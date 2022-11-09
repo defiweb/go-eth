@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"web3rpc/hexutil"
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 // bytesMarshalJSON encodes the given bytes as a JSON string where each byte is

@@ -3,7 +3,7 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"testing"
@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"web3rpc/hexutil"
-	"web3rpc/rpc/testutil"
-	"web3rpc/types"
+	"github.com/defiweb/go-eth/hexutil"
+	"github.com/defiweb/go-eth/rpc/testutil"
+	"github.com/defiweb/go-eth/types"
 )
 
 const mockGasPriceRequest = `
@@ -39,7 +39,7 @@ func TestClient_GasPrice(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGasPriceResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGasPriceResponse)),
 	}
 
 	gasPrice, err := client.GasPrice(context.Background())
@@ -71,7 +71,7 @@ func TestClient_BlockNumber(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockBlockNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockBlockNumberResponse)),
 	}
 
 	blockNumber, err := client.BlockNumber(context.Background())
@@ -107,7 +107,7 @@ func TestClient_GetBalance(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetBalanceResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetBalanceResponse)),
 	}
 
 	balance, err := client.GetBalance(
@@ -148,7 +148,7 @@ func TestClient_GetStorageAt(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetStorageAtResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetStorageAtResponse)),
 	}
 
 	storage, err := client.GetStorageAt(
@@ -189,7 +189,7 @@ func TestClient_GetTransactionCount(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionCountResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionCountResponse)),
 	}
 
 	transactionCount, err := client.GetTransactionCount(
@@ -228,7 +228,7 @@ func TestClient_GetBlockTransactionCountByHash(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByHashResponse)),
 	}
 
 	transactionCount, err := client.GetBlockTransactionCountByHash(
@@ -265,7 +265,7 @@ func TestClient_GetBlockTransactionCountByNumber(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByNumberResponse)),
 	}
 
 	transactionCount, err := client.GetBlockTransactionCountByNumber(
@@ -302,7 +302,7 @@ func TestClient_GetUncleCountByBlockHash(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockHashResponse)),
 	}
 
 	uncleCount, err := client.GetUncleCountByBlockHash(
@@ -339,7 +339,7 @@ func TestClient_GetUncleCountByBlockNumber(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockNumberResponse)),
 	}
 
 	uncleCount, err := client.GetUncleCountByBlockNumber(
@@ -377,7 +377,7 @@ func TestClient_GetCode(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetCodeResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetCodeResponse)),
 	}
 
 	code, err := client.GetCode(
@@ -416,7 +416,7 @@ func TestClient_Sign(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockSignResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockSignResponse)),
 	}
 
 	signature, err := client.Sign(
@@ -475,7 +475,7 @@ func TestClient_SignTransaction(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockSignTransactionResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockSignTransactionResponse)),
 	}
 
 	from := types.MustHexToAddress("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
@@ -531,7 +531,7 @@ func TestClient_SendRawTransaction(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockSendRawTransactionResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockSendRawTransactionResponse)),
 	}
 
 	txHash, err := client.SendRawTransaction(
@@ -576,7 +576,7 @@ func TestClient_Call(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockCallResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockCallResponse)),
 	}
 
 	call, err := client.Call(
@@ -629,7 +629,7 @@ func TestClient_EstimateGas(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockEstimateGasResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockEstimateGasResponse)),
 	}
 
 	gas, err := client.EstimateGas(
@@ -711,7 +711,7 @@ func TestClient_BlockByNumber(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
 	}
 
 	block, err := client.BlockByNumber(
@@ -769,7 +769,7 @@ func TestClient_BlockByHash(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
 	}
 
 	block, err := client.BlockByHash(
@@ -823,7 +823,7 @@ func TestClient_GetTransactionByHash(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
 
 	tx, err := client.GetTransactionByHash(
@@ -868,7 +868,7 @@ func TestClient_GetTransactionByBlockHashAndIndex(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
 
 	tx, err := client.GetTransactionByBlockHashAndIndex(
@@ -900,7 +900,7 @@ func TestClient_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
 
 	tx, err := client.GetTransactionByBlockNumberAndIndex(
@@ -968,7 +968,7 @@ func TestClient_GetTransactionReceipt(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionReceiptResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionReceiptResponse)),
 	}
 
 	receipt, err := client.GetTransactionReceipt(
@@ -1049,7 +1049,7 @@ func TestClient_GetLogs(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetLogsResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetLogsResponse)),
 	}
 
 	from := types.HexToBlockNumber("0x1")
@@ -1077,7 +1077,7 @@ func TestClient_GetLogs(t *testing.T) {
 }
 
 func readBody(r *http.Request) string {
-	body, _ := ioutil.ReadAll(r.Body)
+	body, _ := io.ReadAll(r.Body)
 	return string(body)
 }
 

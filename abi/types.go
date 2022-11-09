@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"strconv"
 
-	"web3rpc/hexutil"
-	"web3rpc/types"
+	"github.com/defiweb/go-eth/hexutil"
+	"github.com/defiweb/go-eth/types"
 
 	"github.com/defiweb/go-anymapper"
 )

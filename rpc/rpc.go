@@ -3,7 +3,7 @@ package rpc
 import (
 	"context"
 
-	"web3rpc/types"
+	"github.com/defiweb/go-eth/types"
 )
 
 // https://ethereum.org/pl/developers/docs/apis/json-rpc/

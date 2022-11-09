@@ -3,7 +3,7 @@ package crypto
 import (
 	"golang.org/x/crypto/sha3"
 
-	"web3rpc/types"
+	"github.com/defiweb/go-eth/types"
 )
 
 // Keccak256 calculates the Keccak256

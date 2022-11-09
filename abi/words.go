@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/big"
 
-	"web3rpc/hexutil"
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 // WordLength is the number of bytes in an EVM word.

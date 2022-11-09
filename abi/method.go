@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"web3rpc/crypto"
-	"web3rpc/hexutil"
+	"github.com/defiweb/go-eth/crypto"
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 type FourBytes [4]byte

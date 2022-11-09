@@ -3,7 +3,7 @@ package rpc
 import (
 	"encoding/json"
 
-	"web3rpc/types"
+	"github.com/defiweb/go-eth/types"
 )
 
 // signTransactionResult is the result of an eth_signTransaction request.

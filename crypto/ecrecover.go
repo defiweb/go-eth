@@ -5,7 +5,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 
-	"web3rpc/types"
+	"github.com/defiweb/go-eth/types"
 )
 
 func Ecrecover(hash types.Hash, sig types.Signature) (types.Address, error) {

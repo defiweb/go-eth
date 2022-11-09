@@ -7,7 +7,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcec"
 
-	"web3rpc/types"
+	"github.com/defiweb/go-eth/types"
 )
 
 var s256 = btcec.S256()
