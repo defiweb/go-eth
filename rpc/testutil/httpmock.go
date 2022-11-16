@@ -3,7 +3,7 @@ package testutil
 import (
 	"net/http"
 
-	"web3rpc/rpc/transport"
+	"github.com/defiweb/go-eth/rpc/transport"
 )
 
 type RoundTripFunc func(req *http.Request) (*http.Response, error)

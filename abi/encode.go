@@ -5,15 +5,15 @@ import (
 	"math/big"
 )
 
-func EncodeValue(t Type, val any) ([]byte, error) {
+func EncodeValue(t Value, val any) ([]byte, error) {
 	return NewEncoder(DefaultConfig).EncodeValue(t, val)
 }
 
-func EncodeValues(t *TupleType, vals ...any) ([]byte, error) {
+func EncodeValues(t *TupleValue, vals ...any) ([]byte, error) {
 	return NewEncoder(DefaultConfig).EncodeValues(t, vals...)
 }
 
-func MustEncodeValue(t Type, val any) []byte {
+func MustEncodeValue(t Value, val any) []byte {
 	b, err := EncodeValue(t, val)
 	if err != nil {
 		panic(err)
@@ -21,7 +21,7 @@ func MustEncodeValue(t Type, val any) []byte {
 	return b
 }
 
-func MustEncodeValues(t *TupleType, vals ...any) []byte {
+func MustEncodeValues(t *TupleValue, vals ...any) []byte {
 	b, err := EncodeValues(t, vals...)
 	if err != nil {
 		panic(err)
@@ -37,8 +37,8 @@ func NewEncoder(c *Config) *Encoder {
 	return &Encoder{Config: c}
 }
 
-func (e *Encoder) EncodeValue(t Type, val any) ([]byte, error) {
-	if err := e.Config.mapper.Map(val, t); err != nil {
+func (e *Encoder) EncodeValue(t Value, val any) ([]byte, error) {
+	if err := e.Config.Mapper.Map(val, t); err != nil {
 		return nil, err
 	}
 	words, err := t.EncodeABI()
@@ -48,12 +48,12 @@ func (e *Encoder) EncodeValue(t Type, val any) ([]byte, error) {
 	return words.Bytes(), nil
 }
 
-func (e *Encoder) EncodeValues(t *TupleType, vals ...any) ([]byte, error) {
-	if t.Length() != len(vals) {
-		return nil, fmt.Errorf("abi: expected %d values, got %d", t.Length(), len(vals))
+func (e *Encoder) EncodeValues(t *TupleValue, vals ...any) ([]byte, error) {
+	if t.Size() != len(vals) {
+		return nil, fmt.Errorf("abi: expected %d values, got %d", t.Size(), len(vals))
 	}
 	for i, elem := range t.Elements() {
-		if err := e.Config.mapper.Map(vals[i], elem); err != nil {
+		if err := e.Config.Mapper.Map(vals[i], elem); err != nil {
 			return nil, err
 		}
 	}
@@ -73,7 +73,7 @@ func (e *Encoder) EncodeValues(t *TupleType, vals ...any) ([]byte, error) {
 // head section. The offset is a 256-bit integer (single word) that points to
 // the start of the element in the tail section. The offset is relative to the
 // beginning of the tuple.
-func encodeTuple(t []Type) (Words, error) {
+func encodeTuple(t []Value) (Words, error) {
 	var (
 		head      Words
 		tail      Words
@@ -128,7 +128,7 @@ func encodeTuple(t []Type) (Words, error) {
 //
 // The array is encoded just like a tuple, except that the first word is the
 // number of elements in the elems.
-func encodeArray(a []Type) (Words, error) {
+func encodeArray(a []Value) (Words, error) {
 	tuple, err := encodeTuple(a)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func encodeArray(a []Type) (Words, error) {
 	return words, nil
 }
 
-func encodeFixedArray(a []Type) (Words, error) {
+func encodeFixedArray(a []Value) (Words, error) {
 	return encodeTuple(a)
 }
 

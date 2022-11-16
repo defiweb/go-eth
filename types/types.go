@@ -9,7 +9,7 @@ import (
 
 	"github.com/defiweb/go-rlp"
 
-	"web3rpc/hexutil"
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 //
@@ -28,15 +28,6 @@ func HexToAddress(address string) (Address, error) {
 	return a, err
 }
 
-func BytesToAddress(b []byte) (Address, error) {
-	var a Address
-	if len(b) != len(a) {
-		return a, fmt.Errorf("invalid address length %d", len(b))
-	}
-	copy(a[:], b)
-	return a, nil
-}
-
 func HexToAddressPtr(address string) *Address {
 	var a Address
 	err := a.UnmarshalText([]byte(address))
@@ -44,6 +35,24 @@ func HexToAddressPtr(address string) *Address {
 		return nil
 	}
 	return &a
+}
+
+// MustHexToAddress parses a hex string into an Address.
+func MustHexToAddress(address string) Address {
+	a, err := HexToAddress(address)
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
+
+func BytesToAddress(b []byte) (Address, error) {
+	var a Address
+	if len(b) != len(a) {
+		return a, fmt.Errorf("invalid address length %d", len(b))
+	}
+	copy(a[:], b)
+	return a, nil
 }
 
 func BytesToAddressPtr(b []byte) *Address {
@@ -54,15 +63,6 @@ func BytesToAddressPtr(b []byte) *Address {
 // MustBytesToAddress returns an Address from a byte slice.
 func MustBytesToAddress(b []byte) Address {
 	a, err := BytesToAddress(b)
-	if err != nil {
-		panic(err)
-	}
-	return a
-}
-
-// MustHexToAddress parses a hex string into an Address.
-func MustHexToAddress(address string) Address {
-	a, err := HexToAddress(address)
 	if err != nil {
 		panic(err)
 	}

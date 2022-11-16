@@ -6,11 +6,11 @@ import (
 	"math/big"
 )
 
-func DecodeValue(t Type, abi []byte, val any) error {
+func DecodeValue(t Value, abi []byte, val any) error {
 	return NewDecoder(DefaultConfig).DecodeValue(t, abi, val)
 }
 
-func DecodeValues(t *TupleType, abi []byte, vals ...any) error {
+func DecodeValues(t *TupleValue, abi []byte, vals ...any) error {
 	return NewDecoder(DefaultConfig).DecodeValues(t, abi, vals...)
 }
 
@@ -22,22 +22,22 @@ func NewDecoder(c *Config) *Decoder {
 	return &Decoder{Config: c}
 }
 
-func (d *Decoder) DecodeValue(t Type, abi []byte, val any) error {
+func (d *Decoder) DecodeValue(t Value, abi []byte, val any) error {
 	if _, err := t.DecodeABI(BytesToWords(abi)); err != nil {
 		return err
 	}
-	return d.Config.mapper.Map(t, val)
+	return d.Config.Mapper.Map(t, val)
 }
 
-func (d *Decoder) DecodeValues(t *TupleType, abi []byte, vals ...any) error {
-	if t.Length() != len(vals) {
-		return fmt.Errorf("abi: cannot decode tuple, expected %d values, got %d", t.Length(), len(vals))
+func (d *Decoder) DecodeValues(t *TupleValue, abi []byte, vals ...any) error {
+	if t.Size() != len(vals) {
+		return fmt.Errorf("abi: cannot decode tuple, expected %d values, got %d", t.Size(), len(vals))
 	}
 	if _, err := t.DecodeABI(BytesToWords(abi)); err != nil {
 		return err
 	}
 	for i, elem := range t.Elements() {
-		if err := d.Config.mapper.Map(elem, vals[i]); err != nil {
+		if err := d.Config.Mapper.Map(elem, vals[i]); err != nil {
 			return err
 		}
 	}
@@ -46,7 +46,7 @@ func (d *Decoder) DecodeValues(t *TupleType, abi []byte, vals ...any) error {
 
 // decodeTuple decodes a tuple from the given words and stores the result in the
 // given tuple. The tuple must contain the correct number of elements.
-func decodeTuple(t *[]Type, w Words) (int, error) {
+func decodeTuple(t *[]Value, w Words) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode tuple from empty data")
 	}
@@ -92,7 +92,7 @@ func decodeTuple(t *[]Type, w Words) (int, error) {
 // decodeArray decodes a dynamic array from the given words and stores the result
 // in the given array. The elements of the array are decoded using the given
 // type definition.
-func decodeArray(a *[]Type, w Words, c *Config, t TypeDefinition) (int, error) {
+func decodeArray(a *[]Value, w Words, t Type) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode array from empty data")
 	}
@@ -106,11 +106,9 @@ func decodeArray(a *[]Type, w Words, c *Config, t TypeDefinition) (int, error) {
 	if size+1 > len(w) {
 		return 0, fmt.Errorf("abi: cannot decode array, size exceeds data length")
 	}
-	*a = make([]Type, size)
+	*a = make([]Value, size)
 	for i := 0; i < size; i++ {
-		if (*a)[i], err = c.NewType(t); err != nil {
-			return 0, err
-		}
+		(*a)[i] = t.New()
 	}
 	if _, err := decodeTuple(a, w[1:]); err != nil {
 		return 0, err
@@ -118,16 +116,13 @@ func decodeArray(a *[]Type, w Words, c *Config, t TypeDefinition) (int, error) {
 	return size + 1, nil
 }
 
-func decodeFixedArray(a *[]Type, w Words, c *Config, t TypeDefinition, size int) (int, error) {
-	var err error
+func decodeFixedArray(a *[]Value, w Words, t Type, size int) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode array[%d] from empty value", size)
 	}
-	*a = make([]Type, size)
+	*a = make([]Value, size)
 	for i := 0; i < size; i++ {
-		if (*a)[i], err = c.NewType(t); err != nil {
-			return 0, err
-		}
+		(*a)[i] = t.New()
 	}
 	if _, err := decodeTuple(a, w); err != nil {
 		return 0, err

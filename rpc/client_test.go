@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"web3rpc/hexutil"
-	"web3rpc/rpc/testutil"
-	"web3rpc/types"
+	"github.com/defiweb/go-eth/hexutil"
+	"github.com/defiweb/go-eth/rpc/testutil"
+	"github.com/defiweb/go-eth/types"
 )
 
 const mockGasPriceRequest = `

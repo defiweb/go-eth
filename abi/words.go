@@ -5,7 +5,7 @@ import (
 	"math"
 	"math/big"
 
-	"web3rpc/hexutil"
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 // WordLength is the number of bytes in an EVM word.
@@ -43,6 +43,9 @@ func (w *Word) SetBytesPadRight(b []byte) error {
 	if len(b) > WordLength {
 		return fmt.Errorf("abi: cannot set %d bytes to a word of length %d", len(b), WordLength)
 	}
+	for i := len(b); i < WordLength; i++ {
+		w[i] = 0
+	}
 	copy((*w)[:], b)
 	return nil
 }
@@ -51,6 +54,9 @@ func (w *Word) SetBytesPadRight(b []byte) error {
 func (w *Word) SetBytesPadLeft(b []byte) error {
 	if len(b) > WordLength {
 		return fmt.Errorf("abi: cannot set %d bytes to a word of length %d", len(b), WordLength)
+	}
+	for i := 0; i < WordLength-len(b); i++ {
+		w[i] = 0
 	}
 	copy((*w)[WordLength-len(b):], b)
 	return nil
