@@ -12,5 +12,5 @@ func Keccak256(v ...[]byte) types.Hash {
 	for _, i := range v {
 		h.Write(i)
 	}
-	return types.BytesToHash(h.Sum(nil))
+	return types.MustBytesToHash(h.Sum(nil))
 }

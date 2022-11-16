@@ -3,7 +3,7 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"testing"
@@ -39,7 +39,7 @@ func TestClient_GasPrice(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGasPriceResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGasPriceResponse)),
 	}
 
 	gasPrice, err := client.GasPrice(context.Background())
@@ -71,7 +71,7 @@ func TestClient_BlockNumber(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockBlockNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockBlockNumberResponse)),
 	}
 
 	blockNumber, err := client.BlockNumber(context.Background())
@@ -107,7 +107,7 @@ func TestClient_GetBalance(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetBalanceResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetBalanceResponse)),
 	}
 
 	balance, err := client.GetBalance(
@@ -148,19 +148,19 @@ func TestClient_GetStorageAt(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetStorageAtResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetStorageAtResponse)),
 	}
 
 	storage, err := client.GetStorageAt(
 		context.Background(),
 		types.MustHexToAddress("0x1111111111111111111111111111111111111111"),
-		types.HexToHash("0x2222222222222222222222222222222222222222222222222222222222222222"),
-		types.HexToBlockNumber("0x1"),
+		types.MustHexToHash("0x2222222222222222222222222222222222222222222222222222222222222222"),
+		types.MustHexToBlockNumber("0x1"),
 	)
 
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetStorageAtRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.HexToHash("0x3333333333333333333333333333333333333333333333333333333333333333"), *storage)
+	assert.Equal(t, types.MustHexToHash("0x3333333333333333333333333333333333333333333333333333333333333333"), *storage)
 }
 
 const mockGetTransactionCountRequest = `
@@ -189,13 +189,13 @@ func TestClient_GetTransactionCount(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionCountResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionCountResponse)),
 	}
 
 	transactionCount, err := client.GetTransactionCount(
 		context.Background(),
 		types.MustHexToAddress("0x1111111111111111111111111111111111111111"),
-		types.HexToBlockNumber("0x1"),
+		types.MustHexToBlockNumber("0x1"),
 	)
 
 	require.NoError(t, err)
@@ -228,12 +228,12 @@ func TestClient_GetBlockTransactionCountByHash(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByHashResponse)),
 	}
 
 	transactionCount, err := client.GetBlockTransactionCountByHash(
 		context.Background(),
-		types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+		types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetBlockTransactionCountByHashRequest, readBody(httpMock.Request))
@@ -265,12 +265,12 @@ func TestClient_GetBlockTransactionCountByNumber(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByNumberResponse)),
 	}
 
 	transactionCount, err := client.GetBlockTransactionCountByNumber(
 		context.Background(),
-		types.HexToBlockNumber("0x1"),
+		types.MustHexToBlockNumber("0x1"),
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetBlockTransactionCountByNumberRequest, readBody(httpMock.Request))
@@ -302,12 +302,12 @@ func TestClient_GetUncleCountByBlockHash(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockHashResponse)),
 	}
 
 	uncleCount, err := client.GetUncleCountByBlockHash(
 		context.Background(),
-		types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+		types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetUncleCountByBlockHashRequest, readBody(httpMock.Request))
@@ -339,12 +339,12 @@ func TestClient_GetUncleCountByBlockNumber(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockNumberResponse)),
 	}
 
 	uncleCount, err := client.GetUncleCountByBlockNumber(
 		context.Background(),
-		types.HexToBlockNumber("0x1"),
+		types.MustHexToBlockNumber("0x1"),
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetUncleCountByBlockNumberRequest, readBody(httpMock.Request))
@@ -377,13 +377,13 @@ func TestClient_GetCode(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetCodeResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetCodeResponse)),
 	}
 
 	code, err := client.GetCode(
 		context.Background(),
 		types.MustHexToAddress("0x1111111111111111111111111111111111111111"),
-		types.HexToBlockNumber("0x2"),
+		types.MustHexToBlockNumber("0x2"),
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetCodeRequest, readBody(httpMock.Request))
@@ -416,7 +416,7 @@ func TestClient_Sign(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockSignResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockSignResponse)),
 	}
 
 	signature, err := client.Sign(
@@ -475,7 +475,7 @@ func TestClient_SignTransaction(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockSignTransactionResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockSignTransactionResponse)),
 	}
 
 	from := types.MustHexToAddress("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
@@ -503,7 +503,7 @@ func TestClient_SignTransaction(t *testing.T) {
 	assert.Equal(t, uint8(0x11), tx.Signature.Bytes()[64])
 	assert.Equal(t, hexToBytes("0x2222222222222222222222222222222222222222222222222222222222222222"), tx.Signature.Bytes()[:32])
 	assert.Equal(t, hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333"), tx.Signature.Bytes()[32:64])
-	assert.Equal(t, types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 }
 
 const mockSendRawTransactionRequest = `
@@ -531,7 +531,7 @@ func TestClient_SendRawTransaction(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockSendRawTransactionResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockSendRawTransactionResponse)),
 	}
 
 	txHash, err := client.SendRawTransaction(
@@ -540,7 +540,7 @@ func TestClient_SendRawTransaction(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockSendRawTransactionRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.HexToHash("0x111111111111111111111111111111111111111111111111111111111111111"), *txHash)
+	assert.Equal(t, types.MustHexToHash("0x111111111111111111111111111111111111111111111111111111111111111"), *txHash)
 }
 
 const mockCallRequest = `
@@ -576,7 +576,7 @@ func TestClient_Call(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockCallResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockCallResponse)),
 	}
 
 	call, err := client.Call(
@@ -589,7 +589,7 @@ func TestClient_Call(t *testing.T) {
 			Value:    big.NewInt(10000000000),
 			Data:     hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
 		},
-		types.HexToBlockNumber("0x1"),
+		types.MustHexToBlockNumber("0x1"),
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockCallRequest, readBody(httpMock.Request))
@@ -629,7 +629,7 @@ func TestClient_EstimateGas(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockEstimateGasResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockEstimateGasResponse)),
 	}
 
 	gas, err := client.EstimateGas(
@@ -711,25 +711,25 @@ func TestClient_BlockByNumber(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
 	}
 
 	block, err := client.BlockByNumber(
 		context.Background(),
-		types.HexToBlockNumber("0x1"),
+		types.MustHexToBlockNumber("0x1"),
 		true,
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockBlockByNumberRequest, readBody(httpMock.Request))
 	assert.Equal(t, uint64(0x11), block.Number)
-	assert.Equal(t, types.HexToHash("0x2222222222222222222222222222222222222222222222222222222222222222"), block.Hash)
-	assert.Equal(t, types.HexToHash("0x3333333333333333333333333333333333333333333333333333333333333333"), block.ParentHash)
+	assert.Equal(t, types.MustHexToHash("0x2222222222222222222222222222222222222222222222222222222222222222"), block.Hash)
+	assert.Equal(t, types.MustHexToHash("0x3333333333333333333333333333333333333333333333333333333333333333"), block.ParentHash)
 	assert.Equal(t, hexToBigInt("0x4444444444444444"), block.Nonce)
-	assert.Equal(t, types.HexToHash("0x5555555555555555555555555555555555555555555555555555555555555555"), block.Sha3Uncles)
+	assert.Equal(t, types.MustHexToHash("0x5555555555555555555555555555555555555555555555555555555555555555"), block.Sha3Uncles)
 	assert.Equal(t, hexToBytes("0x66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666"), block.LogsBloom)
-	assert.Equal(t, types.HexToHash("0x7777777777777777777777777777777777777777777777777777777777777777"), block.TransactionsRoot)
-	assert.Equal(t, types.HexToHash("0x8888888888888888888888888888888888888888888888888888888888888888"), block.StateRoot)
-	assert.Equal(t, types.HexToHash("0x9999999999999999999999999999999999999999999999999999999999999999"), block.ReceiptsRoot)
+	assert.Equal(t, types.MustHexToHash("0x7777777777777777777777777777777777777777777777777777777777777777"), block.TransactionsRoot)
+	assert.Equal(t, types.MustHexToHash("0x8888888888888888888888888888888888888888888888888888888888888888"), block.StateRoot)
+	assert.Equal(t, types.MustHexToHash("0x9999999999999999999999999999999999999999999999999999999999999999"), block.ReceiptsRoot)
 	assert.Equal(t, types.MustHexToAddress("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), block.Miner)
 	assert.Equal(t, hexToBigInt("0xbbbbbb"), block.Difficulty)
 	assert.Equal(t, hexToBigInt("0xcccccc"), block.TotalDifficulty)
@@ -740,7 +740,7 @@ func TestClient_BlockByNumber(t *testing.T) {
 	assert.Equal(t, int64(1424182926), block.Timestamp.Unix())
 	require.Len(t, block.Transactions, 1)
 	require.Len(t, block.Uncles, 1)
-	assert.Equal(t, types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), block.Transactions[0].Hash)
+	assert.Equal(t, types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), block.Transactions[0].Hash)
 	assert.Equal(t, big.NewInt(0x22), block.Transactions[0].Nonce)
 	assert.Equal(t, types.MustHexToAddressPtr("0x5555555555555555555555555555555555555555"), block.Transactions[0].From)
 	assert.Equal(t, types.MustHexToAddressPtr("0x6666666666666666666666666666666666666666"), block.Transactions[0].To)
@@ -748,7 +748,7 @@ func TestClient_BlockByNumber(t *testing.T) {
 	assert.Equal(t, uint64(30400), block.Transactions[0].Gas)
 	assert.Equal(t, big.NewInt(10000000000000), block.Transactions[0].GasPrice)
 	assert.Equal(t, hexToBytes("0x777777777777"), block.Transactions[0].Input)
-	assert.Equal(t, types.HexToHash("0x8888888888888888888888888888888888888888888888888888888888888888"), block.Uncles[0])
+	assert.Equal(t, types.MustHexToHash("0x8888888888888888888888888888888888888888888888888888888888888888"), block.Uncles[0])
 }
 
 const mockBlockByHashRequest = `
@@ -769,18 +769,18 @@ func TestClient_BlockByHash(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
 	}
 
 	block, err := client.BlockByHash(
 		context.Background(),
-		types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+		types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
 		true,
 	)
 
 	require.NoError(t, err)
 	assert.JSONEq(t, mockBlockByHashRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.HexToHash("0x2222222222222222222222222222222222222222222222222222222222222222"), block.Hash)
+	assert.Equal(t, types.MustHexToHash("0x2222222222222222222222222222222222222222222222222222222222222222"), block.Hash)
 }
 
 const mockGetTransactionByHashRequest = `
@@ -823,19 +823,19 @@ func TestClient_GetTransactionByHash(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
 
 	tx, err := client.GetTransactionByHash(
 		context.Background(),
-		types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+		types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
 	)
 
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetTransactionByHashRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.HexToHashPtr("0x1111111111111111111111111111111111111111111111111111111111111111"), tx.BlockHash)
+	assert.Equal(t, types.MustHexToHashPtr("0x1111111111111111111111111111111111111111111111111111111111111111"), tx.BlockHash)
 	assert.Equal(t, uint64(0x22), *tx.BlockNumber)
-	assert.Equal(t, types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 	assert.Equal(t, types.MustHexToAddressPtr("0x3333333333333333333333333333333333333333"), tx.From)
 	assert.Equal(t, types.MustHexToAddressPtr("0x7777777777777777777777777777777777777777"), tx.To)
 	assert.Equal(t, big.NewInt(10000000000), tx.Value)
@@ -847,7 +847,7 @@ func TestClient_GetTransactionByHash(t *testing.T) {
 	assert.Equal(t, uint8(0x88), tx.Signature.Bytes()[64])
 	assert.Equal(t, hexToBytes("0x9999999999999999999999999999999999999999999999999999999999999999"), tx.Signature.Bytes()[:32])
 	assert.Equal(t, hexToBytes("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), tx.Signature.Bytes()[32:64])
-	assert.Equal(t, types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 }
 
 const mockGetTransactionByBlockHashAndIndexRequest = `
@@ -868,18 +868,18 @@ func TestClient_GetTransactionByBlockHashAndIndex(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
 
 	tx, err := client.GetTransactionByBlockHashAndIndex(
 		context.Background(),
-		types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+		types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
 		0,
 	)
 
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetTransactionByBlockHashAndIndexRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 }
 
 const mockGetTransactionByBlockNumberAndIndexRequest = `
@@ -900,18 +900,18 @@ func TestClient_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
 
 	tx, err := client.GetTransactionByBlockNumberAndIndex(
 		context.Background(),
-		types.HexToBlockNumber("0x1"),
+		types.MustHexToBlockNumber("0x1"),
 		2,
 	)
 
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetTransactionByBlockNumberAndIndexRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 }
 
 const mockGetTransactionReceiptRequest = `
@@ -968,20 +968,20 @@ func TestClient_GetTransactionReceipt(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetTransactionReceiptResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionReceiptResponse)),
 	}
 
 	receipt, err := client.GetTransactionReceipt(
 		context.Background(),
-		types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+		types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
 	)
 
 	status := uint64(1)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetTransactionReceiptRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.HexToHash("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), receipt.TransactionHash)
+	assert.Equal(t, types.MustHexToHash("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), receipt.TransactionHash)
 	assert.Equal(t, uint64(17), receipt.TransactionIndex)
-	assert.Equal(t, types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), receipt.BlockHash)
+	assert.Equal(t, types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), receipt.BlockHash)
 	assert.Equal(t, hexToBigInt("0x2222").Uint64(), receipt.BlockNumber)
 	assert.Equal(t, (*types.Address)(nil), receipt.ContractAddress)
 	assert.Equal(t, hexToBigInt("0x33333").Uint64(), receipt.CumulativeGasUsed)
@@ -992,14 +992,14 @@ func TestClient_GetTransactionReceipt(t *testing.T) {
 	assert.Equal(t, hexToBytes("0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000200000000000000000000000000000"), receipt.LogsBloom)
 	assert.Equal(t, &status, receipt.Status)
 	require.Len(t, receipt.Logs, 1)
-	assert.Equal(t, types.HexToHash("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), receipt.Logs[0].TxHash)
+	assert.Equal(t, types.MustHexToHash("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), receipt.Logs[0].TxHash)
 	assert.Equal(t, uint64(17), receipt.Logs[0].TxIndex)
-	assert.Equal(t, types.HexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), receipt.Logs[0].BlockHash)
+	assert.Equal(t, types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), receipt.Logs[0].BlockHash)
 	assert.Equal(t, hexToBigInt("0x2222").Uint64(), receipt.Logs[0].BlockNumber)
 	assert.Equal(t, uint64(8), receipt.Logs[0].LogIndex)
 	assert.Equal(t, hexToBytes("0x000000000000000000000000398137383b3d25c92898c656696e41950e47316b00000000000000000000000000000000000000000000000000000000000cee6100000000000000000000000000000000000000000000000000000000000ac3e100000000000000000000000000000000000000000000000000000000005baf35"), receipt.Logs[0].Data)
 	assert.Equal(t, types.MustHexToAddress("0x7777777777777777777777777777777777777777"), receipt.Logs[0].Address)
-	assert.Equal(t, []types.Hash{types.HexToHash("0x9999999999999999999999999999999999999999999999999999999999999999")}, receipt.Logs[0].Topics)
+	assert.Equal(t, []types.Hash{types.MustHexToHash("0x9999999999999999999999999999999999999999999999999999999999999999")}, receipt.Logs[0].Topics)
 	assert.Equal(t, false, receipt.Logs[0].Removed)
 }
 
@@ -1049,35 +1049,35 @@ func TestClient_GetLogs(t *testing.T) {
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
-		Body:       ioutil.NopCloser(bytes.NewBufferString(mockGetLogsResponse)),
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetLogsResponse)),
 	}
 
-	from := types.HexToBlockNumber("0x1")
-	to := types.HexToBlockNumber("0x2")
+	from := types.MustHexToBlockNumber("0x1")
+	to := types.MustHexToBlockNumber("0x2")
 	logs, err := client.GetLogs(context.Background(), types.FilterLogsQuery{
 		FromBlock: &from,
 		ToBlock:   &to,
 		Address:   []types.Address{types.MustHexToAddress("0x3333333333333333333333333333333333333333")},
 		Topics: [][]types.Hash{
-			{types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444")},
+			{types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444")},
 		},
 	})
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetLogsRequest, readBody(httpMock.Request))
 	require.Len(t, logs, 1)
 	assert.Equal(t, types.MustHexToAddress("0x3333333333333333333333333333333333333333"), logs[0].Address)
-	assert.Equal(t, types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].Topics[0])
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].Topics[0])
 	assert.Equal(t, hexToBytes("0x68656c6c6f21"), logs[0].Data)
 	assert.Equal(t, uint64(1), logs[0].BlockNumber)
-	assert.Equal(t, types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].TxHash)
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].TxHash)
 	assert.Equal(t, uint64(0), logs[0].TxIndex)
-	assert.Equal(t, types.HexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].BlockHash)
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].BlockHash)
 	assert.Equal(t, uint64(0), logs[0].LogIndex)
 	assert.Equal(t, false, logs[0].Removed)
 }
 
 func readBody(r *http.Request) string {
-	body, _ := ioutil.ReadAll(r.Body)
+	body, _ := io.ReadAll(r.Body)
 	return string(body)
 }
 

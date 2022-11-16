@@ -22,22 +22,24 @@ const AddressLength = 20
 // Address represents an Ethereum address encoded as a 20 byte array.
 type Address [AddressLength]byte
 
-func HexToAddress(address string) (Address, error) {
-	var a Address
-	err := a.UnmarshalText([]byte(address))
+// HexToAddress parses an address in hex format and returns an Address type.
+func HexToAddress(address string) (a Address, err error) {
+	err = a.UnmarshalText([]byte(address))
 	return a, err
 }
 
+// HexToAddressPtr parses an address in hex format and returns an *Address type.
+// It returns nil if the address is invalid.
 func HexToAddressPtr(address string) *Address {
-	var a Address
-	err := a.UnmarshalText([]byte(address))
+	a, err := HexToAddress(address)
 	if err != nil {
 		return nil
 	}
 	return &a
 }
 
-// MustHexToAddress parses a hex string into an Address.
+// MustHexToAddress parses an address in hex format and returns an Address type.
+// It panics if the address is invalid.
 func MustHexToAddress(address string) Address {
 	a, err := HexToAddress(address)
 	if err != nil {
@@ -46,6 +48,14 @@ func MustHexToAddress(address string) Address {
 	return a
 }
 
+// MustHexToAddressPtr parses an address in hex format and returns an *Address type.
+// It panics if the address is invalid.
+func MustHexToAddressPtr(address string) *Address {
+	a := MustHexToAddress(address)
+	return &a
+}
+
+// BytesToAddress converts a byte slice to an Address type.
 func BytesToAddress(b []byte) (Address, error) {
 	var a Address
 	if len(b) != len(a) {
@@ -55,18 +65,31 @@ func BytesToAddress(b []byte) (Address, error) {
 	return a, nil
 }
 
+// BytesToAddressPtr converts a byte slice to an *Address type.
+// It returns nil if the address is invalid.
 func BytesToAddressPtr(b []byte) *Address {
-	a := MustBytesToAddress(b)
+	a, err := BytesToAddress(b)
+	if err != nil {
+		return nil
+	}
 	return &a
 }
 
-// MustBytesToAddress returns an Address from a byte slice.
+// MustBytesToAddress converts a byte slice to an Address type.
+// It panics if the address is invalid.
 func MustBytesToAddress(b []byte) Address {
 	a, err := BytesToAddress(b)
 	if err != nil {
 		panic(err)
 	}
 	return a
+}
+
+// MustBytesToAddressPtr converts a byte slice to an *Address type.
+// It panics if the address is invalid.
+func MustBytesToAddressPtr(b []byte) *Address {
+	a := MustBytesToAddress(b)
+	return &a
 }
 
 // Bytes returns the byte representation of the address.
@@ -123,28 +146,81 @@ const HashLength = 32
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
 
-func HexToHash(x string) Hash {
-	h := Hash{}
-	_ = h.UnmarshalText([]byte(x))
-	return h
+// HexToHash parses a hash in hex format and returns a Hash type.
+func HexToHash(x string) (h Hash, err error) {
+	err = h.UnmarshalText([]byte(x))
+	return
 }
 
-func BytesToHash(x []byte) Hash {
-	var h Hash
-	if len(x) > len(h) {
-		return h
-	}
-	copy(h[HashLength-len(x):], x)
-	return h
-}
-
+// HexToHashPtr parses a hash in hex format and returns a *Hash type.
+// It returns nil if the hash is invalid.
 func HexToHashPtr(x string) *Hash {
-	h := HexToHash(x)
+	h, err := HexToHash(x)
+	if err != nil {
+		return nil
+	}
 	return &h
 }
 
+// MustHexToHash parses a hash in hex format and returns a Hash type.
+// It panics if the hash is invalid.
+func MustHexToHash(x string) Hash {
+	h, err := HexToHash(x)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+// MustHexToHashPtr parses a hash in hex format and returns a *Hash type.
+// It panics if the hash is invalid.
+func MustHexToHashPtr(x string) *Hash {
+	h := MustHexToHash(x)
+	return &h
+}
+
+// BytesToHash converts a byte slice to a Hash type.
+// If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
+// If bytes is longer than 32 bytes, it returns an error.
+func BytesToHash(x []byte) (Hash, error) {
+	var h Hash
+	if len(x) > len(h) {
+		return h, fmt.Errorf("invalid hash length %d", len(x))
+	}
+	copy(h[HashLength-len(x):], x)
+	return h, nil
+}
+
+// BytesToHashPtr converts a byte slice to a *Hash type.
+// It returns nil if the hash is invalid.
+// If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
+// If bytes is longer than 32 bytes, it returns nil.
 func BytesToHashPtr(x []byte) *Hash {
-	h := BytesToHash(x)
+	h, err := BytesToHash(x)
+	if err != nil {
+		return nil
+	}
+	return &h
+}
+
+// MustBytesToHash converts a byte slice to a Hash type.
+// It panics if the hash is invalid.
+// If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
+// If bytes is longer than 32 bytes, it panics.
+func MustBytesToHash(x []byte) Hash {
+	h, err := BytesToHash(x)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+// MustBytesToHashPtr converts a byte slice to a *Hash type.
+// It panics if the hash is invalid.
+// If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
+// If bytes is longer than 32 bytes, it panics.
+func MustBytesToHashPtr(x []byte) *Hash {
+	h := MustBytesToHash(x)
 	return &h
 }
 
@@ -211,18 +287,52 @@ var (
 	PendingBlockNumber  = BlockNumber{x: *new(big.Int).SetInt64(pendingBlockNumber)}
 )
 
-// HexToBlockNumber converts a string to a BlockNumber. A string can be a
-// hex number, but also "earliest", "latest" or "pending".
-func HexToBlockNumber(x string) BlockNumber {
+// HexToBlockNumber converts a string to a BlockNumber type.
+// The string can be a hex number or one of the following strings:
+// "earliest", "latest", "pending".
+// If the string is not a valid block number, it returns an error.
+func HexToBlockNumber(x string) (BlockNumber, error) {
 	b := &BlockNumber{}
-	_ = b.UnmarshalText([]byte(x))
-	return *b
+	err := b.UnmarshalText([]byte(x))
+	return *b, err
 }
 
+// HexToBlockNumberPtr converts a string to a *BlockNumber type.
+// The string can be a hex number or one of the following strings:
+// "earliest", "latest", "pending".
+// If the string is not a valid block number, it returns nil.
+func HexToBlockNumberPtr(x string) *BlockNumber {
+	b, err := HexToBlockNumber(x)
+	if err != nil {
+		return nil
+	}
+	return &b
+}
+
+// MustHexToBlockNumber converts a string to a BlockNumber type.
+// The string can be a hex number or one of the following strings:
+// "earliest", "latest", "pending".
+// It panics if the string is not a valid block number.
+func MustHexToBlockNumber(x string) BlockNumber {
+	b, err := HexToBlockNumber(x)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// Uint64ToBlockNumber converts an uint64 to a BlockNumber type.
 func Uint64ToBlockNumber(x uint64) BlockNumber {
 	return BlockNumber{x: *new(big.Int).SetUint64(x)}
 }
 
+// Uint64ToBlockNumberPtr converts an uint64 to a *BlockNumber type.
+func Uint64ToBlockNumberPtr(x uint64) *BlockNumber {
+	b := Uint64ToBlockNumber(x)
+	return &b
+}
+
+// BigIntToBlockNumber converts a big.Int to a BlockNumber type.
 func BigIntToBlockNumber(x *big.Int) BlockNumber {
 	if x == nil {
 		return BlockNumber{}
@@ -230,16 +340,7 @@ func BigIntToBlockNumber(x *big.Int) BlockNumber {
 	return BlockNumber{x: *new(big.Int).Set(x)}
 }
 
-func HexToBlockNumberPtr(x string) *BlockNumber {
-	b := HexToBlockNumber(x)
-	return &b
-}
-
-func Uint64ToBlockNumberPtr(x uint64) *BlockNumber {
-	b := Uint64ToBlockNumber(x)
-	return &b
-}
-
+// BigIntToBlockNumberPtr converts a big.Int to a *BlockNumber type.
 func BigIntToBlockNumberPtr(x *big.Int) *BlockNumber {
 	b := BigIntToBlockNumber(x)
 	return &b
@@ -447,18 +548,30 @@ func (s *Signature) UnmarshalText(input []byte) error {
 // instead.
 type Number struct{ x big.Int }
 
-// HexToNumber returns a number from a hex string.
+// HexToNumber converts a hex string to a Number type.
 func HexToNumber(x string) Number {
 	u, _ := hexutil.HexToBigInt(x)
 	return Number{x: *u}
 }
 
-// Uint64ToNumber returns a number from an uint64.
+// HexToNumberPtr converts a hex string to a *Number type.
+func HexToNumberPtr(x string) *Number {
+	n := HexToNumber(x)
+	return &n
+}
+
+// Uint64ToNumber converts an uint64 to a Number type.
 func Uint64ToNumber(x uint64) Number {
 	return Number{x: *new(big.Int).SetUint64(x)}
 }
 
-// BigIntToNumber returns a number from a big.Int.
+// Uint64ToNumberPtr converts an uint64 to a *Number type.
+func Uint64ToNumberPtr(x uint64) *Number {
+	n := Uint64ToNumber(x)
+	return &n
+}
+
+// BigIntToNumber converts a big.Int to a Number type.
 func BigIntToNumber(x *big.Int) Number {
 	if x == nil {
 		return Number{}
@@ -466,16 +579,7 @@ func BigIntToNumber(x *big.Int) Number {
 	return Number{x: *x}
 }
 
-func HexToNumberPtr(x string) *Number {
-	n := HexToNumber(x)
-	return &n
-}
-
-func Uint64ToNumberPtr(x uint64) *Number {
-	n := Uint64ToNumber(x)
-	return &n
-}
-
+// BigIntToNumberPtr converts a big.Int to a *Number type.
 func BigIntToNumberPtr(x *big.Int) *Number {
 	n := BigIntToNumber(x)
 	return &n
