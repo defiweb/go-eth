@@ -7,7 +7,7 @@ import (
 
 // Type represents an ABI type.
 type Type interface {
-	// New returns a new value from this type.
+	// New returns a new zero value of this type.
 	New() Value
 
 	// Type returns the user-friendly name of the type.
@@ -50,6 +50,9 @@ func (t *TupleType) New() Value {
 	for i, elem := range t.elems {
 		v.elems[i] = elem.Type.New()
 		v.names[i] = elem.Name
+		if len(elem.Name) == 0 {
+			v.names[i] = fmt.Sprintf("arg%d", i)
+		}
 	}
 	return v
 }
@@ -62,12 +65,115 @@ func (t *TupleType) Type() string {
 			buf.WriteString(", ")
 		}
 		buf.WriteString(elem.Type.Type())
+		if len(elem.Name) > 0 {
+			buf.WriteString(" ")
+			buf.WriteString(elem.Name)
+		}
 	}
 	buf.WriteString(")")
 	return buf.String()
 }
 
 func (t *TupleType) CanonicalType() string {
+	var buf strings.Builder
+	buf.WriteString("(")
+	for i, elem := range t.elems {
+		if i > 0 {
+			buf.WriteString(",")
+		}
+		buf.WriteString(elem.Type.CanonicalType())
+	}
+	buf.WriteString(")")
+	return buf.String()
+}
+
+type EventTupleType struct {
+	elems   []EventTupleTypeElem
+	indexed int
+}
+
+type EventTupleTypeElem struct {
+	Name    string
+	Indexed bool
+	Type    Type
+}
+
+// NewEventTupleType creates a new tuple type with the given elements.
+func NewEventTupleType(elems ...EventTupleTypeElem) *EventTupleType {
+	indexed := 0
+	for _, elem := range elems {
+		if elem.Indexed {
+			indexed++
+		}
+	}
+	return &EventTupleType{elems: elems, indexed: indexed}
+}
+
+func (t *EventTupleType) Size() int {
+	return len(t.elems)
+}
+
+func (t *EventTupleType) IndexedSize() int {
+	return t.indexed
+}
+
+func (t *EventTupleType) DataSize() int {
+	return len(t.elems) - t.indexed
+}
+
+func (t *EventTupleType) Elements() []EventTupleTypeElem {
+	cpy := make([]EventTupleTypeElem, len(t.elems))
+	copy(cpy, t.elems)
+	return cpy
+}
+
+func (t *EventTupleType) New() Value {
+	tuple := NewTupleOfSize(len(t.elems))
+	// Fills tuple in such a way that indexed fields are first.
+	dataIdx, topicIdx := 0, 0
+	for _, elem := range t.elems {
+		idx := 0
+		if elem.Indexed {
+			idx = topicIdx
+			topicIdx++
+		} else {
+			idx = dataIdx + t.indexed
+			dataIdx++
+		}
+		tuple.elems[idx] = elem.Type.New()
+		tuple.names[idx] = elem.Name
+		if len(elem.Name) == 0 {
+			if elem.Indexed {
+				tuple.names[idx] = fmt.Sprintf("topic%d", topicIdx)
+			} else {
+				tuple.names[idx] = fmt.Sprintf("data%d", dataIdx-1)
+			}
+		}
+	}
+	return tuple
+}
+
+func (t *EventTupleType) Type() string {
+	var buf strings.Builder
+	buf.WriteString("(")
+	for i, elem := range t.elems {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(elem.Type.Type())
+		if elem.Indexed {
+			buf.WriteString(" indexed")
+		}
+		if len(elem.Name) > 0 {
+			buf.WriteString(" ")
+			buf.WriteString(elem.Name)
+		}
+	}
+	buf.WriteString(")")
+	return buf.String()
+}
+
+func (t *EventTupleType) CanonicalType() string {
 	var buf strings.Builder
 	buf.WriteString("(")
 	for i, elem := range t.elems {

@@ -31,15 +31,33 @@ func (c *Config) Copy() *Config {
 	return cpy
 }
 
+// fieldMapper lowercase the first letter of the field name. If the field name
+// starts with an acronym, it will lowercase the whole acronym. For example:
+//  - "User" will be mapped to "user"
+// 	- "ID" will be mapped to "id"
+// 	- "DAPPName" will be mapped to "dappName"
+// Unfortunately, it does not work with field names that contain two acronyms
+// next to each other. For example, "DAPPID" will be mapped to "dappid".
+var fieldMapper = func(field string) string {
+	if len(field) == 0 {
+		return field
+	}
+	runes := []rune(field)
+	for i, c := range runes {
+		if unicode.IsUpper(c) && (i == 0 || i == len(runes)-1 || unicode.IsUpper(runes[i+1])) {
+			runes[i] = unicode.ToLower(c)
+		}
+		if unicode.IsLower(c) {
+			break
+		}
+	}
+	return string(runes)
+}
+
 func init() {
 	mapper := anymapper.DefaultMapper.Copy()
 	mapper.Tag = "abi"
-	mapper.FieldMapper = func(field string) string {
-		if len(field) > 0 {
-			return string(unicode.ToLower(rune(field[0]))) + field[1:]
-		}
-		return field
-	}
+	mapper.FieldMapper = fieldMapper
 
 	types := map[string]Type{}
 	types["bool"] = NewBoolType()

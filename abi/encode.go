@@ -139,6 +139,9 @@ func encodeArray(a []Value) (Words, error) {
 	return words, nil
 }
 
+// encodeFixedArray encodes a fixed-size array.
+//
+// The fixed-size array is encoded just like a tuple.
 func encodeFixedArray(a []Value) (Words, error) {
 	return encodeTuple(a)
 }
@@ -155,6 +158,10 @@ func encodeBytes(b []byte) (Words, error) {
 	return words, nil
 }
 
+// encodeFixedBytes encodes a fixed-size byte sequence.
+//
+// The fixed-size byte sequence is encoded in a single word, padded on the
+// left if needed.
 func encodeFixedBytes(b []byte) (Words, error) {
 	word := Word{}
 	if err := word.SetBytesPadLeft(b); err != nil {
@@ -163,12 +170,12 @@ func encodeFixedBytes(b []byte) (Words, error) {
 	return Words{word}, nil
 }
 
+// encodeInt encodes an integer.
+//
+// The integer is encoded as two's complement 256-bit integer.
 func encodeInt(i *big.Int, size int) (Words, error) {
 	w := Word{}
-	bitLen := i.BitLen()
-	if i.Sign() < 0 {
-		bitLen++
-	}
+	bitLen := signedBitLen(i)
 	if bitLen > size*8 {
 		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into int%d", bitLen, size*8)
 	}
@@ -178,13 +185,17 @@ func encodeInt(i *big.Int, size int) (Words, error) {
 	return Words{w}, nil
 }
 
+// encodeUint encodes an unsigned integer.
+//
+// The integer is encoded as 256-bit unsigned integer.
 func encodeUint(i *big.Int, size int) (Words, error) {
 	w := Word{}
 	if i.Sign() < 0 {
 		return Words{w}, fmt.Errorf("abi: cannot encode negative integer to uint%d", size*8)
 	}
-	if i.BitLen() > size*8 {
-		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into uint%d", i.BitLen(), size*8)
+	bitLen := i.BitLen()
+	if bitLen > size*8 {
+		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into uint%d", bitLen, size*8)
 	}
 	if err := w.SetBigInt(i); err != nil {
 		return Words{w}, err
@@ -192,6 +203,10 @@ func encodeUint(i *big.Int, size int) (Words, error) {
 	return Words{w}, nil
 }
 
+// encodeBool encodes a boolean.
+//
+// The boolean is encoded as a single word where the least significant bit
+// is the value of the boolean.
 func encodeBool(b bool) Words {
 	w := Word{}
 	if b {
@@ -221,4 +236,15 @@ func encodeUint64(i uint64) []byte {
 	b[6] = byte(i >> 8)
 	b[7] = byte(i)
 	return b
+}
+
+// signedBitLen returns the number of bits in the signed integer i.
+func signedBitLen(x *big.Int) int {
+	if x == nil || x.Sign() == 0 {
+		return 0
+	}
+	if x.Sign() < 0 {
+		return new(big.Int).Not(x).BitLen() + 1
+	}
+	return x.BitLen() + 1
 }

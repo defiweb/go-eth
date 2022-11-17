@@ -24,14 +24,6 @@ var (
 	maxUint256 = new(big.Int).Sub(pow256, big.NewInt(1)) // 2^256 - 1
 )
 
-func BytesToWord(b []byte) (Word, error) {
-	var word Word
-	if err := word.SetBytesPadRight(b); err != nil {
-		return Word{}, err
-	}
-	return word, nil
-}
-
 func BytesToWords(b []byte) []Word {
 	var words Words
 	words.SetBytes(b)
@@ -101,8 +93,7 @@ func (w *Word) SetBigInt(i *big.Int) error {
 		if i.BitLen() > 255 {
 			return fmt.Errorf("abi: cannot set negative integer of a size larger than 255 bits")
 		}
-		n := new(big.Int).Set(i)
-		n.And(n, maxUint256)
+		i.And(i, maxUint256)
 	} else {
 		if i.BitLen() > 256 {
 			return fmt.Errorf("abi: cannot set integer of a size larger than 256 bits")
@@ -173,7 +164,7 @@ func (w *Word) SignedBigInt() *big.Int {
 		i.Add(i, big.NewInt(1))
 		i.Neg(i)
 	}
-	return new(big.Int).SetBytes(w.Bytes())
+	return i
 }
 
 // UnsignedBigInt returns the words as an unsigned big integer.
