@@ -19,7 +19,7 @@ func (e *Event) Decode(topics []types.Hash, data []byte, val any) error {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.Name)
 	}
 	if topics[0] != e.Topic0() {
-		return fmt.Errorf("abi: event topic0 mismatch for event %s", e.Name)
+		return fmt.Errorf("abi: topic0 mismatch for event %s", e.Name)
 	}
 	return NewDecoder(e.Config).DecodeValue(
 		e.Inputs.New(),
@@ -33,7 +33,7 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.Name)
 	}
 	if topics[0] != e.Topic0() {
-		return fmt.Errorf("abi: event topic0 mismatch for event %s", e.Name)
+		return fmt.Errorf("abi: topic0 mismatch for event %s", e.Name)
 	}
 	return NewDecoder(e.Config).DecodeValues(
 		e.Inputs.New().(*TupleValue),
