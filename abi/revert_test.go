@@ -5,22 +5,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
 )
-
-func generateRevertData(t *testing.T, reason string) []byte {
-	typ, err := ParseMethod("Error(string)")
-	require.NoError(t, err)
-
-	data, err := typ.EncodeArgs(reason)
-	require.NoError(t, err)
-
-	print(hexutil.BytesToHex(data))
-
-	return data
-}
 
 func TestDecodeRevert(t *testing.T) {
 	tests := []struct {
@@ -38,7 +25,7 @@ func TestDecodeRevert(t *testing.T) {
 		},
 		{
 			// Invalid revert prefix.
-			data:    hexutil.MustHexToBytes("0x08c379b00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000e726576657274206d657373616765000000000000000000000000000000000000"),
+			data:    hexutil.MustHexToBytes("0xaaaaaaaa0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000e726576657274206d657373616765000000000000000000000000000000000000"),
 			wantErr: true,
 		},
 		{

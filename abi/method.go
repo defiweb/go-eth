@@ -10,57 +10,89 @@ import (
 type FourBytes [4]byte
 
 type Method struct {
-	Name    string
-	Inputs  *TupleType
-	Outputs *TupleType
-	Config  *Config
+	name    string
+	inputs  *TupleType
+	outputs *TupleType
+	config  *Config
+
+	fourBytes FourBytes
+	signature string
 }
 
-func (m *Method) Encode(val any) ([]byte, error) {
-	encoded, err := NewEncoder(m.Config).EncodeValue(m.Inputs.New(), val)
-	if err != nil {
-		return nil, err
+func NewMethod(name string, inputs, outputs *TupleType) *Method {
+	return NewMethodWithConfig(name, inputs, outputs, DefaultConfig)
+}
+
+func NewMethodWithConfig(name string, inputs, outputs *TupleType, config *Config) *Method {
+	m := &Method{
+		name:    name,
+		inputs:  inputs,
+		outputs: outputs,
+		config:  config,
 	}
-	return append(m.FourBytes().Bytes(), encoded...), nil
+	m.generateSignature()
+	m.calculateFourBytes()
+	return m
 }
 
-func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
-	encoded, err := NewEncoder(m.Config).EncodeValues(m.Inputs.New().(*TupleValue), args...)
-	if err != nil {
-		return nil, err
-	}
-	return append(m.FourBytes().Bytes(), encoded...), nil
+func (m *Method) Name() string {
+	return m.name
 }
 
-func (m *Method) Decode(data []byte, val any) error {
-	return NewDecoder(m.Config).DecodeValue(m.Outputs.New(), data, val)
+func (m *Method) Inputs() *TupleType {
+	return m.inputs
 }
 
-func (m *Method) DecodeValues(data []byte, vals ...any) error {
-	return NewDecoder(m.Config).DecodeValues(m.Outputs.New().(*TupleValue), data, vals...)
+func (m *Method) Outputs() *TupleType {
+	return m.outputs
 }
 
 func (m *Method) FourBytes() FourBytes {
-	id := crypto.Keccak256([]byte(m.Signature()))
-	var f FourBytes
-	copy(f[:], id[:4])
-	return f
+	return m.fourBytes
+}
+
+func (m *Method) Signature() string {
+	return m.signature
+}
+
+func (m *Method) Encode(val any) ([]byte, error) {
+	encoded, err := NewEncoder(m.config).EncodeValue(m.inputs.New(), val)
+	if err != nil {
+		return nil, err
+	}
+	return append(m.fourBytes.Bytes(), encoded...), nil
+}
+
+func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
+	encoded, err := NewEncoder(m.config).EncodeValues(m.inputs.New().(*TupleValue), args...)
+	if err != nil {
+		return nil, err
+	}
+	return append(m.fourBytes.Bytes(), encoded...), nil
+}
+
+func (m *Method) Decode(data []byte, val any) error {
+	return NewDecoder(m.config).DecodeValue(m.outputs.New(), data, val)
+}
+
+func (m *Method) DecodeValues(data []byte, vals ...any) error {
+	return NewDecoder(m.config).DecodeValues(m.outputs.New().(*TupleValue), data, vals...)
 }
 
 func (m *Method) String() string {
 	var buf strings.Builder
-	buf.WriteString(m.Name)
+	buf.WriteString(m.name)
 	buf.WriteByte('(')
-	for i, typ := range m.Inputs.Elements() {
+	for i, typ := range m.inputs.Elements() {
 		if i > 0 {
 			buf.WriteString(", ")
 		}
 		buf.WriteString(typ.Type.Type())
 	}
 	buf.WriteByte(')')
-	if m.Outputs.Size() > 0 {
+	if m.outputs.Size() > 0 {
 		buf.WriteString(" returns (")
-		for i, typ := range m.Outputs.Elements() {
+		for i, typ := range m.outputs.Elements() {
 			if i > 0 {
 				buf.WriteString(", ")
 			}
@@ -71,18 +103,23 @@ func (m *Method) String() string {
 	return buf.String()
 }
 
-func (m *Method) Signature() string {
+func (m *Method) generateSignature() {
 	var buf strings.Builder
-	buf.WriteString(m.Name)
+	buf.WriteString(m.name)
 	buf.WriteByte('(')
-	for i, param := range m.Inputs.Elements() {
+	for i, param := range m.inputs.Elements() {
 		if i > 0 {
 			buf.WriteString(",")
 		}
 		buf.WriteString(param.Type.CanonicalType())
 	}
 	buf.WriteByte(')')
-	return buf.String()
+	m.signature = buf.String()
+}
+
+func (m *Method) calculateFourBytes() {
+	id := crypto.Keccak256([]byte(m.Signature()))
+	copy(m.fourBytes[:], id[:4])
 }
 
 func (f FourBytes) Bytes() []byte {
