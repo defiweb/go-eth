@@ -1,9 +1,5 @@
 package abi
 
-import (
-	"strings"
-)
-
 type Constructor struct {
 	inputs *TupleType
 	config *Config
@@ -41,14 +37,5 @@ func (m *Constructor) EncodeValues(args ...any) ([]byte, error) {
 }
 
 func (m *Constructor) String() string {
-	var buf strings.Builder
-	buf.WriteString("constructor(")
-	for i, typ := range m.inputs.Elements() {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(typ.Type.Type())
-	}
-	buf.WriteByte(')')
-	return buf.String()
+	return "constructor" + m.inputs.Type()
 }

@@ -223,14 +223,10 @@ func signedBitLen(x *big.Int) int {
 		return 0
 	}
 	bitLen := x.BitLen()
-	if x.Sign() < 0 {
-		// Check if the binary representation of the number is equal to
-		// x^2. If so, the bit length for negative numbers is one bit
-		// shorter.
-		if x.TrailingZeroBits() == uint(bitLen-1) {
-			return bitLen
-		}
-		return bitLen + 1
+	if x.Sign() < 0 && x.TrailingZeroBits() == uint(bitLen-1) {
+		// If the binary representation of the number is equal to x^2, then the
+		// bit length for the negative number is one bit shorter.
+		return bitLen
 	}
 	return bitLen + 1
 }

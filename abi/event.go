@@ -2,7 +2,6 @@ package abi
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/types"
@@ -77,16 +76,7 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 }
 
 func (e *Event) String() string {
-	var buf strings.Builder
-	buf.WriteString(e.name)
-	buf.WriteByte('(')
-	for i, typ := range e.inputs.Elements() {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(typ.Type.Type())
-	}
-	return buf.String()
+	return fmt.Sprintf("event %s%s", e.name, e.inputs.Type())
 }
 
 func (e *Event) calculateTopic0() {
@@ -94,17 +84,7 @@ func (e *Event) calculateTopic0() {
 }
 
 func (e *Event) generateSignature() {
-	var buf strings.Builder
-	buf.WriteString(e.name)
-	buf.WriteByte('(')
-	for i, param := range e.inputs.Elements() {
-		if i > 0 {
-			buf.WriteString(",")
-		}
-		buf.WriteString(param.Type.CanonicalType())
-	}
-	buf.WriteByte(')')
-	e.signature = buf.String()
+	e.signature = fmt.Sprintf("%s%s", e.name, e.inputs.Type())
 }
 
 func (e *Event) mergeData(topics []types.Hash, data []byte) []byte {

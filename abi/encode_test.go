@@ -28,19 +28,6 @@ func Test_signedBitLen(t *testing.T) {
 	}
 }
 
-func BenchmarkSignedBitLen(b *testing.B) {
-	v1 := bigIntMustSetString("-0x010000000000000000")
-	v2 := bigIntMustSetString("-0x020000000000000000")
-	v3 := bigIntMustSetString("-0x030000000000000000")
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		signedBitLen(v1)
-		signedBitLen(v2)
-		signedBitLen(v3)
-	}
-}
-
 func bigIntMustSetString(s string) *big.Int {
 	i, ok := new(big.Int).SetString(s, 0)
 	if !ok {

@@ -3,7 +3,6 @@ package abi
 import (
 	"bytes"
 	"fmt"
-	"strings"
 
 	"github.com/defiweb/go-eth/crypto"
 )
@@ -73,32 +72,11 @@ func (m *Error) DecodeValues(data []byte, vals ...any) error {
 }
 
 func (m *Error) String() string {
-	var buf strings.Builder
-	buf.WriteString("error ")
-	buf.WriteString(m.name)
-	buf.WriteByte('(')
-	for i, typ := range m.inputs.Elements() {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(typ.Type.Type())
-	}
-	buf.WriteByte(')')
-	return buf.String()
+	return "error " + m.name + m.inputs.Type()
 }
 
 func (m *Error) generateSignature() {
-	var buf strings.Builder
-	buf.WriteString(m.name)
-	buf.WriteByte('(')
-	for i, param := range m.inputs.Elements() {
-		if i > 0 {
-			buf.WriteString(",")
-		}
-		buf.WriteString(param.Type.CanonicalType())
-	}
-	buf.WriteByte(')')
-	m.signature = buf.String()
+	m.signature = m.name + m.inputs.CanonicalType()
 }
 
 func (m *Error) calculateFourBytes() {

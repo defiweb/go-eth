@@ -81,40 +81,18 @@ func (m *Method) DecodeValues(data []byte, vals ...any) error {
 
 func (m *Method) String() string {
 	var buf strings.Builder
+	buf.WriteString("function ")
 	buf.WriteString(m.name)
-	buf.WriteByte('(')
-	for i, typ := range m.inputs.Elements() {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(typ.Type.Type())
-	}
-	buf.WriteByte(')')
+	buf.WriteString(m.inputs.Type())
 	if m.outputs.Size() > 0 {
-		buf.WriteString(" returns (")
-		for i, typ := range m.outputs.Elements() {
-			if i > 0 {
-				buf.WriteString(", ")
-			}
-			buf.WriteString(typ.Type.Type())
-		}
-		buf.WriteByte(')')
+		buf.WriteString(" returns ")
+		buf.WriteString(m.outputs.Type())
 	}
 	return buf.String()
 }
 
 func (m *Method) generateSignature() {
-	var buf strings.Builder
-	buf.WriteString(m.name)
-	buf.WriteByte('(')
-	for i, param := range m.inputs.Elements() {
-		if i > 0 {
-			buf.WriteString(",")
-		}
-		buf.WriteString(param.Type.CanonicalType())
-	}
-	buf.WriteByte(')')
-	m.signature = buf.String()
+	m.signature = m.name + m.inputs.CanonicalType()
 }
 
 func (m *Method) calculateFourBytes() {
