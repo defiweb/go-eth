@@ -55,7 +55,7 @@ func (m *Method) Signature() string {
 	return m.signature
 }
 
-func (m *Method) Encode(val any) ([]byte, error) {
+func (m *Method) EncodeArg(val any) ([]byte, error) {
 	encoded, err := NewEncoder(m.config).EncodeValue(m.inputs.New(), val)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
 	return append(m.fourBytes.Bytes(), encoded...), nil
 }
 
-func (m *Method) Decode(data []byte, val any) error {
+func (m *Method) DecodeValue(data []byte, val any) error {
 	return NewDecoder(m.config).DecodeValue(m.outputs.New(), data, val)
 }
 
@@ -128,4 +128,8 @@ func (f FourBytes) Bytes() []byte {
 
 func (f FourBytes) Hex() string {
 	return hexutil.BytesToHex(f[:])
+}
+
+func (f FourBytes) String() string {
+	return f.Hex()
 }

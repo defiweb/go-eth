@@ -22,6 +22,27 @@ type Type interface {
 	CanonicalType() string
 }
 
+type AliasType struct {
+	alias string
+	typ   Type
+}
+
+func NewAliasType(alias string, typ Type) *AliasType {
+	return &AliasType{alias: alias, typ: typ}
+}
+
+func (a *AliasType) New() Value {
+	return a.typ.New()
+}
+
+func (a *AliasType) Type() string {
+	return a.alias
+}
+
+func (a *AliasType) CanonicalType() string {
+	return a.typ.CanonicalType()
+}
+
 type TupleType struct {
 	elems []TupleTypeElem
 }

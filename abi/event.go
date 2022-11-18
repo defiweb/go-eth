@@ -48,7 +48,7 @@ func (e *Event) Signature() string {
 	return e.signature
 }
 
-func (e *Event) Decode(topics []types.Hash, data []byte, val any) error {
+func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
 	}

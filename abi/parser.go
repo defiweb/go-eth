@@ -22,6 +22,10 @@ func ParseEvent(signature string) (*Event, error) {
 	return NewParser(DefaultConfig).ParseEvent(signature)
 }
 
+func ParseError(signature string) (*Error, error) {
+	return NewParser(DefaultConfig).ParseError(signature)
+}
+
 func MustParseType(signature string) Type {
 	t, err := ParseType(signature)
 	if err != nil {
@@ -54,6 +58,14 @@ func MustParseEvent(signature string) *Event {
 	return e
 }
 
+func MustParseError(signature string) *Error {
+	e, err := ParseError(signature)
+	if err != nil {
+		panic(err)
+	}
+	return e
+}
+
 type Parser struct {
 	Config *Config
 }
@@ -76,7 +88,7 @@ func (p *Parser) ParseConstructor(signature string) (*Constructor, error) {
 		return nil, err
 	}
 	if !isKind(constructor.Kind, sigparser.ConstructorKind, sigparser.UnknownKind) {
-		return nil, fmt.Errorf("abi: expected signature type, got %s", constructor.Kind)
+		return nil, fmt.Errorf("abi: expected signature type for constructor, got %s", constructor.Kind)
 	}
 	return p.toConstructor(constructor)
 }
@@ -87,7 +99,7 @@ func (p *Parser) ParseMethod(signature string) (*Method, error) {
 		return nil, err
 	}
 	if !isKind(method.Kind, sigparser.FunctionKind, sigparser.UnknownKind) {
-		return nil, fmt.Errorf("abi: expected signature type, got %s", method.Kind)
+		return nil, fmt.Errorf("abi: expected signature type for method, got %s", method.Kind)
 	}
 	return p.toMethod(method)
 }
@@ -98,82 +110,20 @@ func (p *Parser) ParseEvent(signature string) (*Event, error) {
 		return nil, err
 	}
 	if !isKind(event.Kind, sigparser.EventKind, sigparser.UnknownKind) {
-		return nil, fmt.Errorf("abi: expected signature type, got %s", event.Kind)
+		return nil, fmt.Errorf("abi: expected signature type for event, got %s", event.Kind)
 	}
 	return p.toEvent(event)
 }
 
-// toConstructor converts a sigparser.Signature to a Constructor.
-func (p *Parser) toConstructor(s sigparser.Signature) (*Constructor, error) {
-	var inputs []TupleTypeElem
-	for _, param := range s.Inputs {
-		typ, err := p.toType(param)
-		if err != nil {
-			return nil, err
-		}
-		inputs = append(inputs, TupleTypeElem{
-			Name: param.Name,
-			Type: typ,
-		})
+func (p *Parser) ParseError(signature string) (*Error, error) {
+	errsig, err := sigparser.ParseSignature(signature)
+	if err != nil {
+		return nil, err
 	}
-	return NewConstructorWithConfig(NewTupleType(inputs...), p.Config), nil
-}
-
-// toMethod converts a sigparser.Signature to a Method.
-func (p *Parser) toMethod(s sigparser.Signature) (*Method, error) {
-	var (
-		inputs  []TupleTypeElem
-		outputs []TupleTypeElem
-	)
-	for _, param := range s.Inputs {
-		typ, err := p.toType(param)
-		if err != nil {
-			return nil, err
-		}
-		inputs = append(inputs, TupleTypeElem{
-			Name: param.Name,
-			Type: typ,
-		})
+	if !isKind(errsig.Kind, sigparser.ErrorKind, sigparser.UnknownKind) {
+		return nil, fmt.Errorf("abi: unexpected signature type for error, got %s", errsig.Kind)
 	}
-	for _, param := range s.Outputs {
-		typ, err := p.toType(param)
-		if err != nil {
-			return nil, err
-		}
-		outputs = append(outputs, TupleTypeElem{
-			Name: param.Name,
-			Type: typ,
-		})
-	}
-	return NewMethodWithConfig(
-		s.Name,
-		NewTupleType(inputs...),
-		NewTupleType(outputs...),
-		p.Config,
-	), nil
-}
-
-func (p *Parser) toEvent(s sigparser.Signature) (*Event, error) {
-	var inputs []EventTupleTypeElem
-	if len(s.Inputs) == 0 {
-		return nil, fmt.Errorf("abi: event %q has no inputs", s.Name)
-	}
-	for _, param := range s.Inputs {
-		typ, err := p.toType(param)
-		if err != nil {
-			return nil, err
-		}
-		inputs = append(inputs, EventTupleTypeElem{
-			Name:    param.Name,
-			Indexed: param.Indexed,
-			Type:    typ,
-		})
-	}
-	return NewEventWithConfig(
-		s.Name,
-		NewEventTupleType(inputs...),
-		p.Config,
-	), nil
+	return p.toError(errsig)
 }
 
 // toType converts a sigparser.Parameter to a Type.
@@ -229,6 +179,88 @@ func (p *Parser) toType(param sigparser.Parameter) (typ Type, err error) {
 		return nil, fmt.Errorf("abi: unknown type %q", param.Type)
 	}
 	return typ, nil
+}
+
+// toConstructor converts a sigparser.Signature to a Constructor.
+func (p *Parser) toConstructor(s sigparser.Signature) (*Constructor, error) {
+	var inputs []TupleTypeElem
+	for _, param := range s.Inputs {
+		typ, err := p.toType(param)
+		if err != nil {
+			return nil, err
+		}
+		inputs = append(inputs, TupleTypeElem{
+			Name: param.Name,
+			Type: typ,
+		})
+	}
+	return NewConstructorWithConfig(NewTupleType(inputs...), p.Config), nil
+}
+
+// toMethod converts a sigparser.Signature to a Method.
+func (p *Parser) toMethod(s sigparser.Signature) (*Method, error) {
+	var (
+		inputs  []TupleTypeElem
+		outputs []TupleTypeElem
+	)
+	for _, param := range s.Inputs {
+		typ, err := p.toType(param)
+		if err != nil {
+			return nil, err
+		}
+		inputs = append(inputs, TupleTypeElem{
+			Name: param.Name,
+			Type: typ,
+		})
+	}
+	for _, param := range s.Outputs {
+		typ, err := p.toType(param)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, TupleTypeElem{
+			Name: param.Name,
+			Type: typ,
+		})
+	}
+	return NewMethodWithConfig(s.Name, NewTupleType(inputs...), NewTupleType(outputs...), p.Config), nil
+}
+
+func (p *Parser) toEvent(s sigparser.Signature) (*Event, error) {
+	var inputs []EventTupleTypeElem
+	if len(s.Inputs) == 0 {
+		return nil, fmt.Errorf("abi: event %q has no inputs", s.Name)
+	}
+	for _, param := range s.Inputs {
+		typ, err := p.toType(param)
+		if err != nil {
+			return nil, err
+		}
+		inputs = append(inputs, EventTupleTypeElem{
+			Name:    param.Name,
+			Indexed: param.Indexed,
+			Type:    typ,
+		})
+	}
+	return NewEventWithConfig(s.Name, NewEventTupleType(inputs...), p.Config), nil
+}
+
+func (p *Parser) toError(s sigparser.Signature) (*Error, error) {
+	var inputs []TupleTypeElem
+	if len(s.Inputs) == 0 {
+		return nil, fmt.Errorf("abi: event %q has no inputs", s.Name)
+	}
+	for _, param := range s.Inputs {
+		typ, err := p.toType(param)
+		if err != nil {
+			return nil, err
+		}
+		inputs = append(inputs, TupleTypeElem{
+			Name: param.Name,
+			Type: typ,
+		})
+	}
+	return NewErrorWithConfig(s.Name, NewTupleType(inputs...), p.Config), nil
 }
 
 func copyParam(param sigparser.Parameter) sigparser.Parameter {

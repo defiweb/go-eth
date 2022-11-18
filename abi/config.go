@@ -61,8 +61,8 @@ func init() {
 
 	types := map[string]Type{}
 	types["bool"] = NewBoolType()
-	types["int"] = NewIntType(32)
-	types["uint"] = NewUintType(32)
+	types["int"] = NewAliasType("int", NewIntType(32))
+	types["uint"] = NewAliasType("uint", NewUintType(32))
 	types["bytes"] = NewBytesType()
 	types["string"] = NewStringType()
 	types["address"] = NewAddressType()
