@@ -33,6 +33,10 @@ func Test_fieldMapper(t *testing.T) {
 		{"Dapp", "dapp"},
 		{"DAPPName", "dappName"},
 		{"DappName", "dappName"},
+		{"DAPP1Name", "dapp1Name"},
+		{"DAPP_Name", "dapp_Name"},
+		{"I18NCode", "i18nCode"},
+		{"Int32Num", "int32Num"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -44,7 +44,7 @@ var fieldMapper = func(field string) string {
 	}
 	runes := []rune(field)
 	for i, c := range runes {
-		if unicode.IsUpper(c) && (i == 0 || i == len(runes)-1 || unicode.IsUpper(runes[i+1])) {
+		if unicode.IsUpper(c) && (i == 0 || i == len(runes)-1 || !(unicode.IsLower(runes[i+1]))) {
 			runes[i] = unicode.ToLower(c)
 		}
 		if unicode.IsLower(c) {
@@ -61,11 +61,11 @@ func init() {
 
 	types := map[string]Type{}
 	types["bool"] = NewBoolType()
-	types["int"] = NewAliasType("int", NewIntType(32))
-	types["uint"] = NewAliasType("uint", NewUintType(32))
 	types["bytes"] = NewBytesType()
 	types["string"] = NewStringType()
 	types["address"] = NewAddressType()
+	types["int"] = NewAliasType("int", NewIntType(32))
+	types["uint"] = NewAliasType("uint", NewUintType(32))
 	for i := 1; i <= 32; i++ {
 		types[fmt.Sprintf("int%d", i*8)] = NewIntType(i)
 		types[fmt.Sprintf("uint%d", i*8)] = NewUintType(i)
