@@ -154,7 +154,9 @@ func encodeFixedArray(a []Value) (Words, error) {
 func encodeBytes(b []byte) (Words, error) {
 	words := make(Words, requiredWords(len(b))+1)
 	words[0].SetInt(len(b))
-	words.SetBytesAt(1, b)
+	for i, w := range BytesToWords(b) {
+		words[i+1] = w
+	}
 	return words, nil
 }
 
@@ -215,36 +217,20 @@ func encodeBool(b bool) Words {
 	return Words{w}
 }
 
-func encodeUint32(i uint32) []byte {
-	b := make([]byte, 4)
-	b[0] = byte(i >> 24)
-	b[1] = byte(i >> 16)
-	b[2] = byte(i >> 8)
-	b[3] = byte(i)
-	return b
-}
-
-// encodeUint64 in the big endian order.
-func encodeUint64(i uint64) []byte {
-	b := make([]byte, 8)
-	b[0] = byte(i >> 56)
-	b[1] = byte(i >> 48)
-	b[2] = byte(i >> 40)
-	b[3] = byte(i >> 32)
-	b[4] = byte(i >> 24)
-	b[5] = byte(i >> 16)
-	b[6] = byte(i >> 8)
-	b[7] = byte(i)
-	return b
-}
-
 // signedBitLen returns the number of bits in the signed integer i.
 func signedBitLen(x *big.Int) int {
 	if x == nil || x.Sign() == 0 {
 		return 0
 	}
+	bitLen := x.BitLen()
 	if x.Sign() < 0 {
-		return new(big.Int).Not(x).BitLen() + 1
+		// Check if the binary representation of the number is equal to
+		// x^2. If so, the bit length for negative numbers is one bit
+		// shorter.
+		if x.TrailingZeroBits() == uint(bitLen-1) {
+			return bitLen
+		}
+		return bitLen + 1
 	}
-	return x.BitLen() + 1
+	return bitLen + 1
 }

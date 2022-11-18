@@ -135,14 +135,6 @@ func NewArray(typ Type) *ArrayValue {
 	return &ArrayValue{typ: typ}
 }
 
-func NewArrayOfElements(elems ...Value) *ArrayValue {
-	return &ArrayValue{elems: elems}
-}
-
-func NewArrayOfSize(size int) *ArrayValue {
-	return &ArrayValue{elems: make([]Value, size)}
-}
-
 func (a *ArrayValue) Length() int {
 	return len(a.elems)
 }
@@ -302,14 +294,6 @@ func (b *BytesValue) Hex() string {
 	return hexutil.BytesToHex(b.data)
 }
 
-func (b *BytesValue) BigInt() *big.Int {
-	return new(big.Int).SetBytes(b.data)
-}
-
-func (b *BytesValue) Uint64() (uint64, error) {
-	return decodeUint64(b.data)
-}
-
 func (b *BytesValue) SetBytes(d []byte) {
 	b.data = d
 }
@@ -325,18 +309,6 @@ func (b *BytesValue) SetHex(s string) error {
 	}
 	b.data = data
 	return nil
-}
-
-func (b *BytesValue) SetBigInt(i *big.Int) {
-	if i == nil || i.Sign() == 0 {
-		*b = BytesValue{}
-		return
-	}
-	b.data = i.Bytes()
-}
-
-func (b *BytesValue) SetUint64(i uint64) {
-	b.data = encodeUint64(i)
 }
 
 func (b *BytesValue) DynamicType() bool {
@@ -434,14 +406,6 @@ func (b *FixedBytesValue) Hex() string {
 	return hexutil.BytesToHex(b.data)
 }
 
-func (b *FixedBytesValue) BigInt() *big.Int {
-	return new(big.Int).SetBytes(b.data)
-}
-
-func (b *FixedBytesValue) Uint64() (uint64, error) {
-	return decodeUint64(b.data)
-}
-
 func (b *FixedBytesValue) SetBytesPadRight(d []byte) error {
 	if len(d) > len(b.data) {
 		return fmt.Errorf("abi: cannot set %d bytes into bytes%d", len(d), len(b.data))
@@ -474,14 +438,6 @@ func (b *FixedBytesValue) SetHex(s string) error {
 		return err
 	}
 	return b.SetBytesPadLeft(data)
-}
-
-func (b *FixedBytesValue) SetBigInt(i *big.Int) error {
-	return b.SetBytesPadLeft(i.Bytes())
-}
-
-func (b *FixedBytesValue) SetUint64(i uint64) error {
-	return b.SetBytesPadLeft(encodeUint64(i))
 }
 
 func (b *FixedBytesValue) DynamicType() bool {

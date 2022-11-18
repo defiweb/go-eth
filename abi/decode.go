@@ -181,27 +181,3 @@ func decodeBool(a *bool, w Words) (int, error) {
 	*a = w[0].IsZero() == false
 	return 1, nil
 }
-
-func decodeUint32(b []byte) (uint32, error) {
-	if len(b) > 4 {
-		return 0, fmt.Errorf("abi: cannot decode uint32, value too large")
-	}
-	var i uint32
-	for _, v := range b {
-		i <<= 8
-		i |= uint32(v)
-	}
-	return i, nil
-}
-
-func decodeUint64(b []byte) (uint64, error) {
-	if len(b) > 8 {
-		return 0, fmt.Errorf("abi: cannot decode uint64, value too large")
-	}
-	var i uint64
-	for _, v := range b {
-		i <<= 8
-		i |= uint64(v)
-	}
-	return i, nil
-}
