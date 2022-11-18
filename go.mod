@@ -6,7 +6,7 @@ require (
 	github.com/btcsuite/btcd v0.22.1
 	github.com/defiweb/go-anymapper v0.0.0-20221115195659-a8e423551a98
 	github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937
-	github.com/defiweb/go-sigparser v0.0.0-20221111060017-dbd0de2ae5ae
+	github.com/defiweb/go-sigparser v0.0.0-20221118124113-9bb2ac0f9646
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/crypto v0.1.0
 )

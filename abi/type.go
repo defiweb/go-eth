@@ -5,7 +5,8 @@ import (
 	"strings"
 )
 
-// Type represents an ABI type.
+// Type represents an ABI type. A type cannot have a value, but can be used to
+// create values.
 type Type interface {
 	// New returns a new zero value of this type.
 	New() Value

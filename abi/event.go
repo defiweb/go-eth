@@ -108,6 +108,9 @@ func (e *Event) generateSignature() {
 }
 
 func (e *Event) mergeData(topics []types.Hash, data []byte) []byte {
+	if len(topics) == 0 {
+		return data
+	}
 	merged := make([]byte, len(topics)*types.HashLength+len(data))
 	for i, topic := range topics {
 		copy(merged[i*types.HashLength:], topic[:])

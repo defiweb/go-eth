@@ -15,6 +15,8 @@ github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937 h1:R/f+QShq/LjTQE34
 github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937/go.mod h1:nLGzk10jAgynPvN2hL+tLnnyZ5Fcshv0wmpWDRtV0PA=
 github.com/defiweb/go-sigparser v0.0.0-20221111060017-dbd0de2ae5ae h1:/H5ak6xMOnCvYs4h4nzOVCJDUTmBdsTHCxv2Brdi4qI=
 github.com/defiweb/go-sigparser v0.0.0-20221111060017-dbd0de2ae5ae/go.mod h1:R1wkfsnASR2M38ZupKHoqqIfv+8HgRbZaFQI9Inr4k8=
+github.com/defiweb/go-sigparser v0.0.0-20221118124113-9bb2ac0f9646 h1:/3M77RtHcCbHPe5KfORG0uB76bCNxsNniaVw1KAuOnI=
+github.com/defiweb/go-sigparser v0.0.0-20221118124113-9bb2ac0f9646/go.mod h1:R1wkfsnASR2M38ZupKHoqqIfv+8HgRbZaFQI9Inr4k8=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
