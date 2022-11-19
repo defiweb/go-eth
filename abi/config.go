@@ -64,11 +64,11 @@ func init() {
 	types["bytes"] = NewBytesType()
 	types["string"] = NewStringType()
 	types["address"] = NewAddressType()
-	types["int"] = NewAliasType("int", NewIntType(32))
-	types["uint"] = NewAliasType("uint", NewUintType(32))
+	types["int"] = NewAliasType("int", NewIntType(256))
+	types["uint"] = NewAliasType("uint", NewUintType(256))
 	for i := 1; i <= 32; i++ {
-		types[fmt.Sprintf("int%d", i*8)] = NewIntType(i)
-		types[fmt.Sprintf("uint%d", i*8)] = NewUintType(i)
+		types[fmt.Sprintf("int%d", i*8)] = NewIntType(i * 8)
+		types[fmt.Sprintf("uint%d", i*8)] = NewUintType(i * 8)
 		types[fmt.Sprintf("bytes%d", i)] = NewFixedBytesType(i)
 	}
 

@@ -69,15 +69,14 @@ func (t *TupleType) Elements() []TupleTypeElem {
 }
 
 func (t *TupleType) New() Value {
-	v := &TupleValue{
-		elems: make([]Value, len(t.elems)),
-		names: make([]string, len(t.elems)),
-	}
+	v := &TupleValue{elems: make([]TupleValueElem, len(t.elems))}
 	for i, elem := range t.elems {
-		v.elems[i] = elem.Type.New()
-		v.names[i] = elem.Name
+		v.elems[i] = TupleValueElem{
+			Name:  elem.Name,
+			Value: elem.Type.New(),
+		}
 		if len(elem.Name) == 0 {
-			v.names[i] = fmt.Sprintf("arg%d", i)
+			v.elems[i].Name = fmt.Sprintf("arg%d", i)
 		}
 	}
 	return v
@@ -114,18 +113,18 @@ func (t *TupleType) CanonicalType() string {
 }
 
 type EventTupleType struct {
-	elems   []EventTupleTypeElem
+	elems   []EventTupleElem
 	indexed int
 }
 
-type EventTupleTypeElem struct {
+type EventTupleElem struct {
 	Name    string
 	Indexed bool
 	Type    Type
 }
 
 // NewEventTupleType creates a new tuple type with the given elements.
-func NewEventTupleType(elems ...EventTupleTypeElem) *EventTupleType {
+func NewEventTupleType(elems ...EventTupleElem) *EventTupleType {
 	indexed := 0
 	for _, elem := range elems {
 		if elem.Indexed {
@@ -147,17 +146,14 @@ func (t *EventTupleType) DataSize() int {
 	return len(t.elems) - t.indexed
 }
 
-func (t *EventTupleType) Elements() []EventTupleTypeElem {
-	cpy := make([]EventTupleTypeElem, len(t.elems))
+func (t *EventTupleType) Elements() []EventTupleElem {
+	cpy := make([]EventTupleElem, len(t.elems))
 	copy(cpy, t.elems)
 	return cpy
 }
 
 func (t *EventTupleType) New() Value {
-	v := &TupleValue{
-		elems: make([]Value, len(t.elems)),
-		names: make([]string, len(t.elems)),
-	}
+	v := &TupleValue{elems: make([]TupleValueElem, len(t.elems))}
 	// Fills tuple in such a way that indexed fields are first.
 	dataIdx, topicIdx := 0, 0
 	for _, elem := range t.elems {
@@ -169,13 +165,15 @@ func (t *EventTupleType) New() Value {
 			idx = dataIdx + t.indexed
 			dataIdx++
 		}
-		v.elems[idx] = elem.Type.New()
-		v.names[idx] = elem.Name
+		v.elems[idx] = TupleValueElem{
+			Name:  elem.Name,
+			Value: elem.Type.New(),
+		}
 		if len(elem.Name) == 0 {
 			if elem.Indexed {
-				v.names[idx] = fmt.Sprintf("topic%d", topicIdx)
+				v.elems[idx].Name = fmt.Sprintf("topic%d", topicIdx)
 			} else {
-				v.names[idx] = fmt.Sprintf("data%d", dataIdx-1)
+				v.elems[idx].Name = fmt.Sprintf("data%d", dataIdx-1)
 			}
 		}
 	}
@@ -342,7 +340,7 @@ type UintType struct{ size int }
 // NewUintType creates a new "uint" type with the given size. The size is in
 // bytes and must be between 1 and 32.
 func NewUintType(size int) *UintType {
-	if size < 0 || size > 32 {
+	if size < 0 || size > 256 || size%8 != 0 {
 		panic(fmt.Errorf("abi: invalid uint size %d", size))
 	}
 	return &UintType{size: size}
@@ -369,7 +367,7 @@ type IntType struct{ size int }
 // NewIntType creates a new "int" type with the given size. The size is in
 // bytes and must be between 1 and 32.
 func NewIntType(size int) *IntType {
-	if size < 0 || size > 32 {
+	if size < 0 || size > 256 || size%8 != 0 {
 		panic(fmt.Errorf("abi: invalid int size %d", size))
 	}
 	return &IntType{size: size}

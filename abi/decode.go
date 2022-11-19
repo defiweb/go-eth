@@ -155,7 +155,7 @@ func decodeInt(i *big.Int, w Words) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode int from empty value")
 	}
-	i.Set(w[0].SignedBigInt())
+	i.Set(w[0].BigInt())
 	return 1, nil
 }
 
@@ -163,7 +163,7 @@ func decodeUint(i *big.Int, w Words) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode int from empty value")
 	}
-	i.Set(w[0].UnsignedBigInt())
+	i.Set(w[0].UBigInt())
 	return 1, nil
 }
 

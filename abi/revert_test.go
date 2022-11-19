@@ -9,6 +9,10 @@ import (
 	"github.com/defiweb/go-eth/hexutil"
 )
 
+func TestRevertPrefix(t *testing.T) {
+	assert.Equal(t, revertPrefix, Revert.FourBytes())
+}
+
 func TestDecodeRevert(t *testing.T) {
 	tests := []struct {
 		data    []byte

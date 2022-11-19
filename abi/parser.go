@@ -227,7 +227,7 @@ func (p *Parser) toMethod(s sigparser.Signature) (*Method, error) {
 }
 
 func (p *Parser) toEvent(s sigparser.Signature) (*Event, error) {
-	var inputs []EventTupleTypeElem
+	var inputs []EventTupleElem
 	if len(s.Inputs) == 0 {
 		return nil, fmt.Errorf("abi: event %q has no inputs", s.Name)
 	}
@@ -236,7 +236,7 @@ func (p *Parser) toEvent(s sigparser.Signature) (*Event, error) {
 		if err != nil {
 			return nil, err
 		}
-		inputs = append(inputs, EventTupleTypeElem{
+		inputs = append(inputs, EventTupleElem{
 			Name:    param.Name,
 			Indexed: param.Indexed,
 			Type:    typ,

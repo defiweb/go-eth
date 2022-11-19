@@ -269,7 +269,7 @@ func TestWord_Uint64(t *testing.T) {
 	}
 }
 
-func TestWord_SignedBigInt(t *testing.T) {
+func TestWord_BigInt(t *testing.T) {
 	tests := []struct {
 		arg  Word
 		want *big.Int
@@ -293,13 +293,13 @@ func TestWord_SignedBigInt(t *testing.T) {
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			got := tt.arg.SignedBigInt()
+			got := tt.arg.BigInt()
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func TestWord_UnsignedBigInt(t *testing.T) {
+func TestWord_UBigInt(t *testing.T) {
 	tests := []struct {
 		arg  Word
 		want *big.Int
@@ -315,7 +315,7 @@ func TestWord_UnsignedBigInt(t *testing.T) {
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.arg.UnsignedBigInt())
+			assert.Equal(t, tt.want, tt.arg.UBigInt())
 		})
 	}
 }
@@ -349,6 +349,56 @@ func TestWords_SetBytes(t *testing.T) {
 			var got Words
 			got.SetBytes(tt.arg)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestWord_LeadingZeros(t *testing.T) {
+	tests := []struct {
+		arg  Word
+		want int
+	}{
+		{
+			arg:  hexToWord("0x0000000000000000000000000000000000000000000000000000000000000000"),
+			want: 256,
+		},
+		{
+			arg:  hexToWord("0x0000000000000000000000000000000000000000000000000000000000000001"),
+			want: 255,
+		},
+		{
+			arg:  hexToWord("0x8000000000000000000000000000000000000000000000000000000000000000"),
+			want: 0,
+		},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.arg.LeadingZeros())
+		})
+	}
+}
+
+func TestWord_TrailingZeros(t *testing.T) {
+	tests := []struct {
+		arg  Word
+		want int
+	}{
+		{
+			arg:  hexToWord("0x0000000000000000000000000000000000000000000000000000000000000000"),
+			want: 256,
+		},
+		{
+			arg:  hexToWord("0x0000000000000000000000000000000000000000000000000000000000000001"),
+			want: 0,
+		},
+		{
+			arg:  hexToWord("0x8000000000000000000000000000000000000000000000000000000000000000"),
+			want: 255,
+		},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.arg.TrailingZeros())
 		})
 	}
 }

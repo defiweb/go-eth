@@ -178,8 +178,8 @@ func encodeFixedBytes(b []byte) (Words, error) {
 func encodeInt(i *big.Int, size int) (Words, error) {
 	w := Word{}
 	bitLen := signedBitLen(i)
-	if bitLen > size*8 {
-		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into int%d", bitLen, size*8)
+	if bitLen > size {
+		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into int%d", bitLen, size)
 	}
 	if err := w.SetBigInt(i); err != nil {
 		return Words{w}, err
@@ -193,11 +193,11 @@ func encodeInt(i *big.Int, size int) (Words, error) {
 func encodeUint(i *big.Int, size int) (Words, error) {
 	w := Word{}
 	if i.Sign() < 0 {
-		return Words{w}, fmt.Errorf("abi: cannot encode negative integer to uint%d", size*8)
+		return Words{w}, fmt.Errorf("abi: cannot encode negative integer to uint%d", size)
 	}
 	bitLen := i.BitLen()
-	if bitLen > size*8 {
-		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into uint%d", bitLen, size*8)
+	if bitLen > size {
+		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into uint%d", bitLen, size)
 	}
 	if err := w.SetBigInt(i); err != nil {
 		return Words{w}, err

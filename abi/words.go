@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"math/bits"
 
 	"github.com/defiweb/go-eth/hexutil"
 )
@@ -13,9 +14,6 @@ const WordLength = 32
 
 // Word represents a 32-bytes EVM word.
 type Word [WordLength]byte
-
-// Words is a slice of words.
-type Words []Word
 
 var (
 	MaxInt256  = new(big.Int).Sub(pow255, big.NewInt(1)) // 2^255 - 1
@@ -34,7 +32,7 @@ func BytesToWords(b []byte) []Word {
 // SetBytesPadRight sets the word to the given bytes, padded on the right.
 func (w *Word) SetBytesPadRight(b []byte) error {
 	if len(b) > WordLength {
-		return fmt.Errorf("abi: cannot set %d bytes to a word of length %d", len(b), WordLength)
+		return fmt.Errorf("abi: cannot set %d-byte data to a %d-byte word", len(b), WordLength)
 	}
 	for i := len(b); i < WordLength; i++ {
 		w[i] = 0
@@ -46,7 +44,7 @@ func (w *Word) SetBytesPadRight(b []byte) error {
 // SetBytesPadLeft sets the word to the given bytes, padded on the left.
 func (w *Word) SetBytesPadLeft(b []byte) error {
 	if len(b) > WordLength {
-		return fmt.Errorf("abi: cannot set %d bytes to a word of length %d", len(b), WordLength)
+		return fmt.Errorf("abi: cannot set %d-byte data to a %d-byte word", len(b), WordLength)
 	}
 	for i := 0; i < WordLength-len(b); i++ {
 		w[i] = 0
@@ -80,17 +78,15 @@ func (w *Word) SetBigInt(i *big.Int) error {
 	if i == nil || i.Sign() == 0 {
 		*w = Word{}
 	}
+	var bitLen int
 	if i.Sign() < 0 {
-		bitLen := signedBitLen(i)
+		bitLen = signedBitLen(i)
 		i = new(big.Int).Set(i).And(i, MaxUint256)
-		if bitLen > 256 {
-			return fmt.Errorf("abi: cannot set %d-bit integer to a word of length 256", bitLen)
-		}
 	} else {
-		bitLen := i.BitLen()
-		if bitLen > 256 {
-			return fmt.Errorf("abi: cannot set %d-bit integer to a word of length 256", bitLen)
-		}
+		bitLen = i.BitLen()
+	}
+	if bitLen > 256 {
+		return fmt.Errorf("abi: cannot set %d-bit integer to a %d-bit word", bitLen, WordLength*8)
 	}
 	return w.SetBytesPadLeft(i.Bytes())
 }
@@ -107,11 +103,12 @@ func (w Word) Hex() string {
 // Int returns the word as an int. If the word is larger than the maximum
 // integer size, an error is returned.
 func (w Word) Int() (int, error) {
-	i, err := w.Int64()
-	if err != nil {
-		return 0, err
+	bn := w.BigInt()
+	if !bn.IsInt64() {
+		return 0, fmt.Errorf("abi: int overflow")
 	}
-	if i > math.MaxInt || i < math.MinInt {
+	i := bn.Int64()
+	if i > math.MaxInt {
 		return 0, fmt.Errorf("abi: int overflow")
 	}
 	return int(i), nil
@@ -120,10 +117,11 @@ func (w Word) Int() (int, error) {
 // Uint returns the word as an uint. If the word is larger than the maximum
 // integer size, an error is returned.
 func (w Word) Uint() (uint, error) {
-	i, err := w.Uint64()
-	if err != nil {
-		return 0, err
+	bn := w.UBigInt()
+	if !bn.IsUint64() {
+		return 0, fmt.Errorf("abi: uint overflow")
 	}
+	i := bn.Uint64()
 	if i > math.MaxUint {
 		return 0, fmt.Errorf("abi: uint overflow")
 	}
@@ -133,7 +131,7 @@ func (w Word) Uint() (uint, error) {
 // Int64 returns the word as an int. If the word is larger than the maximum
 // integer size, an error is returned.
 func (w Word) Int64() (int64, error) {
-	bn := w.SignedBigInt()
+	bn := w.BigInt()
 	if !bn.IsInt64() {
 		return 0, fmt.Errorf("abi: int64 overflow")
 	}
@@ -143,15 +141,15 @@ func (w Word) Int64() (int64, error) {
 // Uint64 returns the word as an uint64. If the word is larger than the maximum
 // uint64 size, an error is returned.
 func (w Word) Uint64() (uint64, error) {
-	bn := w.UnsignedBigInt()
+	bn := w.UBigInt()
 	if !bn.IsUint64() {
 		return 0, fmt.Errorf("abi: uint64 overflow")
 	}
 	return bn.Uint64(), nil
 }
 
-// SignedBigInt returns the words as a signed big integer.
-func (w *Word) SignedBigInt() *big.Int {
+// BigInt returns word as a signed big integer.
+func (w *Word) BigInt() *big.Int {
 	i := new(big.Int).SetBytes(w.Bytes())
 	if i.Cmp(MaxInt256) > 0 {
 		i.Add(MaxUint256, big.NewInt(0).Neg(i))
@@ -161,8 +159,8 @@ func (w *Word) SignedBigInt() *big.Int {
 	return i
 }
 
-// UnsignedBigInt returns the words as an unsigned big integer.
-func (w *Word) UnsignedBigInt() *big.Int {
+// UBigInt returns word as an unsigned big integer.
+func (w *Word) UBigInt() *big.Int {
 	return new(big.Int).SetBytes(w.Bytes())
 }
 
@@ -175,6 +173,29 @@ func (w Word) IsZero() bool {
 	}
 	return true
 }
+
+// LeadingZeros returns the number of leading zero bits.
+func (w Word) LeadingZeros() int {
+	for i, b := range w {
+		if b != 0 {
+			return i*8 + bits.LeadingZeros8(b)
+		}
+	}
+	return WordLength * 8
+}
+
+// TrailingZeros returns the number of trailing zero bits.
+func (w Word) TrailingZeros() int {
+	for i := len(w) - 1; i >= 0; i-- {
+		if w[i] != 0 {
+			return (len(w)-i-1)*8 + bits.TrailingZeros8(w[i])
+		}
+	}
+	return WordLength * 8
+}
+
+// Words is a slice of words.
+type Words []Word
 
 // SetBytes sets the words to the given bytes.
 func (w *Words) SetBytes(b []byte) {

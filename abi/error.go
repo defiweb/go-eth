@@ -57,7 +57,7 @@ func (m *Error) DecodeValue(data []byte, val any) error {
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
-	return NewDecoder(m.config).DecodeValue(m.inputs.New(), data, val)
+	return NewDecoder(m.config).DecodeValue(m.inputs.New(), data[4:], val)
 }
 
 func (m *Error) DecodeValues(data []byte, vals ...any) error {
@@ -67,7 +67,7 @@ func (m *Error) DecodeValues(data []byte, vals ...any) error {
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
-	return NewDecoder(m.config).DecodeValues(m.inputs.New().(*TupleValue), data, vals...)
+	return NewDecoder(m.config).DecodeValues(m.inputs.New().(*TupleValue), data[4:], vals...)
 }
 
 func (m *Error) String() string {

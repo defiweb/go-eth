@@ -26,61 +26,56 @@ type Value interface {
 }
 
 type TupleValue struct {
-	elems []Value
-	names []string
+	elems []TupleValueElem
+}
+
+type TupleValueElem struct {
+	Value Value
+	Name  string
+}
+
+func NewTupleValue(elems ...TupleValueElem) *TupleValue {
+	return &TupleValue{elems: elems}
 }
 
 func (t *TupleValue) Size() int {
 	return len(t.elems)
 }
 
-func (t *TupleValue) Elements() []Value {
+func (t *TupleValue) Elements() []TupleValueElem {
 	return t.elems
 }
 
-func (t *TupleValue) Names() []string {
-	return t.names
-}
-
-func (t *TupleValue) Map() map[string]any {
-	m := make(map[string]any)
-	for i, name := range t.names {
-		m[name] = t.elems[i]
+func (t *TupleValue) Map() map[string]Value {
+	m := make(map[string]Value)
+	for _, elem := range t.elems {
+		m[elem.Name] = elem.Value
 	}
 	return m
 }
 
-func (t *TupleValue) Add(name string, v Value) {
-	t.elems = append(t.elems, v)
-	t.names = append(t.names, name)
-}
-
-func (t *TupleValue) Set(idx int, name string, typ Value) error {
+func (t *TupleValue) Elem(idx int) TupleValueElem {
 	if idx < 0 || idx >= len(t.elems) {
-		return fmt.Errorf("abi: index out of range: %d", idx)
-	}
-	t.names[idx] = name
-	t.elems[idx] = typ
-	return nil
-}
-
-func (t *TupleValue) Get(idx int) Value {
-	if idx < 0 || idx >= len(t.elems) {
-		return nil
+		return TupleValueElem{}
 	}
 	return t.elems[idx]
 }
 
-func (t *TupleValue) GetName(idx int) string {
+func (t *TupleValue) AddElem(elem TupleValueElem) {
+	t.elems = append(t.elems, elem)
+}
+
+func (t *TupleValue) SetElem(idx int, elem TupleValueElem) error {
 	if idx < 0 || idx >= len(t.elems) {
-		return ""
+		return fmt.Errorf("abi: index out of range: %d", idx)
 	}
-	return t.names[idx]
+	t.elems[idx] = elem
+	return nil
 }
 
 func (t *TupleValue) DynamicType() bool {
-	for _, p := range t.elems {
-		if p.DynamicType() {
+	for _, elem := range t.elems {
+		if elem.Value.DynamicType() {
 			return true
 		}
 	}
@@ -88,11 +83,19 @@ func (t *TupleValue) DynamicType() bool {
 }
 
 func (t *TupleValue) EncodeABI() (Words, error) {
-	return encodeTuple(t.elems)
+	elems := make([]Value, len(t.elems))
+	for i, elem := range t.elems {
+		elems[i] = elem.Value
+	}
+	return encodeTuple(elems)
 }
 
 func (t *TupleValue) DecodeABI(words Words) (int, error) {
-	return decodeTuple(&t.elems, words)
+	elems := make([]Value, len(t.elems))
+	for i, elem := range t.elems {
+		elems[i] = elem.Value
+	}
+	return decodeTuple(&elems, words)
 }
 
 func (t *TupleValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
@@ -108,6 +111,10 @@ type ArrayValue struct {
 	typ   Type
 }
 
+func NewArrayValue(typ Type, elems ...Value) *ArrayValue {
+	return &ArrayValue{elems: elems, typ: typ}
+}
+
 func (a *ArrayValue) Length() int {
 	return len(a.elems)
 }
@@ -120,26 +127,23 @@ func (a *ArrayValue) Type() Type {
 	return a.typ
 }
 
-func (a *ArrayValue) Add(v Value) {
+func (a *ArrayValue) Elem(idx int) Value {
+	if idx < 0 || idx >= len(a.elems) {
+		return nil
+	}
+	return a.elems[idx]
+}
+
+func (a *ArrayValue) AddElem(v Value) {
 	a.elems = append(a.elems, v)
 }
 
-func (a *ArrayValue) Set(idx int, v Value) error {
+func (a *ArrayValue) SetElem(idx int, v Value) error {
 	if idx < 0 || idx >= len(a.elems) {
 		return fmt.Errorf("abi: array index out of bounds")
 	}
 	a.elems[idx] = v
 	return nil
-}
-
-func (a *ArrayValue) Get(idx int) (Value, error) {
-	if idx < 0 || idx >= len(a.elems) {
-		return nil, fmt.Errorf("abi: array index out of bounds")
-	}
-	if len(a.elems) == 0 {
-		return nil, nil
-	}
-	return a.elems[idx], nil
 }
 
 func (a *ArrayValue) DynamicType() bool {
@@ -174,6 +178,10 @@ type FixedArrayValue struct {
 	typ   Type
 }
 
+func NewFixedArrayValue(typ Type, size int) *FixedArrayValue {
+	return &FixedArrayValue{elems: make([]Value, size), typ: typ}
+}
+
 func (a *FixedArrayValue) Size() int {
 	return len(a.elems)
 }
@@ -186,22 +194,19 @@ func (a *FixedArrayValue) Type() Type {
 	return a.typ
 }
 
-func (a *FixedArrayValue) Set(idx int, v Value) error {
+func (a *FixedArrayValue) Elem(idx int) Value {
+	if idx < 0 || idx >= len(a.elems) {
+		return nil
+	}
+	return a.elems[idx]
+}
+
+func (a *FixedArrayValue) SetElem(idx int, v Value) error {
 	if idx < 0 || idx >= len(a.elems) {
 		return fmt.Errorf("abi: array index out of bounds")
 	}
 	a.elems[idx] = v
 	return nil
-}
-
-func (a *FixedArrayValue) Get(idx int) (Value, error) {
-	if idx < 0 || idx >= len(a.elems) {
-		return nil, fmt.Errorf("abi: array index out of bounds")
-	}
-	if len(a.elems) == 0 {
-		return nil, nil
-	}
-	return a.elems[idx], nil
 }
 
 func (a *FixedArrayValue) DynamicType() bool {
@@ -235,6 +240,10 @@ func (a *FixedArrayValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error
 
 type BytesValue struct {
 	data []byte
+}
+
+func NewBytesValue() *BytesValue {
+	return &BytesValue{}
 }
 
 func (b *BytesValue) Length() int {
@@ -294,6 +303,10 @@ type StringValue struct {
 	data []byte
 }
 
+func NewStringValue() *StringValue {
+	return &StringValue{}
+}
+
 func (s *StringValue) Length() int {
 	return len(s.data)
 }
@@ -336,6 +349,10 @@ func (s *StringValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 
 type FixedBytesValue struct {
 	data []byte
+}
+
+func NewFixedBytesValue(size int) *FixedBytesValue {
+	return &FixedBytesValue{data: make([]byte, size)}
 }
 
 func (b *FixedBytesValue) Size() int {
@@ -393,28 +410,47 @@ func (b *FixedBytesValue) DynamicType() bool {
 }
 
 func (b *FixedBytesValue) EncodeABI() (Words, error) {
+	if len(b.data) == 0 {
+		return nil, fmt.Errorf("abi: invalid size, use NewFixedBytesType() to create a new FixedBytesValue")
+	}
 	return encodeFixedBytes(b.data)
 }
 
 func (b *FixedBytesValue) DecodeABI(data Words) (int, error) {
+	if len(b.data) == 0 {
+		return 0, fmt.Errorf("abi: invalid size, use NewFixedBytesType() to create a new FixedBytesValue")
+	}
 	return decodeFixedBytes(&b.data, data, len(b.data))
 }
 
 func (b *FixedBytesValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
+	if len(b.data) == 0 {
+		return fmt.Errorf("abi: invalid size, use NewFixedBytesType() to create a new FixedBytesValue")
+	}
 	var data []byte
-	if err := m.MapRefl(src, reflect.ValueOf(&b)); err != nil {
+	if err := m.MapRefl(src, reflect.ValueOf(&data)); err != nil {
 		return err
 	}
-	return b.SetBytesPadLeft(data)
+	return b.SetBytesPadRight(data)
 }
 
 func (b *FixedBytesValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+	if len(b.data) == 0 {
+		return fmt.Errorf("abi: invalid size, use NewFixedBytesType() to create a new FixedBytesValue")
+	}
 	return m.MapRefl(reflect.ValueOf(&b.data), dest)
 }
 
 type UintValue struct {
 	val  *big.Int
 	size int
+}
+
+func NewUintValue(size int) *UintValue {
+	if size < 8 || size > 256 || size%8 != 0 {
+		panic(fmt.Sprintf("abi: invalid size %d for uint", size))
+	}
+	return &UintValue{val: new(big.Int), size: size}
 }
 
 func (u *UintValue) Bytes() []byte {
@@ -429,16 +465,20 @@ func (u *UintValue) Hex() string {
 	return hexutil.BigIntToHex(u.val)
 }
 
+func (u *UintValue) BigInt() *big.Int {
+	return u.val
+}
+
 func (u *UintValue) Uint64() (uint64, error) {
-	if u.size > 8 {
-		return 0, fmt.Errorf("abi: cannot convert uint%d to uint64", u.size*8)
+	if u.size > 64 {
+		return 0, fmt.Errorf("abi: cannot convert uint%d to uint64", u.size)
 	}
 	return u.val.Uint64(), nil
 }
 
 func (u *UintValue) SetBytes(d []byte) error {
-	if len(d) > u.size {
-		return fmt.Errorf("abi: cannot set %d bytes into uint%d", len(d), u.size*8)
+	if len(d)*8 > u.size {
+		return fmt.Errorf("abi: cannot set %d bytes into uint%d", len(d), u.size)
 	}
 	u.val.SetBytes(d)
 	return nil
@@ -453,8 +493,8 @@ func (u *UintValue) SetHex(s string) error {
 }
 
 func (u *UintValue) SetBigInt(i *big.Int) error {
-	if i.BitLen() > u.size*8 {
-		return fmt.Errorf("abi: cannot set %d-bit integer into uint%d", i.BitLen(), u.size*8)
+	if i.BitLen() > u.size {
+		return fmt.Errorf("abi: cannot set %d-bit integer into uint%d", i.BitLen(), u.size)
 	}
 	u.val.Set(i)
 	return nil
@@ -469,18 +509,34 @@ func (u *UintValue) DynamicType() bool {
 }
 
 func (u *UintValue) EncodeABI() (Words, error) {
+	if u.size == 0 {
+		return nil, fmt.Errorf("abi: invalid size, use NewUintType() to create a new UintValue")
+	}
 	return encodeUint(u.val, u.size)
 }
 
 func (u *UintValue) DecodeABI(words Words) (int, error) {
+	if u.size == 0 {
+		return 0, fmt.Errorf("abi: invalid size, use NewUintType() to create a new UintValue")
+	}
 	return decodeUint(u.val, words)
 }
 
 func (u *UintValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
-	return m.MapRefl(src, reflect.ValueOf(&u.val))
+	if u.size == 0 {
+		return fmt.Errorf("abi: invalid size, use NewUintType() to create a new UintValue")
+	}
+	var val *big.Int
+	if err := m.MapRefl(src, reflect.ValueOf(&val)); err != nil {
+		return err
+	}
+	return u.SetBigInt(val)
 }
 
 func (u *UintValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+	if u.size == 0 {
+		return fmt.Errorf("abi: invalid size, use NewUintType() to create a new UintValue")
+	}
 	return m.MapRefl(reflect.ValueOf(&u.val), dest)
 }
 
@@ -489,74 +545,105 @@ type IntValue struct {
 	size int
 }
 
-func (u *IntValue) Bytes() []byte {
-	return u.val.Bytes()
-}
-
-func (u *IntValue) String() string {
-	return u.val.String()
-}
-
-func (u *IntValue) Hex() string {
-	return hexutil.BigIntToHex(u.val)
-}
-
-func (u *IntValue) Int64() (int64, error) {
-	if u.size > 8 {
-		return 0, fmt.Errorf("abi: cannot convert int%d to int64", u.size*8)
+func NewIntValue(size int) *IntValue {
+	if size < 8 || size > 256 || size%8 != 0 {
+		panic(fmt.Sprintf("abi: invalid size %d for int", size))
 	}
-	return u.val.Int64(), nil
+	return &IntValue{val: new(big.Int), size: size}
 }
 
-func (u *IntValue) SetBytes(d []byte) error {
-	if len(d) > u.size {
-		return fmt.Errorf("abi: cannot set %d bytes into int%d", len(d), u.size*8)
+func (i *IntValue) Bytes() []byte {
+	return i.val.Bytes()
+}
+
+func (i *IntValue) String() string {
+	return i.val.String()
+}
+
+func (i *IntValue) Hex() string {
+	return hexutil.BigIntToHex(i.val)
+}
+
+func (i *IntValue) BigInt() *big.Int {
+	return i.val
+}
+
+func (i *IntValue) Int64() (int64, error) {
+	if i.size > 64 {
+		return 0, fmt.Errorf("abi: cannot convert int%d to int64", i.size)
 	}
-	u.val.SetBytes(d)
+	return i.val.Int64(), nil
+}
+
+func (i *IntValue) SetBytes(d []byte) error {
+	if len(d) > i.size {
+		return fmt.Errorf("abi: cannot set %d bytes into int%d", len(d), i.size)
+	}
+	i.val.SetBytes(d)
 	return nil
 }
 
-func (u *IntValue) SetHex(s string) error {
+func (i *IntValue) SetHex(s string) error {
 	data, err := hexutil.HexToBytes(s)
 	if err != nil {
 		return err
 	}
-	return u.SetBytes(data)
+	return i.SetBytes(data)
 }
 
-func (u *IntValue) SetBigInt(i *big.Int) error {
-	if signedBitLen(i) > u.size*8 {
-		return fmt.Errorf("abi: cannot set %d-bit integer into int%d", i.BitLen(), u.size*8)
+func (i *IntValue) SetBigInt(x *big.Int) error {
+	if signedBitLen(x) > i.size {
+		return fmt.Errorf("abi: cannot set %d-bit integer into int%d", x.BitLen(), i.size)
 	}
-	u.val.Set(i)
+	i.val.Set(x)
 	return nil
 }
 
-func (u *IntValue) SetInt64(i int64) error {
-	return u.SetBigInt(new(big.Int).SetInt64(i))
+func (i *IntValue) SetInt64(x int64) error {
+	return i.SetBigInt(new(big.Int).SetInt64(x))
 }
 
-func (u *IntValue) DynamicType() bool {
+func (i *IntValue) DynamicType() bool {
 	return false
 }
 
-func (u *IntValue) EncodeABI() (Words, error) {
-	return encodeInt(u.val, u.size)
+func (i *IntValue) EncodeABI() (Words, error) {
+	if i.size == 0 {
+		return nil, fmt.Errorf("abi: invalid size, use NewIntType() to create a new IntValue")
+	}
+	return encodeInt(i.val, i.size)
 }
 
-func (u *IntValue) DecodeABI(words Words) (int, error) {
-	return decodeInt(u.val, words)
+func (i *IntValue) DecodeABI(words Words) (int, error) {
+	if i.size == 0 {
+		return 0, fmt.Errorf("abi: invalid size, use NewIntType() to create a new IntValue")
+	}
+	return decodeInt(i.val, words)
 }
 
-func (u *IntValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
-	return m.MapRefl(src, reflect.ValueOf(&u.val))
+func (i *IntValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
+	if i.size == 0 {
+		return fmt.Errorf("abi: invalid size, use NewIntType() to create a new IntValue")
+	}
+	var val *big.Int
+	if err := m.MapRefl(src, reflect.ValueOf(&val)); err != nil {
+		return err
+	}
+	return i.SetBigInt(val)
 }
 
-func (u *IntValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
-	return m.MapRefl(reflect.ValueOf(&u.val), dest)
+func (i *IntValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+	if i.size == 0 {
+		return fmt.Errorf("abi: invalid size, use NewIntType() to create a new IntValue")
+	}
+	return m.MapRefl(reflect.ValueOf(&i.val), dest)
 }
 
 type BoolValue bool
+
+func NewBoolValue() *BoolValue {
+	return new(BoolValue)
+}
 
 func (b *BoolValue) Bool() bool {
 	return bool(*b)
@@ -579,14 +666,24 @@ func (b *BoolValue) DecodeABI(words Words) (int, error) {
 }
 
 func (b *BoolValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
-	return m.MapRefl(src, reflect.ValueOf(b))
+	var val bool
+	if err := m.MapRefl(src, reflect.ValueOf(&val)); err != nil {
+		return err
+	}
+	*b = BoolValue(val)
+	return nil
 }
 
 func (b *BoolValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
-	return m.MapRefl(reflect.ValueOf(b), dest)
+	val := bool(*b)
+	return m.MapRefl(reflect.ValueOf(val), dest)
 }
 
 type AddressValue types.Address
+
+func NewAddressValue() *AddressValue {
+	return new(AddressValue)
+}
 
 func (a *AddressValue) Address() types.Address {
 	return types.Address(*a)
@@ -623,7 +720,12 @@ func (a *AddressValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 		*a = AddressValue(addr)
 		return nil
 	}
-	return m.MapRefl(src, reflect.ValueOf(a))
+	var addr types.Address
+	if err := m.MapRefl(src, reflect.ValueOf(&addr)); err != nil {
+		return err
+	}
+	*a = AddressValue(addr)
+	return nil
 }
 
 func (a *AddressValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
@@ -631,5 +733,6 @@ func (a *AddressValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 		dest.SetString(a.Address().String())
 		return nil
 	}
-	return m.MapRefl(reflect.ValueOf(a), dest)
+	addr := types.Address(*a)
+	return m.MapRefl(reflect.ValueOf(addr), dest)
 }
