@@ -2,6 +2,7 @@ package abi
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 )
 
@@ -68,7 +69,10 @@ func (t *TupleType) Elements() []TupleTypeElem {
 }
 
 func (t *TupleType) New() Value {
-	v := NewTupleOfSize(len(t.elems))
+	v := &TupleValue{
+		elems: make([]Value, len(t.elems)),
+		names: make([]string, len(t.elems)),
+	}
 	for i, elem := range t.elems {
 		v.elems[i] = elem.Type.New()
 		v.names[i] = elem.Name
@@ -150,7 +154,10 @@ func (t *EventTupleType) Elements() []EventTupleTypeElem {
 }
 
 func (t *EventTupleType) New() Value {
-	tuple := NewTupleOfSize(len(t.elems))
+	v := &TupleValue{
+		elems: make([]Value, len(t.elems)),
+		names: make([]string, len(t.elems)),
+	}
 	// Fills tuple in such a way that indexed fields are first.
 	dataIdx, topicIdx := 0, 0
 	for _, elem := range t.elems {
@@ -162,17 +169,17 @@ func (t *EventTupleType) New() Value {
 			idx = dataIdx + t.indexed
 			dataIdx++
 		}
-		tuple.elems[idx] = elem.Type.New()
-		tuple.names[idx] = elem.Name
+		v.elems[idx] = elem.Type.New()
+		v.names[idx] = elem.Name
 		if len(elem.Name) == 0 {
 			if elem.Indexed {
-				tuple.names[idx] = fmt.Sprintf("topic%d", topicIdx)
+				v.names[idx] = fmt.Sprintf("topic%d", topicIdx)
 			} else {
-				tuple.names[idx] = fmt.Sprintf("data%d", dataIdx-1)
+				v.names[idx] = fmt.Sprintf("data%d", dataIdx-1)
 			}
 		}
 	}
-	return tuple
+	return v
 }
 
 func (t *EventTupleType) Type() string {
@@ -222,7 +229,7 @@ func (a *ArrayType) Element() Type {
 }
 
 func (a *ArrayType) New() Value {
-	return NewArray(a.typ)
+	return &ArrayValue{typ: a}
 }
 
 func (a *ArrayType) Type() string {
@@ -256,7 +263,7 @@ func (f *FixedArrayType) Element() Type {
 }
 
 func (f *FixedArrayType) New() Value {
-	return NewFixedArray(f.typ, f.size)
+	return &FixedArrayValue{typ: f, elems: make([]Value, f.size)}
 }
 
 func (f *FixedArrayType) Type() string {
@@ -275,7 +282,7 @@ func NewBytesType() *BytesType {
 }
 
 func (b *BytesType) New() Value {
-	return NewBytes()
+	return &BytesValue{}
 }
 
 func (b *BytesType) Type() string {
@@ -294,7 +301,7 @@ func NewStringType() *StringType {
 }
 
 func (s *StringType) New() Value {
-	return NewString()
+	return &StringValue{}
 }
 
 func (s *StringType) Type() string {
@@ -319,7 +326,7 @@ func (f *FixedBytesType) Size() int {
 }
 
 func (f *FixedBytesType) New() Value {
-	return NewFixedBytes(f.size)
+	return &FixedBytesValue{data: make([]byte, f.size)}
 }
 
 func (f *FixedBytesType) Type() string {
@@ -342,7 +349,7 @@ func NewUintType(size int) *UintType {
 }
 
 func (u *UintType) New() Value {
-	return NewUint(u.size)
+	return &UintValue{val: new(big.Int), size: u.size}
 }
 
 func (u *UintType) Size() int {
@@ -369,7 +376,7 @@ func NewIntType(size int) *IntType {
 }
 
 func (i *IntType) New() Value {
-	return NewInt(i.size)
+	return &IntValue{val: new(big.Int), size: i.size}
 }
 
 func (i *IntType) Size() int {
@@ -392,7 +399,7 @@ func NewBoolType() *BoolType {
 }
 
 func (b *BoolType) New() Value {
-	return NewBool()
+	return new(BoolValue)
 }
 
 func (b *BoolType) Type() string {
@@ -411,7 +418,7 @@ func NewAddressType() *AddressType {
 }
 
 func (a *AddressType) New() Value {
-	return NewAddress()
+	return new(AddressValue)
 }
 
 func (a *AddressType) Type() string {

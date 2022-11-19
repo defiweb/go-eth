@@ -2,7 +2,6 @@ package abi
 
 import (
 	"fmt"
-	"math"
 	"math/big"
 )
 
@@ -100,9 +99,6 @@ func decodeArray(a *[]Value, w Words, t Type) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if size >= math.MaxInt {
-		return 0, fmt.Errorf("abi: cannot decode array, size too large")
-	}
 	if size+1 > len(w) {
 		return 0, fmt.Errorf("abi: cannot decode array, size exceeds data length")
 	}
@@ -139,9 +135,6 @@ func decodeBytes(b *[]byte, w Words) (int, error) {
 	size, err := w[0].Int()
 	if err != nil {
 		return 0, err
-	}
-	if size >= math.MaxInt {
-		return 0, fmt.Errorf("abi: cannot decode bytes, size too large")
 	}
 	if requiredWords(size)+1 > len(w) {
 		return 0, fmt.Errorf("abi: cannot decode bytes, size exceeds data length")

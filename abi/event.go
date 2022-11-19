@@ -84,7 +84,7 @@ func (e *Event) calculateTopic0() {
 }
 
 func (e *Event) generateSignature() {
-	e.signature = fmt.Sprintf("%s%s", e.name, e.inputs.Type())
+	e.signature = fmt.Sprintf("%s%s", e.name, e.inputs.CanonicalType())
 }
 
 func (e *Event) mergeData(topics []types.Hash, data []byte) []byte {

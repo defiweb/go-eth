@@ -1,7 +1,6 @@
 package abi
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/defiweb/go-eth/crypto"
@@ -48,14 +47,14 @@ func (m *Error) Signature() string {
 }
 
 func (m *Error) Is(data []byte) bool {
-	return len(data) >= 4 && bytes.Equal(data[:4], m.fourBytes[:])
+	return m.fourBytes.Match(data)
 }
 
 func (m *Error) DecodeValue(data []byte, val any) error {
 	if len(data) < 4 {
 		return fmt.Errorf("abi: error data too short")
 	}
-	if !bytes.Equal(data[:4], m.fourBytes[:]) {
+	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
 	return NewDecoder(m.config).DecodeValue(m.inputs.New(), data, val)
@@ -65,7 +64,7 @@ func (m *Error) DecodeValues(data []byte, vals ...any) error {
 	if len(data) < 4 {
 		return fmt.Errorf("abi: error data too short")
 	}
-	if !bytes.Equal(data[:4], m.fourBytes[:]) {
+	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
 	return NewDecoder(m.config).DecodeValues(m.inputs.New().(*TupleValue), data, vals...)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
-	"strconv"
 
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
@@ -29,28 +28,6 @@ type Value interface {
 type TupleValue struct {
 	elems []Value
 	names []string
-}
-
-func NewTuple() *TupleValue {
-	return &TupleValue{}
-}
-
-func NewTupleOfSize(size int) *TupleValue {
-	return &TupleValue{
-		elems: make([]Value, size),
-		names: make([]string, size),
-	}
-}
-
-func NewTupleOfElements(elems ...Value) *TupleValue {
-	names := make([]string, len(elems))
-	for i := range elems {
-		names[i] = strconv.Itoa(i)
-	}
-	return &TupleValue{
-		elems: elems,
-		names: names,
-	}
 }
 
 func (t *TupleValue) Size() int {
@@ -131,10 +108,6 @@ type ArrayValue struct {
 	typ   Type
 }
 
-func NewArray(typ Type) *ArrayValue {
-	return &ArrayValue{typ: typ}
-}
-
 func (a *ArrayValue) Length() int {
 	return len(a.elems)
 }
@@ -201,16 +174,6 @@ type FixedArrayValue struct {
 	typ   Type
 }
 
-func NewFixedArray(typ Type, size int) *FixedArrayValue {
-	if size < 0 {
-		panic(fmt.Errorf("abi: negative array size"))
-	}
-	return &FixedArrayValue{
-		elems: make([]Value, size),
-		typ:   typ,
-	}
-}
-
 func (a *FixedArrayValue) Size() int {
 	return len(a.elems)
 }
@@ -274,10 +237,6 @@ type BytesValue struct {
 	data []byte
 }
 
-func NewBytes() *BytesValue {
-	return &BytesValue{}
-}
-
 func (b *BytesValue) Length() int {
 	return len(b.data)
 }
@@ -335,10 +294,6 @@ type StringValue struct {
 	data []byte
 }
 
-func NewString() *StringValue {
-	return &StringValue{}
-}
-
 func (s *StringValue) Length() int {
 	return len(s.data)
 }
@@ -381,13 +336,6 @@ func (s *StringValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 
 type FixedBytesValue struct {
 	data []byte
-}
-
-func NewFixedBytes(size int) *FixedBytesValue {
-	if size < 0 || size > 32 {
-		panic(fmt.Sprintf("abi: invalid fixed bytes size %d", size))
-	}
-	return &FixedBytesValue{data: make([]byte, size)}
 }
 
 func (b *FixedBytesValue) Size() int {
@@ -469,13 +417,6 @@ type UintValue struct {
 	size int
 }
 
-func NewUint(size int) *UintValue {
-	if size <= 0 || size > 32 {
-		panic(fmt.Errorf("abi: invalid uint size %d", size))
-	}
-	return &UintValue{val: new(big.Int), size: size}
-}
-
 func (u *UintValue) Bytes() []byte {
 	return u.val.Bytes()
 }
@@ -548,13 +489,6 @@ type IntValue struct {
 	size int
 }
 
-func NewInt(size int) *IntValue {
-	if size <= 0 || size > 32 {
-		panic(fmt.Errorf("abi: invalid uint size %d", size))
-	}
-	return &IntValue{val: new(big.Int), size: size}
-}
-
 func (u *IntValue) Bytes() []byte {
 	return u.val.Bytes()
 }
@@ -591,7 +525,7 @@ func (u *IntValue) SetHex(s string) error {
 }
 
 func (u *IntValue) SetBigInt(i *big.Int) error {
-	if i.BitLen() > u.size*8 {
+	if signedBitLen(i) > u.size*8 {
 		return fmt.Errorf("abi: cannot set %d-bit integer into int%d", i.BitLen(), u.size*8)
 	}
 	u.val.Set(i)
@@ -624,10 +558,6 @@ func (u *IntValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 
 type BoolValue bool
 
-func NewBool() *BoolValue {
-	return new(BoolValue)
-}
-
 func (b *BoolValue) Bool() bool {
 	return bool(*b)
 }
@@ -657,10 +587,6 @@ func (b *BoolValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 }
 
 type AddressValue types.Address
-
-func NewAddress() *AddressValue {
-	return (*AddressValue)(&types.Address{})
-}
 
 func (a *AddressValue) Address() types.Address {
 	return types.Address(*a)

@@ -4,10 +4,7 @@ import (
 	"strings"
 
 	"github.com/defiweb/go-eth/crypto"
-	"github.com/defiweb/go-eth/hexutil"
 )
-
-type FourBytes [4]byte
 
 type Method struct {
 	name    string
@@ -98,16 +95,4 @@ func (m *Method) generateSignature() {
 func (m *Method) calculateFourBytes() {
 	id := crypto.Keccak256([]byte(m.Signature()))
 	copy(m.fourBytes[:], id[:4])
-}
-
-func (f FourBytes) Bytes() []byte {
-	return f[:]
-}
-
-func (f FourBytes) Hex() string {
-	return hexutil.BytesToHex(f[:])
-}
-
-func (f FourBytes) String() string {
-	return f.Hex()
 }
