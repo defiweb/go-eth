@@ -53,7 +53,7 @@ func (e *Encoder) EncodeValues(t *TupleValue, vals ...any) ([]byte, error) {
 		return nil, fmt.Errorf("abi: expected %d values, got %d", t.Size(), len(vals))
 	}
 	for i, elem := range t.Elements() {
-		if err := e.Config.Mapper.Map(vals[i], elem); err != nil {
+		if err := e.Config.Mapper.Map(vals[i], elem.Value); err != nil {
 			return nil, err
 		}
 	}
@@ -164,8 +164,11 @@ func encodeBytes(b []byte) (Words, error) {
 //
 // The fixed-size byte sequence is encoded in a single word, padded on the
 // left if needed.
-func encodeFixedBytes(b []byte) (Words, error) {
+func encodeFixedBytes(b []byte, size int) (Words, error) {
 	word := Word{}
+	if len(b) > size {
+		return Words{}, fmt.Errorf("abi: cannot encode %d bytes to bytes%d", len(b), size)
+	}
 	if err := word.SetBytesPadLeft(b); err != nil {
 		return nil, err
 	}
@@ -177,9 +180,9 @@ func encodeFixedBytes(b []byte) (Words, error) {
 // The integer is encoded as two's complement 256-bit integer.
 func encodeInt(i *big.Int, size int) (Words, error) {
 	w := Word{}
-	bitLen := signedBitLen(i)
-	if bitLen > size {
-		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into int%d", bitLen, size)
+	b := signedBitLen(i)
+	if b > size {
+		return Words{}, fmt.Errorf("abi: cannot encode %d-bit integer to int%d", b, size)
 	}
 	if err := w.SetBigInt(i); err != nil {
 		return Words{w}, err
@@ -193,11 +196,11 @@ func encodeInt(i *big.Int, size int) (Words, error) {
 func encodeUint(i *big.Int, size int) (Words, error) {
 	w := Word{}
 	if i.Sign() < 0 {
-		return Words{w}, fmt.Errorf("abi: cannot encode negative integer to uint%d", size)
+		return Words{}, fmt.Errorf("abi: cannot encode negative integer to uint%d", size)
 	}
-	bitLen := i.BitLen()
-	if bitLen > size {
-		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit integer into uint%d", bitLen, size)
+	b := i.BitLen()
+	if b > size {
+		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit unsigned integer to uint%d", b, size)
 	}
 	if err := w.SetBigInt(i); err != nil {
 		return Words{w}, err

@@ -36,7 +36,7 @@ func (d *Decoder) DecodeValues(t *TupleValue, abi []byte, vals ...any) error {
 		return err
 	}
 	for i, elem := range t.Elements() {
-		if err := d.Config.Mapper.Map(elem, vals[i]); err != nil {
+		if err := d.Config.Mapper.Map(elem.Value, vals[i]); err != nil {
 			return err
 		}
 	}
@@ -46,14 +46,14 @@ func (d *Decoder) DecodeValues(t *TupleValue, abi []byte, vals ...any) error {
 // decodeTuple decodes a tuple from the given words and stores the result in the
 // given tuple. The tuple must contain the correct number of elements.
 func decodeTuple(t *[]Value, w Words) (int, error) {
-	if len(w) == 0 {
-		return 0, fmt.Errorf("abi: cannot decode tuple from empty data")
-	}
 	var (
 		wordIdx   int
 		wordsRead int
 	)
 	for _, e := range *t {
+		if wordIdx >= len(w) {
+			return 0, fmt.Errorf("abi: cannot decode tuple, unexpected end of data")
+		}
 		if e.DynamicType() {
 			offset, err := w[wordIdx].Int()
 			if err != nil {
@@ -114,7 +114,7 @@ func decodeArray(a *[]Value, w Words, t Type) (int, error) {
 
 func decodeFixedArray(a *[]Value, w Words, t Type, size int) (int, error) {
 	if len(w) == 0 {
-		return 0, fmt.Errorf("abi: cannot decode array[%d] from empty value", size)
+		return 0, fmt.Errorf("abi: cannot decode array[%d] from empty data", size)
 	}
 	*a = make([]Value, size)
 	for i := 0; i < size; i++ {
@@ -130,46 +130,57 @@ func decodeFixedArray(a *[]Value, w Words, t Type, size int) (int, error) {
 // result in the given byte array.
 func decodeBytes(b *[]byte, w Words) (int, error) {
 	if len(w) == 0 {
-		return 0, fmt.Errorf("abi: cannot decode bytes from empty value")
+		return 0, fmt.Errorf("abi: cannot decode bytes from empty data")
 	}
 	size, err := w[0].Int()
 	if err != nil {
 		return 0, err
 	}
-	if requiredWords(size)+1 > len(w) {
+	l := requiredWords(size)
+	if l+1 > len(w) {
 		return 0, fmt.Errorf("abi: cannot decode bytes, size exceeds data length")
 	}
-	*b = w[1:].Bytes()[0:size]
+	*b = w[1 : l+1].Bytes()[0:size]
 	return size + 1, nil
 }
 
 func decodeFixedBytes(b *[]byte, w Words, size int) (int, error) {
 	if len(w) == 0 {
-		return 0, fmt.Errorf("abi: cannot unmarshal bytes%d from empty value", size)
+		return 0, fmt.Errorf("abi: cannot decode bytes%d from empty data", size)
 	}
 	*b = w.Bytes()[0:size]
 	return 1, nil
 }
 
-func decodeInt(i *big.Int, w Words) (int, error) {
+func decodeInt(i *big.Int, w Words, size int) (int, error) {
 	if len(w) == 0 {
-		return 0, fmt.Errorf("abi: cannot decode int from empty value")
+		return 0, fmt.Errorf("abi: cannot decode int from empty data")
 	}
-	i.Set(w[0].BigInt())
+	x := w[0].BigInt()
+	b := signedBitLen(x)
+	if b > size {
+		return 0, fmt.Errorf("abi: decoded %d-bit integer, but type is int%d", b, size)
+	}
+	i.Set(x)
 	return 1, nil
 }
 
-func decodeUint(i *big.Int, w Words) (int, error) {
+func decodeUint(i *big.Int, w Words, size int) (int, error) {
 	if len(w) == 0 {
-		return 0, fmt.Errorf("abi: cannot decode int from empty value")
+		return 0, fmt.Errorf("abi: cannot decode int from empty data")
 	}
-	i.Set(w[0].UBigInt())
+	x := w[0].UBigInt()
+	b := x.BitLen()
+	if b > size {
+		return 0, fmt.Errorf("abi: decoded %d-bit integer, but type is uint%d", b, size)
+	}
+	i.Set(x)
 	return 1, nil
 }
 
 func decodeBool(a *bool, w Words) (int, error) {
 	if len(w) == 0 {
-		return 0, fmt.Errorf("abi: cannot decode bool from empty value")
+		return 0, fmt.Errorf("abi: cannot decode bool from empty data")
 	}
 	*a = w[0].IsZero() == false
 	return 1, nil

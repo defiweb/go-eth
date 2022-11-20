@@ -24,7 +24,6 @@ func Test_fieldMapper(t *testing.T) {
 		{"Abcd", "abcd"},
 		{"ABcd", "aBcd"},
 		{"ABCd", "abCd"},
-
 		{"ID", "id"},
 		{"Id", "id"},
 		{"UserID", "userID"},

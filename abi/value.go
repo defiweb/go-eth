@@ -3,9 +3,9 @@ package abi
 import (
 	"fmt"
 	"math/big"
+	"math/bits"
 	"reflect"
 
-	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
 
 	"github.com/defiweb/go-anymapper"
@@ -61,16 +61,17 @@ func (t *TupleValue) Elem(idx int) TupleValueElem {
 	return t.elems[idx]
 }
 
-func (t *TupleValue) AddElem(elem TupleValueElem) {
+func (t *TupleValue) AddElem(elem TupleValueElem) *TupleValue {
 	t.elems = append(t.elems, elem)
+	return t
 }
 
-func (t *TupleValue) SetElem(idx int, elem TupleValueElem) error {
+func (t *TupleValue) SetElem(idx int, elem TupleValueElem) *TupleValue {
 	if idx < 0 || idx >= len(t.elems) {
-		return fmt.Errorf("abi: index out of range: %d", idx)
+		panic("abi: tuple index out of bounds")
 	}
 	t.elems[idx] = elem
-	return nil
+	return t
 }
 
 func (t *TupleValue) DynamicType() bool {
@@ -134,16 +135,17 @@ func (a *ArrayValue) Elem(idx int) Value {
 	return a.elems[idx]
 }
 
-func (a *ArrayValue) AddElem(v Value) {
+func (a *ArrayValue) AddElem(v Value) *ArrayValue {
 	a.elems = append(a.elems, v)
+	return a
 }
 
-func (a *ArrayValue) SetElem(idx int, v Value) error {
+func (a *ArrayValue) SetElem(idx int, v Value) *ArrayValue {
 	if idx < 0 || idx >= len(a.elems) {
-		return fmt.Errorf("abi: array index out of bounds")
+		panic("abi: array index out of bounds")
 	}
 	a.elems[idx] = v
-	return nil
+	return a
 }
 
 func (a *ArrayValue) DynamicType() bool {
@@ -201,12 +203,12 @@ func (a *FixedArrayValue) Elem(idx int) Value {
 	return a.elems[idx]
 }
 
-func (a *FixedArrayValue) SetElem(idx int, v Value) error {
+func (a *FixedArrayValue) SetElem(idx int, v Value) *FixedArrayValue {
 	if idx < 0 || idx >= len(a.elems) {
-		return fmt.Errorf("abi: array index out of bounds")
+		panic("abi: array index out of bounds")
 	}
 	a.elems[idx] = v
-	return nil
+	return a
 }
 
 func (a *FixedArrayValue) DynamicType() bool {
@@ -258,25 +260,14 @@ func (b *BytesValue) String() string {
 	return string(b.data)
 }
 
-func (b *BytesValue) Hex() string {
-	return hexutil.BytesToHex(b.data)
-}
-
-func (b *BytesValue) SetBytes(d []byte) {
+func (b *BytesValue) SetBytes(d []byte) *BytesValue {
 	b.data = d
+	return b
 }
 
-func (b *BytesValue) SetString(s string) {
+func (b *BytesValue) SetString(s string) *BytesValue {
 	b.data = []byte(s)
-}
-
-func (b *BytesValue) SetHex(s string) error {
-	data, err := hexutil.HexToBytes(s)
-	if err != nil {
-		return err
-	}
-	b.data = data
-	return nil
+	return b
 }
 
 func (b *BytesValue) DynamicType() bool {
@@ -319,12 +310,14 @@ func (s *StringValue) String() string {
 	return string(s.data)
 }
 
-func (s *StringValue) SetBytes(v []byte) {
+func (s *StringValue) SetBytes(v []byte) *StringValue {
 	s.data = v
+	return s
 }
 
-func (s *StringValue) SetString(v string) {
+func (s *StringValue) SetString(v string) *StringValue {
 	s.data = []byte(v)
+	return s
 }
 
 func (s *StringValue) DynamicType() bool {
@@ -367,42 +360,34 @@ func (b *FixedBytesValue) String() string {
 	return string(b.data)
 }
 
-func (b *FixedBytesValue) Hex() string {
-	return hexutil.BytesToHex(b.data)
+func (b *FixedBytesValue) CanSetBytes(d []byte) bool {
+	return len(d) <= len(b.data)
 }
 
-func (b *FixedBytesValue) SetBytesPadRight(d []byte) error {
-	if len(d) > len(b.data) {
-		return fmt.Errorf("abi: cannot set %d bytes into bytes%d", len(d), len(b.data))
+func (b *FixedBytesValue) SetBytesPadRight(d []byte) *FixedBytesValue {
+	if !b.CanSetBytes(d) {
+		panic(fmt.Errorf("abi: cannot set %d bytes to bytes%d", len(d), len(b.data)))
 	}
 	copy(b.data, d)
 	for i := len(d); i < len(b.data); i++ {
 		b.data[i] = 0
 	}
-	return nil
+	return b
 }
 
-func (b *FixedBytesValue) SetBytesPadLeft(d []byte) error {
-	if len(d) > len(b.data) {
-		return fmt.Errorf("abi: cannot set %d bytes into bytes%d", len(d), len(b.data))
+func (b *FixedBytesValue) SetBytesPadLeft(d []byte) *FixedBytesValue {
+	if !b.CanSetBytes(d) {
+		panic(fmt.Errorf("abi: cannot set %d bytes to bytes%d", len(d), len(b.data)))
 	}
 	copy(b.data[len(b.data)-len(d):], d)
 	for i := 0; i < len(b.data)-len(d); i++ {
 		b.data[i] = 0
 	}
-	return nil
+	return b
 }
 
-func (b *FixedBytesValue) SetString(s string) error {
+func (b *FixedBytesValue) SetString(s string) *FixedBytesValue {
 	return b.SetBytesPadRight([]byte(s))
-}
-
-func (b *FixedBytesValue) SetHex(s string) error {
-	data, err := hexutil.HexToBytes(s)
-	if err != nil {
-		return err
-	}
-	return b.SetBytesPadLeft(data)
 }
 
 func (b *FixedBytesValue) DynamicType() bool {
@@ -410,34 +395,26 @@ func (b *FixedBytesValue) DynamicType() bool {
 }
 
 func (b *FixedBytesValue) EncodeABI() (Words, error) {
-	if len(b.data) == 0 {
-		return nil, fmt.Errorf("abi: invalid size, use NewFixedBytesType() to create a new FixedBytesValue")
-	}
-	return encodeFixedBytes(b.data)
+	return encodeFixedBytes(b.data, len(b.data))
 }
 
 func (b *FixedBytesValue) DecodeABI(data Words) (int, error) {
-	if len(b.data) == 0 {
-		return 0, fmt.Errorf("abi: invalid size, use NewFixedBytesType() to create a new FixedBytesValue")
-	}
 	return decodeFixedBytes(&b.data, data, len(b.data))
 }
 
 func (b *FixedBytesValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
-	if len(b.data) == 0 {
-		return fmt.Errorf("abi: invalid size, use NewFixedBytesType() to create a new FixedBytesValue")
-	}
 	var data []byte
 	if err := m.MapRefl(src, reflect.ValueOf(&data)); err != nil {
 		return err
 	}
-	return b.SetBytesPadRight(data)
+	if !b.CanSetBytes(data) {
+		return fmt.Errorf("abi: cannot map %d bytes to bytes%d", len(data), len(b.data))
+	}
+	b.SetBytesPadRight(data)
+	return nil
 }
 
 func (b *FixedBytesValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
-	if len(b.data) == 0 {
-		return fmt.Errorf("abi: invalid size, use NewFixedBytesType() to create a new FixedBytesValue")
-	}
 	return m.MapRefl(reflect.ValueOf(&b.data), dest)
 }
 
@@ -461,47 +438,55 @@ func (u *UintValue) String() string {
 	return u.val.String()
 }
 
-func (u *UintValue) Hex() string {
-	return hexutil.BigIntToHex(u.val)
+func (u *UintValue) IsUint64() bool {
+	return u.size <= 64
 }
 
 func (u *UintValue) BigInt() *big.Int {
 	return u.val
 }
 
-func (u *UintValue) Uint64() (uint64, error) {
-	if u.size > 64 {
-		return 0, fmt.Errorf("abi: cannot convert uint%d to uint64", u.size)
+func (u *UintValue) Uint64() uint64 {
+	if !u.IsUint64() {
+		panic(fmt.Errorf("abi: cannot convert uint%d to uint64", u.size))
 	}
-	return u.val.Uint64(), nil
+	return u.val.Uint64()
 }
 
-func (u *UintValue) SetBytes(d []byte) error {
-	if len(d)*8 > u.size {
-		return fmt.Errorf("abi: cannot set %d bytes into uint%d", len(d), u.size)
-	}
-	u.val.SetBytes(d)
-	return nil
+func (u *UintValue) CanSetBytes(x []byte) bool {
+	return len(x)*8 <= u.size
 }
 
-func (u *UintValue) SetHex(s string) error {
-	data, err := hexutil.HexToBytes(s)
-	if err != nil {
-		return err
-	}
-	return u.SetBytes(data)
+func (u *UintValue) CanSetBigInt(x *big.Int) bool {
+	return x.BitLen() <= u.size
 }
 
-func (u *UintValue) SetBigInt(i *big.Int) error {
-	if i.BitLen() > u.size {
-		return fmt.Errorf("abi: cannot set %d-bit integer into uint%d", i.BitLen(), u.size)
-	}
-	u.val.Set(i)
-	return nil
+func (u *UintValue) CanSetUint64(x uint64) bool {
+	return x <= (1<<u.size)-1
 }
 
-func (u *UintValue) SetUint64(i uint64) error {
-	return u.SetBigInt(new(big.Int).SetUint64(i))
+func (u *UintValue) SetBytes(x []byte) *UintValue {
+	if !u.CanSetBytes(x) {
+		panic(fmt.Errorf("abi: cannot set %d bytes to uint%d", len(x), u.size))
+	}
+	u.val.SetBytes(x)
+	return u
+}
+
+func (u *UintValue) SetBigInt(x *big.Int) *UintValue {
+	if !u.CanSetBigInt(x) {
+		panic(fmt.Errorf("abi: cannot set %d-bit integer to uint%d", x.BitLen(), u.size))
+	}
+	u.val.Set(x)
+	return u
+}
+
+func (u *UintValue) SetUint64(x uint64) *UintValue {
+	if !u.CanSetUint64(x) {
+		panic(fmt.Errorf("abi: cannot set %d-big integer to uint%d", bits.Len64(x), u.size))
+	}
+	u.val.Set(new(big.Int).SetUint64(x))
+	return u
 }
 
 func (u *UintValue) DynamicType() bool {
@@ -509,34 +494,26 @@ func (u *UintValue) DynamicType() bool {
 }
 
 func (u *UintValue) EncodeABI() (Words, error) {
-	if u.size == 0 {
-		return nil, fmt.Errorf("abi: invalid size, use NewUintType() to create a new UintValue")
-	}
 	return encodeUint(u.val, u.size)
 }
 
 func (u *UintValue) DecodeABI(words Words) (int, error) {
-	if u.size == 0 {
-		return 0, fmt.Errorf("abi: invalid size, use NewUintType() to create a new UintValue")
-	}
-	return decodeUint(u.val, words)
+	return decodeUint(u.val, words, u.size)
 }
 
 func (u *UintValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
-	if u.size == 0 {
-		return fmt.Errorf("abi: invalid size, use NewUintType() to create a new UintValue")
-	}
 	var val *big.Int
 	if err := m.MapRefl(src, reflect.ValueOf(&val)); err != nil {
 		return err
 	}
-	return u.SetBigInt(val)
+	if !u.CanSetBigInt(val) {
+		return fmt.Errorf("abi: cannot set %d-bit integer to uint%d", val.BitLen(), u.size)
+	}
+	u.SetBigInt(val)
+	return nil
 }
 
 func (u *UintValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
-	if u.size == 0 {
-		return fmt.Errorf("abi: invalid size, use NewUintType() to create a new UintValue")
-	}
 	return m.MapRefl(reflect.ValueOf(&u.val), dest)
 }
 
@@ -560,47 +537,55 @@ func (i *IntValue) String() string {
 	return i.val.String()
 }
 
-func (i *IntValue) Hex() string {
-	return hexutil.BigIntToHex(i.val)
+func (i *IntValue) IsInt64() bool {
+	return i.size <= 64
 }
 
 func (i *IntValue) BigInt() *big.Int {
 	return i.val
 }
 
-func (i *IntValue) Int64() (int64, error) {
-	if i.size > 64 {
-		return 0, fmt.Errorf("abi: cannot convert int%d to int64", i.size)
+func (i *IntValue) Int64() int64 {
+	if !i.IsInt64() {
+		panic(fmt.Errorf("abi: cannot convert int%d to int64", i.size))
 	}
-	return i.val.Int64(), nil
+	return i.val.Int64()
 }
 
-func (i *IntValue) SetBytes(d []byte) error {
-	if len(d) > i.size {
-		return fmt.Errorf("abi: cannot set %d bytes into int%d", len(d), i.size)
-	}
-	i.val.SetBytes(d)
-	return nil
+func (i *IntValue) CanSetBytes(b []byte) bool {
+	return len(b)*8 <= i.size
 }
 
-func (i *IntValue) SetHex(s string) error {
-	data, err := hexutil.HexToBytes(s)
-	if err != nil {
-		return err
-	}
-	return i.SetBytes(data)
+func (i *IntValue) CanSetBigInt(x *big.Int) bool {
+	return signedBitLen(x) <= i.size
 }
 
-func (i *IntValue) SetBigInt(x *big.Int) error {
-	if signedBitLen(x) > i.size {
-		return fmt.Errorf("abi: cannot set %d-bit integer into int%d", x.BitLen(), i.size)
+func (i *IntValue) CanSetInt64(x int64) bool {
+	return x >= -(1<<(i.size-1)) && x < (1<<(i.size-1))
+}
+
+func (i *IntValue) SetBytes(x []byte) *IntValue {
+	if !i.CanSetBytes(x) {
+		panic(fmt.Errorf("abi: cannot set %d bytes to int%d", len(x), i.size))
+	}
+	i.val.SetBytes(x)
+	return i
+}
+
+func (i *IntValue) SetBigInt(x *big.Int) *IntValue {
+	if !i.CanSetBigInt(x) {
+		panic(fmt.Errorf("abi: cannot set %d-bit integer to int%d", x.BitLen(), i.size))
 	}
 	i.val.Set(x)
-	return nil
+	return i
 }
 
-func (i *IntValue) SetInt64(x int64) error {
-	return i.SetBigInt(new(big.Int).SetInt64(x))
+func (i *IntValue) SetInt64(x int64) *IntValue {
+	if !i.CanSetInt64(x) {
+		panic(fmt.Errorf("abi: cannot set %d-big integer to int%d", bits.Len64(uint64(x)), i.size))
+	}
+	i.val.Set(new(big.Int).SetInt64(x))
+	return i
 }
 
 func (i *IntValue) DynamicType() bool {
@@ -608,34 +593,26 @@ func (i *IntValue) DynamicType() bool {
 }
 
 func (i *IntValue) EncodeABI() (Words, error) {
-	if i.size == 0 {
-		return nil, fmt.Errorf("abi: invalid size, use NewIntType() to create a new IntValue")
-	}
 	return encodeInt(i.val, i.size)
 }
 
 func (i *IntValue) DecodeABI(words Words) (int, error) {
-	if i.size == 0 {
-		return 0, fmt.Errorf("abi: invalid size, use NewIntType() to create a new IntValue")
-	}
-	return decodeInt(i.val, words)
+	return decodeInt(i.val, words, i.size)
 }
 
 func (i *IntValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
-	if i.size == 0 {
-		return fmt.Errorf("abi: invalid size, use NewIntType() to create a new IntValue")
-	}
 	var val *big.Int
 	if err := m.MapRefl(src, reflect.ValueOf(&val)); err != nil {
 		return err
 	}
-	return i.SetBigInt(val)
+	if !i.CanSetBigInt(val) {
+		return fmt.Errorf("abi: cannot set %d-bit integer to int%d", val.BitLen(), i.size)
+	}
+	i.SetBigInt(val)
+	return nil
 }
 
 func (i *IntValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
-	if i.size == 0 {
-		return fmt.Errorf("abi: invalid size, use NewIntType() to create a new IntValue")
-	}
 	return m.MapRefl(reflect.ValueOf(&i.val), dest)
 }
 
@@ -649,8 +626,9 @@ func (b *BoolValue) Bool() bool {
 	return bool(*b)
 }
 
-func (b *BoolValue) SetBool(v bool) {
+func (b *BoolValue) Set(v bool) *BoolValue {
 	*b = BoolValue(v)
+	return b
 }
 
 func (b *BoolValue) DynamicType() bool {
@@ -689,8 +667,9 @@ func (a *AddressValue) Address() types.Address {
 	return types.Address(*a)
 }
 
-func (a *AddressValue) SetAddress(addr types.Address) {
+func (a *AddressValue) SetAddress(addr types.Address) *AddressValue {
 	*a = AddressValue(addr)
+	return a
 }
 
 func (a *AddressValue) DynamicType() bool {
