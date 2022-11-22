@@ -3,6 +3,8 @@ package abi
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/defiweb/go-eth/types"
 )
 
 func EncodeValue(t Value, val any) ([]byte, error) {
@@ -49,10 +51,10 @@ func (e *Encoder) EncodeValue(t Value, val any) ([]byte, error) {
 }
 
 func (e *Encoder) EncodeValues(t *TupleValue, vals ...any) ([]byte, error) {
-	if t.Size() != len(vals) {
-		return nil, fmt.Errorf("abi: expected %d values, got %d", t.Size(), len(vals))
+	if len(*t) != len(vals) {
+		return nil, fmt.Errorf("abi: expected %d values, got %d", len(*t), len(vals))
 	}
-	for i, elem := range t.Elements() {
+	for i, elem := range *t {
 		if err := e.Config.Mapper.Map(vals[i], elem.Value); err != nil {
 			return nil, err
 		}
@@ -112,10 +114,9 @@ func encodeTuple(t []Value) (Words, error) {
 	}
 	// Calculate the offsets for the dynamic elements as described above.
 	for n, i := range offsetIdx {
-		if headLen+offsetVal[n] < 0 {
-			return nil, fmt.Errorf("abi: element offset overflow")
+		if err := writeUint(&head[i], headLen+offsetVal[n]); err != nil {
+			return nil, err
 		}
-		head[i].SetInt(headLen + offsetVal[n])
 	}
 	// Append the tail section to the head section.
 	words := make(Words, len(head)+len(tail))
@@ -134,7 +135,9 @@ func encodeArray(a []Value) (Words, error) {
 		return nil, err
 	}
 	words := make(Words, len(tuple)+1)
-	words[0].SetInt(len(a))
+	if err := writeUint(&words[0], len(a)); err != nil {
+		return nil, err
+	}
 	copy(words[1:], tuple)
 	return words, nil
 }
@@ -153,7 +156,9 @@ func encodeFixedArray(a []Value) (Words, error) {
 // (single word) before the byte sequence.
 func encodeBytes(b []byte) (Words, error) {
 	words := make(Words, requiredWords(len(b))+1)
-	words[0].SetInt(len(b))
+	if err := writeUint(&words[0], len(b)); err != nil {
+		return nil, err
+	}
 	for i, w := range BytesToWords(b) {
 		words[i+1] = w
 	}
@@ -169,7 +174,7 @@ func encodeFixedBytes(b []byte, size int) (Words, error) {
 	if len(b) > size {
 		return Words{}, fmt.Errorf("abi: cannot encode %d bytes to bytes%d", len(b), size)
 	}
-	if err := word.SetBytesPadLeft(b); err != nil {
+	if err := word.SetBytesPadRight(b); err != nil {
 		return nil, err
 	}
 	return Words{word}, nil
@@ -178,14 +183,14 @@ func encodeFixedBytes(b []byte, size int) (Words, error) {
 // encodeInt encodes an integer.
 //
 // The integer is encoded as two's complement 256-bit integer.
-func encodeInt(i *big.Int, size int) (Words, error) {
+func encodeInt(val *big.Int, size int) (Words, error) {
 	w := Word{}
-	b := signedBitLen(i)
-	if b > size {
-		return Words{}, fmt.Errorf("abi: cannot encode %d-bit integer to int%d", b, size)
+	x := newIntX(size)
+	if err := x.SetBigInt(val); err != nil {
+		return nil, err
 	}
-	if err := w.SetBigInt(i); err != nil {
-		return Words{w}, err
+	if err := w.SetBytesPadLeft(x.Bytes()); err != nil {
+		return nil, err
 	}
 	return Words{w}, nil
 }
@@ -193,17 +198,14 @@ func encodeInt(i *big.Int, size int) (Words, error) {
 // encodeUint encodes an unsigned integer.
 //
 // The integer is encoded as 256-bit unsigned integer.
-func encodeUint(i *big.Int, size int) (Words, error) {
+func encodeUint(val *big.Int, size int) (Words, error) {
 	w := Word{}
-	if i.Sign() < 0 {
-		return Words{}, fmt.Errorf("abi: cannot encode negative integer to uint%d", size)
+	x := newUintX(size)
+	if err := x.SetBigInt(val); err != nil {
+		return nil, err
 	}
-	b := i.BitLen()
-	if b > size {
-		return Words{w}, fmt.Errorf("abi: cannot encode %d-bit unsigned integer to uint%d", b, size)
-	}
-	if err := w.SetBigInt(i); err != nil {
-		return Words{w}, err
+	if err := w.SetBytesPadLeft(x.Bytes()); err != nil {
+		return nil, err
 	}
 	return Words{w}, nil
 }
@@ -220,16 +222,19 @@ func encodeBool(b bool) Words {
 	return Words{w}
 }
 
-// signedBitLen returns the number of bits in the signed integer i.
-func signedBitLen(x *big.Int) int {
-	if x == nil || x.Sign() == 0 {
-		return 0
+// encodeAddress encodes an address.
+func encodeAddress(val types.Address) (Words, error) {
+	w := Word{}
+	if err := w.SetBytesPadLeft(val.Bytes()); err != nil {
+		return nil, err
 	}
-	bitLen := x.BitLen()
-	if x.Sign() < 0 && x.TrailingZeroBits() == uint(bitLen-1) {
-		// If the binary representation of the number is equal to x^2, then the
-		// bit length for the negative number is one bit shorter.
-		return bitLen
+	return Words{w}, nil
+}
+
+func writeUint(w *Word, x int) error {
+	i32 := newIntX(32)
+	if err := i32.SetInt(x); err != nil {
+		return err
 	}
-	return bitLen + 1
+	return w.SetBytesPadLeft(i32.Bytes())
 }

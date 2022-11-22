@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
@@ -16,29 +17,33 @@ func TestEncodeABI(t *testing.T) {
 	tests := []struct {
 		name    string
 		val     Value
-		abi     Words
+		arg     any
+		wantABI Words
 		wantErr bool
 	}{
 		// TupleValue:
 		{
-			name: "tuple/empty",
-			val:  NewTupleValue(),
-			abi:  nil,
+			name:    "tuple/empty",
+			val:     &TupleValue{},
+			arg:     struct{}{},
+			wantABI: Words(nil),
 		},
 		{
 			name: "tuple/static",
-			val: NewTupleValue(
-				TupleValueElem{Value: NewBoolValue().Set(true)},
-				TupleValueElem{Value: NewBoolValue().Set(true)},
-			),
-			abi: Words{padL("1"), padL("1")},
+			val: &TupleValue{
+				TupleValueElem{Value: new(BoolValue), Name: "a"},
+				TupleValueElem{Value: new(BoolValue), Name: "b"},
+			},
+			arg:     map[string]bool{"a": true, "b": true},
+			wantABI: Words{padL("1"), padL("1")},
 		},
 		{
 			name: "tuple/dynamic",
-			val: NewTupleValue(
-				TupleValueElem{Value: NewBytesValue().SetBytes([]byte{1, 2, 3})},
-			),
-			abi: Words{
+			val: &TupleValue{
+				TupleValueElem{Value: new(BytesValue), Name: "a"},
+			},
+			arg: map[string][]byte{"a": {1, 2, 3}},
+			wantABI: Words{
 				padL("20"),     // offset
 				padL("3"),      // length
 				padR("010203"), // data
@@ -46,34 +51,39 @@ func TestEncodeABI(t *testing.T) {
 		},
 		{
 			name: "tuple/static-and-dynamic",
-			val: NewTupleValue(
-				TupleValueElem{Value: NewBoolValue().Set(true)},
-				TupleValueElem{Value: NewBytesValue().SetBytes([]byte{1, 2, 3})},
-			),
-			abi: Words{
-				padL("1"),      // arg0
-				padL("40"),     // offset to arg1
-				padL("3"),      // length of arg1
-				padR("010203"), // arg1
+			val: &TupleValue{
+				TupleValueElem{Value: new(BoolValue), Name: "a"},
+				TupleValueElem{Value: new(BytesValue), Name: "b"},
+			},
+			arg: map[string]interface{}{"a": true, "b": []byte{1, 2, 3}},
+			wantABI: Words{
+				padL("1"),      // a
+				padL("40"),     // offset to b
+				padL("3"),      // length of b
+				padR("010203"), // b
 			},
 		},
 		{
 			name: "tuple/nested",
-			val: NewTupleValue(
+			val: &TupleValue{
 				TupleValueElem{
-					Value: NewTupleValue(
-						TupleValueElem{Value: NewBytesValue().SetBytes([]byte{1, 2, 3}), Name: "x"},
-					),
+					Value: &TupleValue{
+						TupleValueElem{Value: new(BytesValue), Name: "x"},
+					},
 					Name: "a",
 				},
 				TupleValueElem{
-					Value: NewTupleValue(
-						TupleValueElem{Value: NewBytesValue().SetBytes([]byte{4, 5, 6}), Name: "x"},
-					),
+					Value: &TupleValue{
+						TupleValueElem{Value: new(BytesValue), Name: "x"},
+					},
 					Name: "b",
 				},
-			),
-			abi: Words{
+			},
+			arg: map[string]interface{}{
+				"a": map[string][]byte{"x": {1, 2, 3}},
+				"b": map[string][]byte{"x": {4, 5, 6}},
+			},
+			wantABI: Words{
 				padL("40"),     // offset to a
 				padL("a0"),     // offset to b
 				padL("20"),     // offset to a.x
@@ -86,14 +96,16 @@ func TestEncodeABI(t *testing.T) {
 		},
 		// ArrayValue:
 		{
-			name: "array/empty",
-			val:  NewArrayValue(NewBoolType()),
-			abi:  Words{padL("0")},
+			name:    "array/empty",
+			val:     &ArrayValue{Type: NewBoolType()},
+			arg:     []bool{},
+			wantABI: Words{padL("0")},
 		},
 		{
 			name: "array/two-static-elements",
-			val:  NewArrayValue(NewBoolType(), NewBoolValue().Set(true), NewBoolValue().Set(true)),
-			abi: Words{
+			val:  &ArrayValue{Type: NewBoolType()},
+			arg:  []bool{true, true},
+			wantABI: Words{
 				padL("2"), // array length
 				padL("1"), // first element
 				padL("1"), // second element
@@ -101,12 +113,9 @@ func TestEncodeABI(t *testing.T) {
 		},
 		{
 			name: "array/two-dynamic-elements",
-			val: NewArrayValue(
-				NewBytesType(),
-				NewBytesValue().SetBytes([]byte{1, 2, 3}),
-				NewBytesValue().SetBytes([]byte{4, 5, 6}),
-			),
-			abi: Words{
+			val:  &ArrayValue{Type: NewBytesType()},
+			arg:  [][]byte{{1, 2, 3}, {4, 5, 6}},
+			wantABI: Words{
 				padL("2"),      // array length
 				padL("40"),     // offset to first element
 				padL("80"),     // offset to second element
@@ -118,26 +127,25 @@ func TestEncodeABI(t *testing.T) {
 		},
 		// FixedArrayValue:
 		{
-			name: "fixed-array/empty",
-			val:  NewFixedArrayValue(NewBoolType(), 0),
-			abi:  nil,
+			name:    "fixed-array/empty",
+			val:     &FixedArrayValue{},
+			arg:     [0]bool{},
+			wantABI: nil,
 		},
 		{
 			name: "fixed-array/two-static-elements",
-			val: NewFixedArrayValue(NewBoolType(), 2).
-				SetElem(0, NewBoolValue().Set(true)).
-				SetElem(1, NewBoolValue().Set(true)),
-			abi: Words{
+			val:  &FixedArrayValue{new(BoolValue), new(BoolValue)},
+			arg:  []bool{true, true},
+			wantABI: Words{
 				padL("1"), // first element
 				padL("1"), // second element
 			},
 		},
 		{
 			name: "fixed-array/two-dynamic-elements",
-			val: NewFixedArrayValue(NewBytesType(), 2).
-				SetElem(0, NewBytesValue().SetBytes([]byte{1, 2, 3})).
-				SetElem(1, NewBytesValue().SetBytes([]byte{4, 5, 6})),
-			abi: Words{
+			val:  &FixedArrayValue{new(BytesValue), new(BytesValue)},
+			arg:  [][]byte{{1, 2, 3}, {4, 5, 6}},
+			wantABI: Words{
 				padL("40"),     // offset to first element
 				padL("80"),     // offset to second element
 				padL("3"),      // length of first element
@@ -148,45 +156,52 @@ func TestEncodeABI(t *testing.T) {
 		},
 		// BytesValue:
 		{
-			name: "bytes/empty",
-			val:  NewBytesValue(),
-			abi:  Words{padL("0")},
+			name:    "bytes/empty",
+			val:     new(BytesValue),
+			arg:     []byte{},
+			wantABI: Words{padL("0")},
 		},
 		{
 			name: "bytes/one-word",
-			val:  NewBytesValue().SetBytes([]byte{1, 2, 3}),
-			abi: Words{
+			val:  new(BytesValue),
+			arg:  []byte{1, 2, 3},
+			wantABI: Words{
 				padL("3"),      // length
 				padR("010203"), // data
 			},
 		},
 		{
 			name: "bytes/two-words",
-			val:  NewBytesValue().SetBytes(bytes.Repeat([]byte{0x01}, 33)),
-			abi: Words{
+			val:  new(BytesValue),
+			arg:  bytes.Repeat([]byte{1}, 33),
+			wantABI: Words{
 				padL("21"), // length
 				padR("0101010101010101010101010101010101010101010101010101010101010101"), // data
 				padR("01"), // data
 			},
 		},
+
 		// StringValue:
 		{
-			name: "string/empty",
-			val:  NewStringValue(),
-			abi:  Words{padL("0")},
+			name:    "string/empty",
+			val:     new(StringValue),
+			arg:     "",
+			wantABI: Words{padL("0")},
 		},
 		{
 			name: "string/one-word",
-			val:  NewStringValue().SetString("abc"),
-			abi: Words{
+			val:  new(StringValue),
+			arg:  "abc",
+			wantABI: Words{
 				padL("3"),      // length
 				padR("616263"), // data
 			},
 		},
 		{
 			name: "string/two-words",
-			val:  NewStringValue().SetString(strings.Repeat("a", 33)),
-			abi: Words{
+			val:  new(StringValue),
+			arg:  strings.Repeat("a", 33),
+			wantABI: Words{
 				padL("21"), // length
 				padR("6161616161616161616161616161616161616161616161616161616161616161"), // data
 				padR("61"), // data
@@ -194,95 +209,111 @@ func TestEncodeABI(t *testing.T) {
 		},
 		// FixedBytesValue:
 		{
-			name: "fixed/bytes-empty",
-			val:  NewFixedBytesValue(1),
-			abi:  Words{padL("0")},
+			name:    "fixed/bytes-empty",
+			val:     make(FixedBytesValue, 0),
+			arg:     []byte{},
+			wantABI: Words{padL("0")},
 		},
 		{
 			name: "fixed/bytes-non-empty",
-			val:  NewFixedBytesValue(32).SetBytesPadRight([]byte{1, 2, 3}),
-			abi: Words{
+			val:  make(FixedBytesValue, 3),
+			arg:  []byte{1, 2, 3},
+			wantABI: Words{
 				padR("010203"), // data
 			},
 		},
 		// UintValue:
 		{
-			name: "uint256/0",
-			val:  NewUintValue(256),
-			abi:  Words{padL("0")},
+			name:    "uint256/0",
+			val:     &UintValue{Size: 256},
+			arg:     big.NewInt(0),
+			wantABI: Words{padL("0")},
 		},
 		{
-			name: "uint256/MaxUint256",
-			val:  NewUintValue(256).SetBigInt(MaxUint256),
-			abi:  Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
+			name:    "uint256/MaxUint256",
+			val:     &UintValue{Size: 256},
+			arg:     new(big.Int).Set(MaxUint[256]),
+			wantABI: Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
 		},
 		// IntValue:
 		{
-			name: "int256/0",
-			val:  NewIntValue(256).SetBigInt(big.NewInt(0)),
-			abi:  Words{padL("0")},
+			name:    "int256/0",
+			val:     &IntValue{Size: 256},
+			arg:     big.NewInt(0),
+			wantABI: Words{padL("0")},
 		},
 		{
-			name: "int256/1",
-			val:  NewIntValue(256).SetBigInt(big.NewInt(1)),
-			abi:  Words{padL("1")},
+			name:    "int256/1",
+			val:     &IntValue{Size: 256},
+			arg:     big.NewInt(1),
+			wantABI: Words{padL("1")},
 		},
 		{
-			name: "int256/-1",
-			val:  NewIntValue(256).SetBigInt(big.NewInt(-1)),
-			abi:  Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
+			name:    "int256/-1",
+			val:     &IntValue{Size: 256},
+			arg:     big.NewInt(-1),
+			wantABI: Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
 		},
 		{
-			name: "int256/MaxInt256",
-			val:  NewIntValue(256).SetBigInt(MaxInt256),
-			abi:  Words{padR("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
+			name:    "int256/MaxInt256",
+			val:     &IntValue{Size: 256},
+			arg:     new(big.Int).Set(MaxInt[256]),
+			wantABI: Words{padR("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
 		},
 		{
-			name: "int256/MinInt256",
-			val:  NewIntValue(256).SetBigInt(MinInt256),
-			abi:  Words{padR("8000000000000000000000000000000000000000000000000000000000000000")},
+			name:    "int256/MinInt256",
+			val:     &IntValue{Size: 256},
+			arg:     new(big.Int).Set(MinInt[256]),
+			wantABI: Words{padR("8000000000000000000000000000000000000000000000000000000000000000")},
 		},
 		{
-			name: "int8/127",
-			val:  NewIntValue(8).SetBigInt(big.NewInt(127)),
-			abi:  Words{padL("7f")},
+			name:    "int8/127",
+			val:     &IntValue{Size: 256},
+			arg:     big.NewInt(127),
+			wantABI: Words{padL("7f")},
 		},
 		{
-			name: "int8/-128",
-			val:  NewIntValue(8).SetBigInt(big.NewInt(-128)),
-			abi:  Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80")},
+			name:    "int8/-128",
+			val:     &IntValue{Size: 256},
+			arg:     big.NewInt(-128),
+			wantABI: Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80")},
 		},
 		// BoolValue:
 		{
-			name: "bool/true",
-			val:  NewBoolValue().Set(true),
-			abi:  Words{padL("1")},
+			name:    "bool/true",
+			val:     new(BoolValue),
+			arg:     true,
+			wantABI: Words{padL("1")},
 		},
 		{
-			name: "bool/false",
-			val:  NewBoolValue().Set(false),
-			abi:  Words{padL("0")},
+			name:    "bool/false",
+			val:     new(BoolValue),
+			arg:     false,
+			wantABI: Words{padL("0")},
 		},
 		// AddressValue:
 		{
-			name: "address/empty",
-			val:  NewAddressValue(),
-			abi:  Words{padL("0")},
+			name:    "address/empty",
+			val:     new(AddressValue),
+			arg:     types.Address{},
+			wantABI: Words{padL("0")},
 		},
 		{
-			name: "address/non-empty",
-			val:  NewAddressValue().SetAddress(types.MustHexToAddress("0x0102030405060708090a0b0c0d0e0f1011121314")),
-			abi:  Words{padL("0102030405060708090a0b0c0d0e0f1011121314")},
+			name:    "address/non-empty",
+			val:     new(AddressValue),
+			arg:     types.MustHexToAddress("0x0102030405060708090a0b0c0d0e0f1011121314"),
+			wantABI: Words{padL("0102030405060708090a0b0c0d0e0f1011121314")},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.val.EncodeABI()
+			require.NoError(t, DefaultConfig.Mapper.Map(tt.arg, tt.val))
+			enc, err := tt.val.EncodeABI()
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.abi, got)
+				assert.Equal(t, tt.wantABI, enc)
 			}
 		})
 	}
@@ -290,85 +321,67 @@ func TestEncodeABI(t *testing.T) {
 
 func TestDecodeABI(t *testing.T) {
 	tests := []struct {
-		name     string
-		val      Value
-		abi      Words
-		assertFn func(t *testing.T, val Value)
-		wantErr  bool
+		name    string
+		abi     Words
+		val     Value
+		wantVal Value
+		wantErr bool
 	}{
+		// TupleValue:
 		{
-			name: "tuple/empty",
-			val:  NewTupleValue(),
-			abi:  Words{},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 0, val.(*TupleValue).Size())
-			},
+			name:    "tuple/empty",
+			abi:     Words{},
+			val:     new(TupleValue),
+			wantVal: new(TupleValue),
 		},
 		{
 			name: "tuple/static",
-			val: NewTupleValue(
-				TupleValueElem{Value: NewBoolValue()},
-				TupleValueElem{Value: NewBoolValue()},
-			),
 			abi: Words{
 				padL("1"),
 				padL("1"),
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 2, val.(*TupleValue).Size())
-				assert.True(t, val.(*TupleValue).Elem(0).Value.(*BoolValue).Bool())
-				assert.True(t, val.(*TupleValue).Elem(1).Value.(*BoolValue).Bool())
+			val: &TupleValue{
+				TupleValueElem{Value: new(BoolValue), Name: "a"},
+				TupleValueElem{Value: new(BoolValue), Name: "b"},
+			},
+			wantVal: &TupleValue{
+				TupleValueElem{Value: func() *BoolValue { b := BoolValue(true); return &b }(), Name: "a"},
+				TupleValueElem{Value: func() *BoolValue { b := BoolValue(true); return &b }(), Name: "b"},
 			},
 		},
 		{
 			name: "tuple/dynamic",
-			val: NewTupleValue(
-				TupleValueElem{Value: NewBytesValue()},
-			),
 			abi: Words{
 				padL("20"),     // offset
 				padL("3"),      // length
 				padR("010203"), // data
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 1, val.(*TupleValue).Size())
-				assert.Equal(t, []byte{1, 2, 3}, val.(*TupleValue).Elem(0).Value.(*BytesValue).Bytes())
+			val: &TupleValue{
+				TupleValueElem{Value: new(BytesValue), Name: "a"},
+			},
+			wantVal: &TupleValue{
+				TupleValueElem{Value: func() *BytesValue { b := BytesValue([]byte{1, 2, 3}); return &b }(), Name: "a"},
 			},
 		},
 		{
 			name: "tuple/static-and-dynamic",
-			val: NewTupleValue(
-				TupleValueElem{Value: NewBoolValue()},
-				TupleValueElem{Value: NewBytesValue()},
-			),
 			abi: Words{
-				padL("1"),      // arg0
-				padL("40"),     // offset to arg1
-				padL("3"),      // length of arg1
-				padR("010203"), // arg1
+				padL("1"),      // a
+				padL("40"),     // offset to b
+				padL("3"),      // length of b
+				padR("010203"), // b
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 2, val.(*TupleValue).Size())
-				assert.True(t, val.(*TupleValue).Elem(0).Value.(*BoolValue).Bool())
-				assert.Equal(t, []byte{1, 2, 3}, val.(*TupleValue).Elem(1).Value.(*BytesValue).Bytes())
+			val: &TupleValue{
+				TupleValueElem{Value: new(BoolValue), Name: "a"},
+				TupleValueElem{Value: new(BytesValue), Name: "b"},
+			},
+			wantVal: &TupleValue{
+				TupleValueElem{Value: func() *BoolValue { b := BoolValue(true); return &b }(), Name: "a"},
+				TupleValueElem{Value: func() *BytesValue { b := BytesValue([]byte{1, 2, 3}); return &b }(), Name: "b"},
 			},
 		},
 		{
 			name: "tuple/nested",
-			val: NewTupleValue(
-				TupleValueElem{
-					Value: NewTupleValue(
-						TupleValueElem{Value: NewBytesValue(), Name: "x"},
-					),
-					Name: "a",
-				},
-				TupleValueElem{
-					Value: NewTupleValue(
-						TupleValueElem{Value: NewBytesValue(), Name: "x"},
-					),
-					Name: "b",
-				},
-			),
 			abi: Words{
 				padL("40"),     // offset to a
 				padL("a0"),     // offset to b
@@ -379,48 +392,60 @@ func TestDecodeABI(t *testing.T) {
 				padL("3"),      // length of b.x
 				padR("040506"), // b.x
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 2, val.(*TupleValue).Size())
-				assert.Equal(t, []byte{1, 2, 3}, val.(*TupleValue).Elem(0).Value.(*TupleValue).Elem(0).Value.(*BytesValue).Bytes())
-				assert.Equal(t, []byte{4, 5, 6}, val.(*TupleValue).Elem(1).Value.(*TupleValue).Elem(0).Value.(*BytesValue).Bytes())
+			val: &TupleValue{
+				TupleValueElem{
+					Value: &TupleValue{
+						TupleValueElem{Value: new(BytesValue), Name: "x"},
+					},
+					Name: "a",
+				},
+				TupleValueElem{
+					Value: &TupleValue{
+						TupleValueElem{Value: new(BytesValue), Name: "x"},
+					},
+					Name: "b",
+				},
+			},
+			wantVal: &TupleValue{
+				TupleValueElem{
+					Value: &TupleValue{
+						TupleValueElem{Value: func() *BytesValue { b := BytesValue([]byte{1, 2, 3}); return &b }(), Name: "x"},
+					},
+					Name: "a",
+				},
+				TupleValueElem{
+					Value: &TupleValue{
+						TupleValueElem{Value: func() *BytesValue { b := BytesValue([]byte{4, 5, 6}); return &b }(), Name: "x"},
+					},
+					Name: "b",
+				},
 			},
 		},
 		// ArrayValue:
 		{
 			name:    "array/empty",
-			val:     NewArrayValue(NewBoolType()),
-			abi:     Words{},
-			wantErr: true,
-		},
-		{
-			name: "array/empty-2",
-			val:  NewArrayValue(NewBoolType()),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 0, val.(*ArrayValue).Length())
-			},
+			abi:     Words{padL("0")},
+			val:     &ArrayValue{Type: NewBoolType()},
+			wantVal: &ArrayValue{Type: NewBoolType(), Elems: []Value{}},
 		},
 		{
 			name: "array/two-static-elements",
-			val:  NewArrayValue(NewBoolType(), NewBoolValue(), NewBoolValue()),
 			abi: Words{
 				padL("2"), // array length
 				padL("1"), // first element
 				padL("1"), // second element
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 2, val.(*ArrayValue).Length())
-				assert.True(t, val.(*ArrayValue).Elem(0).(*BoolValue).Bool())
-				assert.True(t, val.(*ArrayValue).Elem(1).(*BoolValue).Bool())
+			val: &ArrayValue{Type: NewBoolType()},
+			wantVal: &ArrayValue{
+				Type: NewBoolType(),
+				Elems: []Value{
+					func() *BoolValue { b := BoolValue(true); return &b }(),
+					func() *BoolValue { b := BoolValue(true); return &b }(),
+				},
 			},
 		},
 		{
 			name: "array/two-dynamic-elements",
-			val: NewArrayValue(
-				NewBytesType(),
-				NewBytesValue(),
-				NewBytesValue(),
-			),
 			abi: Words{
 				padL("2"),      // array length
 				padL("40"),     // offset to first element
@@ -430,47 +455,36 @@ func TestDecodeABI(t *testing.T) {
 				padL("3"),      // length of second element
 				padR("040506"), // second element
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 2, val.(*ArrayValue).Length())
-				assert.Equal(t, []byte{1, 2, 3}, val.(*ArrayValue).Elem(0).(*BytesValue).Bytes())
-				assert.Equal(t, []byte{4, 5, 6}, val.(*ArrayValue).Elem(1).(*BytesValue).Bytes())
+			val: &ArrayValue{Type: NewBytesType()},
+			wantVal: &ArrayValue{
+				Type: NewBytesType(),
+				Elems: []Value{
+					func() *BytesValue { b := BytesValue([]byte{1, 2, 3}); return &b }(),
+					func() *BytesValue { b := BytesValue([]byte{4, 5, 6}); return &b }(),
+				},
 			},
 		},
 		// FixedArrayValue:
 		{
 			name:    "fixed-array/empty",
-			val:     NewFixedArrayValue(NewBoolType(), 0),
-			abi:     Words{},
-			wantErr: true,
-		},
-		{
-			name: "fixed-array/empty-2",
-			val:  NewFixedArrayValue(NewBoolType(), 0),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 0, val.(*FixedArrayValue).Size())
-			},
+			val:     &FixedArrayValue{},
+			abi:     Words{padL("0")},
+			wantVal: &FixedArrayValue{},
 		},
 		{
 			name: "fixed-array/two-static-elements",
-			val: NewFixedArrayValue(NewBoolType(), 2).
-				SetElem(0, NewBoolValue()).
-				SetElem(1, NewBoolValue()),
 			abi: Words{
 				padL("1"), // first element
 				padL("1"), // second element
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 2, val.(*FixedArrayValue).Size())
-				assert.True(t, val.(*FixedArrayValue).Elem(0).(*BoolValue).Bool())
-				assert.True(t, val.(*FixedArrayValue).Elem(1).(*BoolValue).Bool())
+			val: &FixedArrayValue{new(BoolValue), new(BoolValue)},
+			wantVal: &FixedArrayValue{
+				func() *BoolValue { b := BoolValue(true); return &b }(),
+				func() *BoolValue { b := BoolValue(true); return &b }(),
 			},
 		},
 		{
 			name: "fixed-array/two-dynamic-elements",
-			val: NewFixedArrayValue(NewBytesType(), 2).
-				SetElem(0, NewBytesValue()).
-				SetElem(1, NewBytesValue()),
 			abi: Words{
 				padL("40"),     // offset to first element
 				padL("80"),     // offset to second element
@@ -479,220 +493,163 @@ func TestDecodeABI(t *testing.T) {
 				padL("3"),      // length of second element
 				padR("040506"), // second element
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, 2, val.(*FixedArrayValue).Size())
-				assert.Equal(t, []byte{1, 2, 3}, val.(*FixedArrayValue).Elem(0).(*BytesValue).Bytes())
-				assert.Equal(t, []byte{4, 5, 6}, val.(*FixedArrayValue).Elem(1).(*BytesValue).Bytes())
+			val: &FixedArrayValue{new(BytesValue), new(BytesValue)},
+			wantVal: &FixedArrayValue{
+				func() *BytesValue { b := BytesValue([]byte{1, 2, 3}); return &b }(),
+				func() *BytesValue { b := BytesValue([]byte{4, 5, 6}); return &b }(),
 			},
 		},
 		// BytesValue:
 		{
-			name:    "bytes/empty-1",
-			val:     NewBytesValue(),
-			abi:     Words{},
-			wantErr: true,
-		},
-		{
-			name: "bytes/empty-2",
-			val:  NewBytesValue(),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, []byte{}, val.(*BytesValue).Bytes())
-			},
+			name:    "bytes/empty",
+			abi:     Words{padL("0")},
+			val:     new(BytesValue),
+			wantVal: func() *BytesValue { b := BytesValue([]byte{}); return &b }(),
 		},
 		{
 			name: "bytes/one-word",
-			val:  NewBytesValue(),
 			abi: Words{
 				padL("3"),      // length
 				padR("010203"), // data
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, []byte{1, 2, 3}, val.(*BytesValue).Bytes())
-			},
+			val:     new(BytesValue),
+			wantVal: func() *BytesValue { b := BytesValue([]byte{1, 2, 3}); return &b }(),
 		},
 		{
 			name: "bytes/two-words",
-			val:  NewBytesValue(),
 			abi: Words{
 				padL("21"), // length
 				padR("0101010101010101010101010101010101010101010101010101010101010101"), // data
 				padR("01"), // data
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, bytes.Repeat([]byte{0x01}, 33), val.(*BytesValue).Bytes())
-			},
+			val:     new(BytesValue),
+			wantVal: func() *BytesValue { b := BytesValue(bytes.Repeat([]byte{1}, 33)); return &b }(),
 		},
 		// StringValue:
 		{
-			name:    "string/empty-1",
-			val:     NewStringValue(),
-			abi:     Words{},
-			wantErr: true,
-		},
-		{
-			name: "string/empty-2",
-			val:  NewStringValue(),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, []byte{}, val.(*StringValue).Bytes())
-			},
+			name:    "string/empty",
+			abi:     Words{padL("0")},
+			val:     new(StringValue),
+			wantVal: func() *StringValue { s := StringValue(""); return &s }(),
 		},
 		{
 			name: "string/one-word",
-			val:  NewStringValue(),
 			abi: Words{
 				padL("3"),      // length
 				padR("616263"), // data
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, "abc", val.(*StringValue).String())
-			},
+			val:     new(StringValue),
+			wantVal: func() *StringValue { s := StringValue("abc"); return &s }(),
 		},
 		{
 			name: "string/two-words",
-			val:  NewStringValue(),
 			abi: Words{
 				padL("21"), // length
 				padR("6161616161616161616161616161616161616161616161616161616161616161"), // data
 				padR("61"), // data
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, strings.Repeat("a", 33), val.(*StringValue).String())
-			},
+			val:     new(StringValue),
+			wantVal: func() *StringValue { s := StringValue(strings.Repeat("a", 33)); return &s }(),
 		},
 		// FixedBytesValue:
 		{
-			name:    "fixed/bytes-empty-1",
-			val:     NewFixedBytesValue(1),
-			abi:     Words{},
-			wantErr: true,
-		},
-		{
-			name: "fixed/bytes-empty-2",
-			val:  NewFixedBytesValue(1),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, []byte{0}, val.(*FixedBytesValue).Bytes())
-			},
+			name:    "fixed/bytes-empty",
+			abi:     Words{padL("0")},
+			val:     make(FixedBytesValue, 0),
+			wantVal: make(FixedBytesValue, 0),
 		},
 		{
 			name: "fixed/bytes-non-empty",
-			val:  NewFixedBytesValue(4),
 			abi: Words{
 				padR("010203"), // data
 			},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, []byte{1, 2, 3, 0}, val.(*FixedBytesValue).Bytes())
-			},
+			val:     make(FixedBytesValue, 3),
+			wantVal: func() FixedBytesValue { b := FixedBytesValue([]byte{1, 2, 3}); return b }(),
 		},
 		// UintValue:
 		{
-			name: "uint256/0",
-			val:  NewUintValue(64),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, uint64(0), val.(*UintValue).Uint64())
-			},
+			name:    "uint256/0",
+			abi:     Words{padL("0")},
+			val:     &UintValue{Size: 256},
+			wantVal: func() *UintValue { u := UintValue{Size: 256, Int: *big.NewInt(0)}; return &u }(),
 		},
 		{
-			name: "uint256/MaxUint256",
-			val:  NewUintValue(256),
-			abi:  Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, MaxUint256, val.(*UintValue).BigInt())
-			},
+			name:    "uint256/MaxUint256",
+			abi:     Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
+			val:     &UintValue{Size: 256},
+			wantVal: func() *UintValue { u := UintValue{Size: 256, Int: *MaxUint[256]}; return &u }(),
 		},
 		// IntValue:
 		{
-			name: "int256/0",
-			val:  NewIntValue(256),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, big.NewInt(0), val.(*IntValue).BigInt())
-			},
+			name:    "int256/0",
+			abi:     Words{padL("0")},
+			val:     &IntValue{Size: 256},
+			wantVal: func() *IntValue { i := IntValue{Size: 256, Int: *big.NewInt(0)}; return &i }(),
 		},
 		{
-			name: "int256/1",
-			val:  NewIntValue(256),
-			abi:  Words{padL("1")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, big.NewInt(1), val.(*IntValue).BigInt())
-			},
+			name:    "int256/1",
+			abi:     Words{padL("1")},
+			val:     &IntValue{Size: 256},
+			wantVal: func() *IntValue { i := IntValue{Size: 256, Int: *big.NewInt(1)}; return &i }(),
 		},
 		{
-			name: "int256/-1",
-			val:  NewIntValue(256),
-			abi:  Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, big.NewInt(-1), val.(*IntValue).BigInt())
-			},
+			name:    "int256/-1",
+			abi:     Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
+			val:     &IntValue{Size: 256},
+			wantVal: func() *IntValue { i := IntValue{Size: 256, Int: *big.NewInt(-1)}; return &i }(),
 		},
 		{
-			name: "int256/MaxInt256",
-			val:  NewIntValue(256),
-			abi:  Words{padR("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, MaxInt256, val.(*IntValue).BigInt())
-			},
+			name:    "int256/MaxInt256",
+			abi:     Words{padR("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
+			val:     &IntValue{Size: 256},
+			wantVal: func() *IntValue { i := IntValue{Size: 256, Int: *MaxInt[256]}; return &i }(),
 		},
 		{
-			name: "int256/MinInt256",
-			val:  NewIntValue(256),
-			abi:  Words{padR("8000000000000000000000000000000000000000000000000000000000000000")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, MinInt256, val.(*IntValue).BigInt())
-			},
+			name:    "int256/MinInt256",
+			abi:     Words{padR("8000000000000000000000000000000000000000000000000000000000000000")},
+			val:     &IntValue{Size: 256},
+			wantVal: func() *IntValue { i := IntValue{Size: 256, Int: *MinInt[256]}; return &i }(),
 		},
 		{
-			name: "int8/127",
-			val:  NewIntValue(8),
-			abi:  Words{padL("7f")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, big.NewInt(127), val.(*IntValue).BigInt())
-			},
+			name:    "int8/127",
+			abi:     Words{padL("7f")},
+			val:     &IntValue{Size: 256},
+			wantVal: func() *IntValue { i := IntValue{Size: 256, Int: *big.NewInt(127)}; return &i }(),
 		},
 		{
-			name: "int8/-128",
-			val:  NewIntValue(8),
-			abi:  Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, big.NewInt(-128), val.(*IntValue).BigInt())
-			},
+			name:    "int8/-128",
+			abi:     Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80")},
+			val:     &IntValue{Size: 256},
+			wantVal: func() *IntValue { i := IntValue{Size: 256, Int: *big.NewInt(-128)}; return &i }(),
 		},
 		// BoolValue:
 		{
-			name: "bool/true",
-			val:  NewBoolValue(),
-			abi:  Words{padL("1")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.True(t, val.(*BoolValue).Bool())
-			},
+			name:    "bool/true",
+			abi:     Words{padL("1")},
+			val:     new(BoolValue),
+			wantVal: func() *BoolValue { b := BoolValue(true); return &b }(),
 		},
 		{
-			name: "bool/false",
-			val:  NewBoolValue(),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.False(t, val.(*BoolValue).Bool())
-			},
+			name:    "bool/false",
+			abi:     Words{padL("0")},
+			val:     new(BoolValue),
+			wantVal: func() *BoolValue { b := BoolValue(false); return &b }(),
 		},
 		// AddressValue:
 		{
-			name: "address/empty",
-			val:  NewAddressValue(),
-			abi:  Words{padL("0")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, types.Address{}, val.(*AddressValue).Address())
-			},
+			name:    "address/empty",
+			abi:     Words{padL("0")},
+			val:     new(AddressValue),
+			wantVal: func() *AddressValue { a := AddressValue{}; return &a }(),
 		},
 		{
 			name: "address/non-empty",
-			val:  NewAddressValue(),
 			abi:  Words{padL("0102030405060708090a0b0c0d0e0f1011121314")},
-			assertFn: func(t *testing.T, val Value) {
-				assert.Equal(t, types.MustHexToAddress("0x0102030405060708090a0b0c0d0e0f1011121314"), val.(*AddressValue).Address())
-			},
+			val:  new(AddressValue),
+			wantVal: func() *AddressValue {
+				a := types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314")
+				return (*AddressValue)(&a)
+			}(),
 		},
 	}
 	for _, tt := range tests {
@@ -702,10 +659,14 @@ func TestDecodeABI(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				tt.assertFn(t, tt.val)
+				assert.Equal(t, tt.wantVal, tt.val)
 			}
 		})
 	}
+}
+
+func ptr(v any) *any {
+	return &v
 }
 
 func padL(h string) (w Word) {

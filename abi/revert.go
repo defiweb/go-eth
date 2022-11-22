@@ -25,10 +25,10 @@ func DecodeRevert(data []byte) (string, error) {
 	if !revertPrefix.Match(data) {
 		return "", fmt.Errorf("abi: invalid revert prefix")
 	}
-	s := NewStringValue()
-	t := NewTupleValue(TupleValueElem{Value: s})
+	s := new(StringValue)
+	t := TupleValue{TupleValueElem{Name: "error", Value: s}}
 	if _, err := t.DecodeABI(BytesToWords(data[4:])); err != nil {
 		return "", err
 	}
-	return s.String(), nil
+	return string(*s), nil
 }

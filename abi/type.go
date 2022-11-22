@@ -2,7 +2,6 @@ package abi
 
 import (
 	"fmt"
-	"math/big"
 	"strings"
 )
 
@@ -69,17 +68,17 @@ func (t *TupleType) Elements() []TupleTypeElem {
 }
 
 func (t *TupleType) New() Value {
-	v := &TupleValue{elems: make([]TupleValueElem, len(t.elems))}
+	v := make(TupleValue, len(t.elems))
 	for i, elem := range t.elems {
-		v.elems[i] = TupleValueElem{
+		v[i] = TupleValueElem{
 			Name:  elem.Name,
 			Value: elem.Type.New(),
 		}
 		if len(elem.Name) == 0 {
-			v.elems[i].Name = fmt.Sprintf("arg%d", i)
+			v[i].Name = fmt.Sprintf("arg%d", i)
 		}
 	}
-	return v
+	return &v
 }
 
 func (t *TupleType) Type() string {
@@ -153,7 +152,7 @@ func (t *EventTupleType) Elements() []EventTupleElem {
 }
 
 func (t *EventTupleType) New() Value {
-	v := &TupleValue{elems: make([]TupleValueElem, len(t.elems))}
+	v := make(TupleValue, len(t.elems))
 	// Fills tuple in such a way that indexed fields are first.
 	dataIdx, topicIdx := 0, 0
 	for _, elem := range t.elems {
@@ -165,19 +164,19 @@ func (t *EventTupleType) New() Value {
 			idx = dataIdx + t.indexed
 			dataIdx++
 		}
-		v.elems[idx] = TupleValueElem{
+		v[idx] = TupleValueElem{
 			Name:  elem.Name,
 			Value: elem.Type.New(),
 		}
 		if len(elem.Name) == 0 {
 			if elem.Indexed {
-				v.elems[idx].Name = fmt.Sprintf("topic%d", topicIdx)
+				v[idx].Name = fmt.Sprintf("topic%d", topicIdx)
 			} else {
-				v.elems[idx].Name = fmt.Sprintf("data%d", dataIdx-1)
+				v[idx].Name = fmt.Sprintf("data%d", dataIdx-1)
 			}
 		}
 	}
-	return v
+	return &v
 }
 
 func (t *EventTupleType) Type() string {
@@ -227,7 +226,7 @@ func (a *ArrayType) Element() Type {
 }
 
 func (a *ArrayType) New() Value {
-	return &ArrayValue{typ: a}
+	return &ArrayValue{Type: a}
 }
 
 func (a *ArrayType) Type() string {
@@ -261,7 +260,11 @@ func (f *FixedArrayType) Element() Type {
 }
 
 func (f *FixedArrayType) New() Value {
-	return &FixedArrayValue{typ: f, elems: make([]Value, f.size)}
+	elems := make([]Value, f.size)
+	for i := range elems {
+		elems[i] = f.typ.New()
+	}
+	return (*FixedArrayValue)(&elems)
 }
 
 func (f *FixedArrayType) Type() string {
@@ -299,7 +302,7 @@ func NewStringType() *StringType {
 }
 
 func (s *StringType) New() Value {
-	return &StringValue{}
+	return new(StringValue)
 }
 
 func (s *StringType) Type() string {
@@ -324,7 +327,8 @@ func (f *FixedBytesType) Size() int {
 }
 
 func (f *FixedBytesType) New() Value {
-	return &FixedBytesValue{data: make([]byte, f.size)}
+	b := make(FixedBytesValue, f.size)
+	return &b
 }
 
 func (f *FixedBytesType) Type() string {
@@ -347,7 +351,7 @@ func NewUintType(size int) *UintType {
 }
 
 func (u *UintType) New() Value {
-	return &UintValue{val: new(big.Int), size: u.size}
+	return &UintValue{Size: u.size}
 }
 
 func (u *UintType) Size() int {
@@ -374,7 +378,7 @@ func NewIntType(size int) *IntType {
 }
 
 func (i *IntType) New() Value {
-	return &IntValue{val: new(big.Int), size: i.size}
+	return &IntValue{Size: i.size}
 }
 
 func (i *IntType) Size() int {
