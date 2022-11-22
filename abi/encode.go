@@ -89,7 +89,7 @@ func encodeTuple(t []Value) (Words, error) {
 		if err != nil {
 			return nil, err
 		}
-		if p.DynamicType() {
+		if p.IsDynamic() {
 			// At this point, we do not know what the number of words in the
 			// head will be, so we cannot calculate the offset. Instead, we
 			// store the index of the offset element and the number of words

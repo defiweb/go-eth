@@ -10,15 +10,24 @@ import (
 	"github.com/defiweb/go-anymapper"
 )
 
-// Value represents a value that can be marshaled to and from ABI.
+// Value represents a value that can be encoded to and from ABI.
+//
+// Values are used as an intermediate representation during encoding and
+// decoding ABI data. Usually, they are not used outside the abi package.
+//
+// When data is encoded using Encoder, the values provided to Encoder are
+// mapped to Value instances using the anymapper package, and then they are used
+// to encode the ABI data. When the data is decoded using Decoder, the Value
+// instances are used to decode the ABI data, and then the values are mapped to
+// the target types.
 type Value interface {
-	// DynamicType indicates whether the type is dynamic.
-	DynamicType() bool
+	// IsDynamic indicates whether the type is dynamic.
+	IsDynamic() bool
 
 	// EncodeABI returns the ABI encoding of the value.
 	EncodeABI() (Words, error)
 
-	// DecodeABI sets the value from the ABI encoding.
+	// DecodeABI sets the value from the ABI encoded data.
 	DecodeABI(Words) (int, error)
 }
 
@@ -29,9 +38,9 @@ type TupleValueElem struct {
 	Name  string
 }
 
-func (t *TupleValue) DynamicType() bool {
+func (t *TupleValue) IsDynamic() bool {
 	for _, elem := range *t {
-		if elem.Value.DynamicType() {
+		if elem.Value.IsDynamic() {
 			return true
 		}
 	}
@@ -75,7 +84,7 @@ type ArrayValue struct {
 	Type  Type
 }
 
-func (a *ArrayValue) DynamicType() bool {
+func (a *ArrayValue) IsDynamic() bool {
 	return true
 }
 
@@ -104,35 +113,35 @@ func (a *ArrayValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 
 type FixedArrayValue []Value
 
-func (a *FixedArrayValue) DynamicType() bool {
+func (a FixedArrayValue) IsDynamic() bool {
 	return false
 }
 
-func (a *FixedArrayValue) EncodeABI() (Words, error) {
-	return encodeFixedArray(*a)
+func (a FixedArrayValue) EncodeABI() (Words, error) {
+	return encodeFixedArray(a)
 }
 
-func (a *FixedArrayValue) DecodeABI(data Words) (int, error) {
-	return decodeFixedArray((*[]Value)(a), data)
+func (a FixedArrayValue) DecodeABI(data Words) (int, error) {
+	return decodeFixedArray((*[]Value)(&a), data)
 }
 
-func (a *FixedArrayValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
+func (a FixedArrayValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	if src.Kind() != reflect.Slice && src.Kind() != reflect.Array {
-		return fmt.Errorf("abi: cannot map %s to array[%d]", src.Type(), len(*a))
+		return fmt.Errorf("abi: cannot map %s to array[%d]", src.Type(), len(a))
 	}
-	if src.Len() != len(*a) {
-		return fmt.Errorf("abi: cannot map %d elements to array[%d]", src.Len(), len(*a))
+	if src.Len() != len(a) {
+		return fmt.Errorf("abi: cannot map %d elements to array[%d]", src.Len(), len(a))
 	}
-	return m.MapRefl(src, reflect.ValueOf((*[]Value)(a)))
+	return m.MapRefl(src, reflect.ValueOf((*[]Value)(&a)))
 }
 
-func (a *FixedArrayValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
-	return m.MapRefl(reflect.ValueOf((*[]Value)(a)), dest)
+func (a FixedArrayValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+	return m.MapRefl(reflect.ValueOf(([]Value)(a)), dest)
 }
 
 type BytesValue []byte
 
-func (b *BytesValue) DynamicType() bool {
+func (b *BytesValue) IsDynamic() bool {
 	return true
 }
 
@@ -154,7 +163,7 @@ func (b *BytesValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 
 type StringValue string
 
-func (s *StringValue) DynamicType() bool {
+func (s *StringValue) IsDynamic() bool {
 	return true
 }
 
@@ -181,7 +190,7 @@ func (s *StringValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 
 type FixedBytesValue []byte
 
-func (b FixedBytesValue) DynamicType() bool {
+func (b FixedBytesValue) IsDynamic() bool {
 	return false
 }
 
@@ -206,7 +215,7 @@ type UintValue struct {
 	Size int
 }
 
-func (u *UintValue) DynamicType() bool {
+func (u *UintValue) IsDynamic() bool {
 	return false
 }
 
@@ -242,7 +251,7 @@ type IntValue struct {
 	Size int
 }
 
-func (i *IntValue) DynamicType() bool {
+func (i *IntValue) IsDynamic() bool {
 	return false
 }
 
@@ -275,7 +284,7 @@ func (i *IntValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 
 type BoolValue bool
 
-func (b *BoolValue) DynamicType() bool {
+func (b *BoolValue) IsDynamic() bool {
 	return false
 }
 
@@ -303,7 +312,7 @@ func (b *BoolValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
 
 type AddressValue types.Address
 
-func (a *AddressValue) DynamicType() bool {
+func (a *AddressValue) IsDynamic() bool {
 	return false
 }
 

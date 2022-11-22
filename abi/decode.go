@@ -56,7 +56,7 @@ func decodeTuple(t *[]Value, w Words) (int, error) {
 		if wordIdx >= len(w) {
 			return 0, fmt.Errorf("abi: cannot decode tuple, unexpected end of data")
 		}
-		if e.DynamicType() {
+		if e.IsDynamic() {
 			offset, err := readInt(&w[wordIdx])
 			if offset%WordLength != 0 {
 				return 0, fmt.Errorf("abi: cannot decode tuple, offset not a multiple of word length")

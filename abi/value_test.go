@@ -665,10 +665,6 @@ func TestDecodeABI(t *testing.T) {
 	}
 }
 
-func ptr(v any) *any {
-	return &v
-}
-
 func padL(h string) (w Word) {
 	_ = (&w).SetBytesPadLeft(hexutil.MustHexToBytes(h))
 	return w
