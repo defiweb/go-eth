@@ -102,7 +102,7 @@ func (a *ArrayValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	}
 	a.Elems = make([]Value, src.Len())
 	for i := 0; i < src.Len(); i++ {
-		a.Elems[i] = a.Type.New()
+		a.Elems[i] = a.Type.Value()
 	}
 	return m.MapRefl(src, reflect.ValueOf(&a.Elems))
 }

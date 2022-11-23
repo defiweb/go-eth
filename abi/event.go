@@ -7,6 +7,8 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+// Event represents an event in an ABI. The event can be used to decode events
+// emitted by a contract.
 type Event struct {
 	name   string
 	inputs *EventTupleType
@@ -16,10 +18,12 @@ type Event struct {
 	signature string
 }
 
+// NewEvent creates a new Event instance.
 func NewEvent(name string, inputs *EventTupleType) *Event {
 	return NewEventWithConfig(name, inputs, DefaultConfig)
 }
 
+// NewEventWithConfig creates a new Event instance with a custom config.
 func NewEventWithConfig(name string, inputs *EventTupleType, config *Config) *Event {
 	e := &Event{
 		name:   name,
@@ -31,22 +35,30 @@ func NewEventWithConfig(name string, inputs *EventTupleType, config *Config) *Ev
 	return e
 }
 
+// Name returns the name of the event.
 func (e *Event) Name() string {
 	return e.name
 }
 
+// Inputs returns the input arguments of the event as a tuple type.
 func (e *Event) Inputs() *EventTupleType {
 	return e.inputs
 }
 
+// Topic0 returns the first topic of the event, that is, the Keccak256 hash of
+// the event signature.
 func (e *Event) Topic0() types.Hash {
 	return e.topic0
 }
 
+// Signature returns the event signature, that is, the event name and the
+// canonical type of the input arguments.
 func (e *Event) Signature() string {
 	return e.signature
 }
 
+// DecodeValue decodes the event into a map or structure. If a structure is
+// given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
@@ -55,12 +67,14 @@ func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 		return fmt.Errorf("abi: topic0 mismatch for event %s", e.name)
 	}
 	return NewDecoder(e.config).DecodeValue(
-		e.inputs.New(),
+		e.inputs.Value(),
 		e.mergeData(topics[1:], data),
 		val,
 	)
 }
 
+// DecodeValues decodes the event into a map or structure. If a structure is
+// given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) error {
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
@@ -69,12 +83,13 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 		return fmt.Errorf("abi: topic0 mismatch for event %s", e.name)
 	}
 	return NewDecoder(e.config).DecodeValues(
-		e.inputs.New().(*TupleValue),
+		e.inputs.Value().(*TupleValue),
 		e.mergeData(topics[1:], data),
 		vals...,
 	)
 }
 
+// String returns the human-readable signature of the event.
 func (e *Event) String() string {
 	return fmt.Sprintf("event %s%s", e.name, e.inputs.Type())
 }

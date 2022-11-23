@@ -102,7 +102,7 @@ func decodeArray(a *[]Value, w Words, t Type) (int, error) {
 	}
 	*a = make([]Value, size)
 	for i := 0; i < size; i++ {
-		(*a)[i] = t.New()
+		(*a)[i] = t.Value()
 	}
 	if _, err := decodeTuple(a, w[1:]); err != nil {
 		return 0, err
