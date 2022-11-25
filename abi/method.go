@@ -6,7 +6,7 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
-// Method represents a method in an ABI. The method can be used to encode
+// Method represents a method in an jsonABI. The method can be used to encode
 // arguments for a method call and decode return values from a method call.
 type Method struct {
 	name    string
@@ -66,8 +66,8 @@ func (m *Method) Signature() string {
 // EncodeArg encodes arguments for a method call using a provided map or
 // structure. The map or structure must have fields with the same names as
 // the method arguments.
-func (m *Method) EncodeArg(val any) ([]byte, error) {
-	encoded, err := NewEncoder(m.config).EncodeValue(m.inputs.Value(), val)
+func (m *Method) EncodeArg(arg any) ([]byte, error) {
+	encoded, err := NewEncoder(m.config).EncodeValue(m.inputs.Value(), arg)
 	if err != nil {
 		return nil, err
 	}
@@ -100,10 +100,10 @@ func (m *Method) String() string {
 	var buf strings.Builder
 	buf.WriteString("function ")
 	buf.WriteString(m.name)
-	buf.WriteString(m.inputs.Type())
+	buf.WriteString(m.inputs.String())
 	if m.outputs.Size() > 0 {
 		buf.WriteString(" returns ")
-		buf.WriteString(m.outputs.Type())
+		buf.WriteString(m.outputs.String())
 	}
 	return buf.String()
 }

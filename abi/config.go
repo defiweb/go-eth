@@ -9,14 +9,14 @@ import (
 
 var DefaultConfig *Config
 
-// Config holds the configuration for the ABI parser, encoder and decoder.
+// Config holds the configuration for the jsonABI parser, encoder and decoder.
 type Config struct {
-	// Types is a map of types that can be used in the ABI.
+	// Types is a map of types that can be used in the jsonABI.
 	// The key is the name of the type, and the value is the type.
 	Types map[string]Type
 
 	// Mapper is the instance of the mapper that will be used to map
-	// values to and from ABI types.
+	// values to and from jsonABI types.
 	Mapper *anymapper.Mapper
 }
 

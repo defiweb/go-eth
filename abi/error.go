@@ -6,7 +6,7 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
-// Error represents an error in an ABI. The error can be used to decode errors
+// Error represents an error in an jsonABI. The error can be used to decode errors
 // returned by a contract call.
 type Error struct {
 	name   string
@@ -56,7 +56,7 @@ func (m *Error) Signature() string {
 	return m.signature
 }
 
-// Is returns true if the ABI encoded data is an error of this type.
+// Is returns true if the jsonABI encoded data is an error of this type.
 func (m *Error) Is(data []byte) bool {
 	return m.fourBytes.Match(data)
 }
@@ -64,9 +64,6 @@ func (m *Error) Is(data []byte) bool {
 // DecodeValue decodes the error into a map or structure. If a structure is
 // given, it must have fields with the same names as the error arguments.
 func (m *Error) DecodeValue(data []byte, val any) error {
-	if len(data) < 4 {
-		return fmt.Errorf("abi: error data too short")
-	}
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
@@ -76,9 +73,6 @@ func (m *Error) DecodeValue(data []byte, val any) error {
 // DecodeValues decodes the error into a map or structure. If a structure is
 // given, it must have fields with the same names as the error arguments.
 func (m *Error) DecodeValues(data []byte, vals ...any) error {
-	if len(data) < 4 {
-		return fmt.Errorf("abi: error data too short")
-	}
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
@@ -87,7 +81,7 @@ func (m *Error) DecodeValues(data []byte, vals ...any) error {
 
 // String returns the human-readable signature of the error.
 func (m *Error) String() string {
-	return "error " + m.name + m.inputs.Type()
+	return "error " + m.name + m.inputs.String()
 }
 
 func (m *Error) generateSignature() {

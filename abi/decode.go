@@ -88,7 +88,7 @@ func decodeTuple(t *[]Value, w Words) (int, error) {
 }
 
 // decodeArray decodes a dynamic array from the given words and stores the result
-// in the given array.
+// in the given array. The elements of the array are decoded to t type.
 func decodeArray(a *[]Value, w Words, t Type) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode array from empty data")
@@ -110,6 +110,8 @@ func decodeArray(a *[]Value, w Words, t Type) (int, error) {
 	return size + 1, nil
 }
 
+// decodeFixedArray decodes a fixed array from the given words into the values
+// in the given array.
 func decodeFixedArray(a *[]Value, w Words) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode array[%d] from empty data", len(*a))
@@ -138,6 +140,8 @@ func decodeBytes(b *[]byte, w Words) (int, error) {
 	return size + 1, nil
 }
 
+// decodeFixedBytes decodes a fixed byte of the given size from the given words
+// and stores the result in the given byte array.
 func decodeFixedBytes(b *[]byte, w Words, size int) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode bytes%d from empty data", size)
@@ -149,6 +153,9 @@ func decodeFixedBytes(b *[]byte, w Words, size int) (int, error) {
 	return 1, nil
 }
 
+// decodeInt decodes an integer of the given size from the given words and
+// stores the result in the given integer. If the integer is larger than the
+// maximum value for the given size, an error is returned.
 func decodeInt(v *big.Int, w Words, size int) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode int from empty data")
@@ -161,6 +168,9 @@ func decodeInt(v *big.Int, w Words, size int) (int, error) {
 	return 1, nil
 }
 
+// decodeUint decodes an unsigned integer of the given size from the given
+// words and stores the result in the given integer. If the integer is larger
+// than the maximum value for the given size, an error is returned.
 func decodeUint(v *big.Int, w Words, size int) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode int from empty data")
@@ -173,6 +183,8 @@ func decodeUint(v *big.Int, w Words, size int) (int, error) {
 	return 1, nil
 }
 
+// decodeBool decodes a boolean from the given words and stores the result in
+// the given boolean.
 func decodeBool(a *bool, w Words) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode bool from empty data")
@@ -181,6 +193,8 @@ func decodeBool(a *bool, w Words) (int, error) {
 	return 1, nil
 }
 
+// decodeAddress decodes an address from the given words and stores the result
+// in the given address.
 func decodeAddress(v *types.Address, w Words) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode address from empty data")
@@ -189,6 +203,7 @@ func decodeAddress(v *types.Address, w Words) (int, error) {
 	return 1, nil
 }
 
+// readInt reads an integer from the given word.
 func readInt(w *Word) (int, error) {
 	i32 := newIntX(32)
 	if err := i32.SetBytes(w.Bytes()); err != nil {

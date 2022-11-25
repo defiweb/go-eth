@@ -5,11 +5,9 @@ import (
 	"strings"
 )
 
-// Type represents an ABI type.
+// Type is a representation of a type like uint256 or address. The type can be
+// used to create a new value of that type, but it cannot store a value.
 type Type interface {
-	// Type returns the user-friendly name of the type.
-	Type() string
-
 	// CanonicalType returns the canonical name of the type. In case of a
 	// tuple, the canonical name is the canonical name of the tuple's
 	// elements, separated by commas and enclosed in parentheses. Arrays
@@ -17,7 +15,10 @@ type Type interface {
 	// by square brackets with the array size.
 	CanonicalType() string
 
-	// Value creates a new zero value of this type.
+	// String returns the user-friendly name of the type.
+	String() string
+
+	// Value creates a new zero value for the type.
 	Value() Value
 }
 
@@ -33,14 +34,14 @@ func NewAliasType(alias string, typ Type) *AliasType {
 	return &AliasType{alias: alias, typ: typ}
 }
 
-// Type implements the Type interface.
-func (a *AliasType) Type() string {
-	return a.alias
-}
-
 // CanonicalType implements the Type interface.
 func (a *AliasType) CanonicalType() string {
 	return a.typ.CanonicalType()
+}
+
+// String implements the Type interface.
+func (a *AliasType) String() string {
+	return a.alias
 }
 
 // Value implements the Type interface.
@@ -81,24 +82,6 @@ func (t *TupleType) Elements() []TupleTypeElem {
 	return cpy
 }
 
-// Type implements the Type interface.
-func (t *TupleType) Type() string {
-	var buf strings.Builder
-	buf.WriteString("(")
-	for i, elem := range t.elems {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(elem.Type.Type())
-		if len(elem.Name) > 0 {
-			buf.WriteString(" ")
-			buf.WriteString(elem.Name)
-		}
-	}
-	buf.WriteString(")")
-	return buf.String()
-}
-
 // CanonicalType implements the Type interface.
 func (t *TupleType) CanonicalType() string {
 	var buf strings.Builder
@@ -108,6 +91,24 @@ func (t *TupleType) CanonicalType() string {
 			buf.WriteString(",")
 		}
 		buf.WriteString(elem.Type.CanonicalType())
+	}
+	buf.WriteString(")")
+	return buf.String()
+}
+
+// String implements the Type interface.
+func (t *TupleType) String() string {
+	var buf strings.Builder
+	buf.WriteString("(")
+	for i, elem := range t.elems {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(elem.Type.String())
+		if len(elem.Name) > 0 {
+			buf.WriteString(" ")
+			buf.WriteString(elem.Name)
+		}
 	}
 	buf.WriteString(")")
 	return buf.String()
@@ -186,27 +187,6 @@ func (t *EventTupleType) Elements() []EventTupleElem {
 	return cpy
 }
 
-// Type implements the Type interface.
-func (t *EventTupleType) Type() string {
-	var buf strings.Builder
-	buf.WriteString("(")
-	for i, elem := range t.elems {
-		if i > 0 {
-			buf.WriteString(", ")
-		}
-		buf.WriteString(elem.Type.Type())
-		if elem.Indexed {
-			buf.WriteString(" indexed")
-		}
-		if len(elem.Name) > 0 {
-			buf.WriteString(" ")
-			buf.WriteString(elem.Name)
-		}
-	}
-	buf.WriteString(")")
-	return buf.String()
-}
-
 // CanonicalType implements the Type interface.
 func (t *EventTupleType) CanonicalType() string {
 	var buf strings.Builder
@@ -216,6 +196,27 @@ func (t *EventTupleType) CanonicalType() string {
 			buf.WriteString(",")
 		}
 		buf.WriteString(elem.Type.CanonicalType())
+	}
+	buf.WriteString(")")
+	return buf.String()
+}
+
+// String implements the Type interface.
+func (t *EventTupleType) String() string {
+	var buf strings.Builder
+	buf.WriteString("(")
+	for i, elem := range t.elems {
+		if i > 0 {
+			buf.WriteString(", ")
+		}
+		buf.WriteString(elem.Type.String())
+		if elem.Indexed {
+			buf.WriteString(" indexed")
+		}
+		if len(elem.Name) > 0 {
+			buf.WriteString(" ")
+			buf.WriteString(elem.Name)
+		}
 	}
 	buf.WriteString(")")
 	return buf.String()
@@ -265,14 +266,14 @@ func (a *ArrayType) ElementType() Type {
 	return a.typ
 }
 
-// Type implements the Type interface.
-func (a *ArrayType) Type() string {
-	return a.typ.Type() + "[]"
-}
-
 // CanonicalType implements the Type interface.
 func (a *ArrayType) CanonicalType() string {
 	return a.typ.CanonicalType() + "[]"
+}
+
+// String implements the Type interface.
+func (a *ArrayType) String() string {
+	return a.typ.String() + "[]"
 }
 
 // Value implements the Type interface.
@@ -305,14 +306,14 @@ func (f *FixedArrayType) ElementType() Type {
 	return f.typ
 }
 
-// Type implements the Type interface.
-func (f *FixedArrayType) Type() string {
-	return f.typ.Type() + fmt.Sprintf("[%d]", f.size)
-}
-
 // CanonicalType implements the Type interface.
 func (f *FixedArrayType) CanonicalType() string {
 	return f.typ.CanonicalType() + fmt.Sprintf("[%d]", f.size)
+}
+
+// String implements the Type interface.
+func (f *FixedArrayType) String() string {
+	return f.typ.String() + fmt.Sprintf("[%d]", f.size)
 }
 
 // Value implements the Type interface.
@@ -332,13 +333,13 @@ func NewBytesType() *BytesType {
 	return &BytesType{}
 }
 
-// Type implements the Type interface.
-func (b *BytesType) Type() string {
+// CanonicalType implements the Type interface.
+func (b *BytesType) CanonicalType() string {
 	return "bytes"
 }
 
-// CanonicalType implements the Type interface.
-func (b *BytesType) CanonicalType() string {
+// String implements the Type interface.
+func (b *BytesType) String() string {
 	return "bytes"
 }
 
@@ -356,7 +357,7 @@ func NewStringType() *StringType {
 }
 
 // Type implements the Type interface.
-func (s *StringType) Type() string {
+func (s *StringType) String() string {
 	return "string"
 }
 
@@ -387,13 +388,13 @@ func (f *FixedBytesType) Size() int {
 	return f.size
 }
 
-// Type implements the Type interface.
-func (f *FixedBytesType) Type() string {
+// CanonicalType implements the Type interface.
+func (f *FixedBytesType) CanonicalType() string {
 	return fmt.Sprintf("bytes%d", f.size)
 }
 
-// CanonicalType implements the Type interface.
-func (f *FixedBytesType) CanonicalType() string {
+// String implements the Type interface.
+func (f *FixedBytesType) String() string {
 	return fmt.Sprintf("bytes%d", f.size)
 }
 
@@ -420,13 +421,13 @@ func (u *UintType) Size() int {
 	return u.size
 }
 
-// Type implements the Type interface.
-func (u *UintType) Type() string {
+// CanonicalType implements the Type interface.
+func (u *UintType) CanonicalType() string {
 	return fmt.Sprintf("uint%d", u.size)
 }
 
-// CanonicalType implements the Type interface.
-func (u *UintType) CanonicalType() string {
+// String implements the Type interface.
+func (u *UintType) String() string {
 	return fmt.Sprintf("uint%d", u.size)
 }
 
@@ -453,7 +454,7 @@ func (i *IntType) Size() int {
 }
 
 // Type implements the Type interface.
-func (i *IntType) Type() string {
+func (i *IntType) String() string {
 	return fmt.Sprintf("int%d", i.size)
 }
 
@@ -475,13 +476,13 @@ func NewBoolType() *BoolType {
 	return &BoolType{}
 }
 
-// Type implements the Type interface.
-func (b *BoolType) Type() string {
+// CanonicalType implements the Type interface.
+func (b *BoolType) CanonicalType() string {
 	return "bool"
 }
 
-// CanonicalType implements the Type interface.
-func (b *BoolType) CanonicalType() string {
+// String implements the Type interface.
+func (b *BoolType) String() string {
 	return "bool"
 }
 
@@ -498,13 +499,13 @@ func NewAddressType() *AddressType {
 	return &AddressType{}
 }
 
-// Type implements the Type interface.
-func (a *AddressType) Type() string {
+// CanonicalType implements the Type interface.
+func (a *AddressType) CanonicalType() string {
 	return "address"
 }
 
-// CanonicalType implements the Type interface.
-func (a *AddressType) CanonicalType() string {
+// String implements the Type interface.
+func (a *AddressType) String() string {
 	return "address"
 }
 

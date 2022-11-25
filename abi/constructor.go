@@ -1,6 +1,6 @@
 package abi
 
-// Constructor represents a constructor in an ABI. The constructor can be used to
+// Constructor represents a constructor in an jsonABI. The constructor can be used to
 // encode arguments for a constructor call.
 type Constructor struct {
 	inputs *TupleType
@@ -29,8 +29,8 @@ func (m *Constructor) Inputs() *TupleType {
 // EncodeArg encodes arguments for a constructor call using a provided map or
 // structure. The map or structure must have fields with the same names as
 // the constructor arguments.
-func (m *Constructor) EncodeArg(val any) ([]byte, error) {
-	encoded, err := NewEncoder(m.config).EncodeValue(m.inputs.Value(), val)
+func (m *Constructor) EncodeArg(arg any) ([]byte, error) {
+	encoded, err := NewEncoder(m.config).EncodeValue(m.inputs.Value(), arg)
 	if err != nil {
 		return nil, err
 	}
@@ -48,5 +48,5 @@ func (m *Constructor) EncodeArgs(args ...any) ([]byte, error) {
 
 // String returns the human-readable signature of the constructor.
 func (m *Constructor) String() string {
-	return "constructor" + m.inputs.Type()
+	return "constructor" + m.inputs.String()
 }

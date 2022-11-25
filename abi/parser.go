@@ -13,10 +13,10 @@ import (
 // the parentheses. Parameter names are optional.
 //
 // The generated types can be used to create new values, which can then be used
-// to encode or decode ABI data.
+// to encode or decode jsonABI data.
 //
-// Custom types may be added to the Config.Types. This will allow the parser to
-// handle custom types.
+// Custom types may be added to the Config.Types, this will allow the parser to
+// handle them.
 //
 // The following examples are valid type signatures:
 //
@@ -229,21 +229,21 @@ func (p *Parser) toType(param sigparser.Parameter) (typ Type, err error) {
 		return nil, fmt.Errorf("abi: parameter cannot be both elementary type and tuple: %s", param)
 	}
 	switch {
-	case len(param.Arrays) > 0:
-		cpy := copyParam(param)
-		cpy.Arrays = nil
-		typ, err = p.toType(cpy)
+	case len(param.Arrays) > 0: // array
+		arrays := param.Arrays
+		param.Arrays = nil
+		typ, err = p.toType(param)
 		if err != nil {
 			return nil, err
 		}
-		for i := len(param.Arrays) - 1; i >= 0; i-- {
-			if param.Arrays[i] == -1 {
+		for i := len(arrays) - 1; i >= 0; i-- {
+			if arrays[i] == -1 {
 				typ = NewArrayType(typ)
 			} else {
-				typ = NewFixedArrayType(typ, param.Arrays[i])
+				typ = NewFixedArrayType(typ, arrays[i])
 			}
 		}
-	case len(param.Tuple) > 0:
+	case len(param.Tuple) > 0: // tuple
 		tuple := make([]TupleTypeElem, len(param.Tuple))
 		for i, param := range param.Tuple {
 			elemTyp, err := p.toType(param)
@@ -327,7 +327,14 @@ func (p *Parser) toEvent(s sigparser.Signature) (*Event, error) {
 			Type:    typ,
 		})
 	}
-	return NewEventWithConfig(s.Name, NewEventTupleType(inputs...), p.Config), nil
+	anonymous := false
+	for _, param := range s.Modifiers {
+		if param == "anonymous" {
+			anonymous = true
+			break
+		}
+	}
+	return NewEventWithConfig(s.Name, NewEventTupleType(inputs...), anonymous, p.Config), nil
 }
 
 func (p *Parser) toError(s sigparser.Signature) (*Error, error) {
@@ -346,22 +353,6 @@ func (p *Parser) toError(s sigparser.Signature) (*Error, error) {
 		})
 	}
 	return NewErrorWithConfig(s.Name, NewTupleType(inputs...), p.Config), nil
-}
-
-func copyParam(param sigparser.Parameter) sigparser.Parameter {
-	cpy := sigparser.Parameter{
-		Type:         param.Type,
-		Name:         param.Name,
-		Arrays:       make([]int, len(param.Arrays)),
-		Tuple:        make([]sigparser.Parameter, len(param.Tuple)),
-		Indexed:      param.Indexed,
-		DataLocation: param.DataLocation,
-	}
-	copy(cpy.Arrays, param.Arrays)
-	for i, p := range param.Tuple {
-		cpy.Tuple[i] = copyParam(p)
-	}
-	return cpy
 }
 
 func isKind(kind sigparser.SignatureKind, kinds ...sigparser.SignatureKind) bool {

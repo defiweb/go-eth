@@ -2,33 +2,36 @@ package abi
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/types"
 )
 
-// Event represents an event in an ABI. The event can be used to decode events
+// Event represents an event in an jsonABI. The event can be used to decode events
 // emitted by a contract.
 type Event struct {
-	name   string
-	inputs *EventTupleType
-	config *Config
+	name      string
+	inputs    *EventTupleType
+	anonymous bool
+	config    *Config
 
 	topic0    types.Hash
 	signature string
 }
 
 // NewEvent creates a new Event instance.
-func NewEvent(name string, inputs *EventTupleType) *Event {
-	return NewEventWithConfig(name, inputs, DefaultConfig)
+func NewEvent(name string, inputs *EventTupleType, anonymous bool) *Event {
+	return NewEventWithConfig(name, inputs, anonymous, DefaultConfig)
 }
 
 // NewEventWithConfig creates a new Event instance with a custom config.
-func NewEventWithConfig(name string, inputs *EventTupleType, config *Config) *Event {
+func NewEventWithConfig(name string, inputs *EventTupleType, anonymous bool, config *Config) *Event {
 	e := &Event{
-		name:   name,
-		inputs: inputs,
-		config: config,
+		name:      name,
+		inputs:    inputs,
+		anonymous: anonymous,
+		config:    config,
 	}
 	e.generateSignature()
 	e.calculateTopic0()
@@ -60,6 +63,13 @@ func (e *Event) Signature() string {
 // DecodeValue decodes the event into a map or structure. If a structure is
 // given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
+	if e.anonymous {
+		return NewDecoder(e.config).DecodeValue(
+			e.inputs.Value().(*TupleValue),
+			data,
+			val,
+		)
+	}
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
 	}
@@ -76,6 +86,13 @@ func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 // DecodeValues decodes the event into a map or structure. If a structure is
 // given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) error {
+	if e.anonymous {
+		return NewDecoder(e.config).DecodeValues(
+			e.inputs.Value().(*TupleValue),
+			data,
+			vals...,
+		)
+	}
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
 	}
@@ -91,7 +108,14 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 
 // String returns the human-readable signature of the event.
 func (e *Event) String() string {
-	return fmt.Sprintf("event %s%s", e.name, e.inputs.Type())
+	var buf strings.Builder
+	buf.WriteString("event ")
+	buf.WriteString(e.name)
+	buf.WriteString(e.inputs.String())
+	if e.anonymous {
+		buf.WriteString(" anonymous")
+	}
+	return buf.String()
 }
 
 func (e *Event) calculateTopic0() {

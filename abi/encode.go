@@ -114,7 +114,7 @@ func encodeTuple(t []Value) (Words, error) {
 	}
 	// Calculate the offsets for the dynamic elements as described above.
 	for n, i := range offsetIdx {
-		if err := writeUint(&head[i], headLen+offsetVal[n]); err != nil {
+		if err := writeInt(&head[i], headLen+offsetVal[n]); err != nil {
 			return nil, err
 		}
 	}
@@ -128,14 +128,14 @@ func encodeTuple(t []Value) (Words, error) {
 // encodeArray encodes a dynamic array.
 //
 // The array is encoded just like a tuple, except that the first word is the
-// number of elements in the elems.
+// number of elements in the array. All array elements must be of the same type.
 func encodeArray(a []Value) (Words, error) {
 	tuple, err := encodeTuple(a)
 	if err != nil {
 		return nil, err
 	}
 	words := make(Words, len(tuple)+1)
-	if err := writeUint(&words[0], len(a)); err != nil {
+	if err := writeInt(&words[0], len(a)); err != nil {
 		return nil, err
 	}
 	copy(words[1:], tuple)
@@ -144,7 +144,8 @@ func encodeArray(a []Value) (Words, error) {
 
 // encodeFixedArray encodes a fixed-size array.
 //
-// The fixed-size array is encoded just like a tuple.
+// The fixed-size array is encoded just like a tuple. All array elements must be
+// of the same type.
 func encodeFixedArray(a []Value) (Words, error) {
 	return encodeTuple(a)
 }
@@ -156,7 +157,7 @@ func encodeFixedArray(a []Value) (Words, error) {
 // (single word) before the byte sequence.
 func encodeBytes(b []byte) (Words, error) {
 	words := make(Words, requiredWords(len(b))+1)
-	if err := writeUint(&words[0], len(b)); err != nil {
+	if err := writeInt(&words[0], len(b)); err != nil {
 		return nil, err
 	}
 	for i, w := range BytesToWords(b) {
@@ -182,11 +183,13 @@ func encodeFixedBytes(b []byte, size int) (Words, error) {
 
 // encodeInt encodes an integer.
 //
-// The integer is encoded as two's complement 256-bit integer.
-func encodeInt(val *big.Int, size int) (Words, error) {
+// The integer is encoded as two's complement integer. If the integer cannot
+// be represented in number of bits specified by the size argument, an error
+// is returned.
+func encodeInt(v *big.Int, size int) (Words, error) {
 	w := Word{}
 	x := newIntX(size)
-	if err := x.SetBigInt(val); err != nil {
+	if err := x.SetBigInt(v); err != nil {
 		return nil, err
 	}
 	if err := w.SetBytesPadLeft(x.Bytes()); err != nil {
@@ -197,11 +200,13 @@ func encodeInt(val *big.Int, size int) (Words, error) {
 
 // encodeUint encodes an unsigned integer.
 //
-// The integer is encoded as 256-bit unsigned integer.
-func encodeUint(val *big.Int, size int) (Words, error) {
+// The integer is encoded as unsigned integer. If the integer cannot be
+// represented in number of bits specified by the size argument, an error
+// is returned.
+func encodeUint(v *big.Int, size int) (Words, error) {
 	w := Word{}
 	x := newUintX(size)
-	if err := x.SetBigInt(val); err != nil {
+	if err := x.SetBigInt(v); err != nil {
 		return nil, err
 	}
 	if err := w.SetBytesPadLeft(x.Bytes()); err != nil {
@@ -223,6 +228,8 @@ func encodeBool(b bool) Words {
 }
 
 // encodeAddress encodes an address.
+//
+// An address is encoded as a 160-bit byte sequence, padded on the left.
 func encodeAddress(val types.Address) (Words, error) {
 	w := Word{}
 	if err := w.SetBytesPadLeft(val.Bytes()); err != nil {
@@ -231,7 +238,8 @@ func encodeAddress(val types.Address) (Words, error) {
 	return Words{w}, nil
 }
 
-func writeUint(w *Word, x int) error {
+// writeInt writes an integer to a word.
+func writeInt(w *Word, x int) error {
 	i32 := newIntX(32)
 	if err := i32.SetInt(x); err != nil {
 		return err
