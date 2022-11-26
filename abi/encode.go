@@ -7,15 +7,19 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-func EncodeValue(t Value, val any) ([]byte, error) {
-	return NewEncoder(DefaultConfig).EncodeValue(t, val)
+// EncodeValue encodes a value to ABI encoding.
+func EncodeValue(t Type, val any) ([]byte, error) {
+	return Default.EncodeValue(t, val)
 }
 
-func EncodeValues(t *TupleValue, vals ...any) ([]byte, error) {
-	return NewEncoder(DefaultConfig).EncodeValues(t, vals...)
+// EncodeValues encodes a list of values to ABI encoding.
+// The t type must be a tuple type.
+func EncodeValues(t Type, vals ...any) ([]byte, error) {
+	return Default.EncodeValues(t, vals...)
 }
 
-func MustEncodeValue(t Value, val any) []byte {
+// MustEncodeValue is like EncodeValue but panics on error.
+func MustEncodeValue(t Type, val any) []byte {
 	b, err := EncodeValue(t, val)
 	if err != nil {
 		panic(err)
@@ -23,7 +27,8 @@ func MustEncodeValue(t Value, val any) []byte {
 	return b
 }
 
-func MustEncodeValues(t *TupleValue, vals ...any) []byte {
+// MustEncodeValues is like EncodeValues but panics on error.
+func MustEncodeValues(t Type, vals ...any) []byte {
 	b, err := EncodeValues(t, vals...)
 	if err != nil {
 		panic(err)
@@ -31,35 +36,35 @@ func MustEncodeValues(t *TupleValue, vals ...any) []byte {
 	return b
 }
 
-type Encoder struct {
-	Config *Config
-}
-
-func NewEncoder(c *Config) *Encoder {
-	return &Encoder{Config: c}
-}
-
-func (e *Encoder) EncodeValue(t Value, val any) ([]byte, error) {
-	if err := e.Config.Mapper.Map(val, t); err != nil {
+// EncodeValue encodes a value to ABI encoding.
+func (a *ABI) EncodeValue(t Type, val any) ([]byte, error) {
+	v := t.Value()
+	if err := a.Mapper.Map(val, v); err != nil {
 		return nil, err
 	}
-	words, err := t.EncodeABI()
+	words, err := v.EncodeABI()
 	if err != nil {
 		return nil, err
 	}
 	return words.Bytes(), nil
 }
 
-func (e *Encoder) EncodeValues(t *TupleValue, vals ...any) ([]byte, error) {
-	if len(*t) != len(vals) {
-		return nil, fmt.Errorf("abi: expected %d values, got %d", len(*t), len(vals))
+// EncodeValues encodes a list of values to ABI encoding.
+// The t type must be a tuple type.
+func (a *ABI) EncodeValues(t Type, vals ...any) ([]byte, error) {
+	v, ok := t.Value().(*TupleValue)
+	if !ok {
+		return nil, fmt.Errorf("abi: cannot encode values, expected tuple type")
 	}
-	for i, elem := range *t {
-		if err := e.Config.Mapper.Map(vals[i], elem.Value); err != nil {
+	if len(*v) != len(vals) {
+		return nil, fmt.Errorf("abi: expected %d values, got %d", len(*v), len(vals))
+	}
+	for i, elem := range *v {
+		if err := a.Mapper.Map(vals[i], elem.Value); err != nil {
 			return nil, err
 		}
 	}
-	words, err := t.EncodeABI()
+	words, err := v.EncodeABI()
 	if err != nil {
 		return nil, err
 	}

@@ -22,6 +22,46 @@ type Type interface {
 	Value() Value
 }
 
+// ParseType parses a type signature and returns a new Type.
+//
+// A type can be either an elementary type like uint256 or a tuple type. Tuple
+// types are denoted by parentheses, with the optional keyword "tuple" before
+// the parentheses. Parameter names are optional.
+//
+// The generated types can be used to create new values, which can then be used
+// to encode or decode Contract data.
+//
+// Custom types may be added to the ABI.Types, this will allow the parser to
+// handle them.
+//
+// The following examples are valid type signatures:
+//
+//   uint256
+//   (uint256 a,bytes32 b)
+//   tuple(uint256 a, bytes32 b)[]
+//
+// This function is equivalent to calling Parser.ParseType with the default
+// configuration.
+func ParseType(signature string) (Type, error) {
+	return Default.ParseType(signature)
+}
+
+// MustParseType is like ParseType but panics on error.
+func MustParseType(signature string) Type {
+	t, err := ParseType(signature)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+// ParseType parses a type signature and returns a new Type.
+//
+// See ParseType for more information.
+func (a *ABI) ParseType(signature string) (Type, error) {
+	return parseType(a, signature)
+}
+
 // AliasType wraps another type and gives it a different type name. The canonical
 // type name is the same as the wrapped type.
 type AliasType struct {
@@ -436,7 +476,7 @@ func (u *UintType) Value() Value {
 	return &UintValue{Size: u.size}
 }
 
-// IntType represents an signed integer type.
+// IntType represents a signed integer type.
 type IntType struct{ size int }
 
 // NewIntType creates a new "int" type with the given size. The size must be

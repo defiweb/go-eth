@@ -6,12 +6,12 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
-// Error represents an error in an jsonABI. The error can be used to decode errors
+// Error represents an error in an Contract. The error can be used to decode errors
 // returned by a contract call.
 type Error struct {
 	name   string
 	inputs *TupleType
-	config *Config
+	config *ABI
 
 	fourBytes FourBytes
 	signature string
@@ -19,19 +19,52 @@ type Error struct {
 
 // NewError creates a new Error instance.
 func NewError(name string, inputs *TupleType) *Error {
-	return NewErrorWithConfig(name, inputs, DefaultConfig)
+	return Default.NewError(name, inputs)
 }
 
-// NewErrorWithConfig creates a new Error instance with a custom config.
-func NewErrorWithConfig(name string, inputs *TupleType, config *Config) *Error {
+// ParseError parses an error signature and returns a new Error.
+//
+// An error signature is similar to a method signature, but returns no values.
+// It can be optionally prefixed with the "error" keyword.
+//
+// The following examples are valid signatures:
+//
+//   foo((uint256,bytes32)[])(uint256)
+//   foo((uint256 a, bytes32 b)[] c)(uint256 d)
+//   error foo(tuple(uint256 a, bytes32 b)[] memory c)
+//
+// This function is equivalent to calling Parser.ParseError with the default
+// configuration.
+func ParseError(signature string) (*Error, error) {
+	return Default.ParseError(signature)
+}
+
+// MustParseError is like ParseError but panics on error.
+func MustParseError(signature string) *Error {
+	e, err := ParseError(signature)
+	if err != nil {
+		panic(err)
+	}
+	return e
+}
+
+// NewError creates a new Error instance.
+func (a *ABI) NewError(name string, inputs *TupleType) *Error {
 	m := &Error{
 		name:   name,
 		inputs: inputs,
-		config: config,
+		config: a,
 	}
 	m.generateSignature()
 	m.calculateFourBytes()
 	return m
+}
+
+// ParseError parses an error signature and returns a new Error.
+//
+// See ParseError for more information.
+func (a *ABI) ParseError(signature string) (*Error, error) {
+	return parseError(a, signature)
 }
 
 // Name returns the name of the error.
@@ -56,7 +89,7 @@ func (m *Error) Signature() string {
 	return m.signature
 }
 
-// Is returns true if the jsonABI encoded data is an error of this type.
+// Is returns true if the Contract encoded data is an error of this type.
 func (m *Error) Is(data []byte) bool {
 	return m.fourBytes.Match(data)
 }
@@ -67,7 +100,7 @@ func (m *Error) DecodeValue(data []byte, val any) error {
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
-	return NewDecoder(m.config).DecodeValue(m.inputs.Value(), data[4:], val)
+	return m.config.DecodeValue(m.inputs, data[4:], val)
 }
 
 // DecodeValues decodes the error into a map or structure. If a structure is
@@ -76,7 +109,7 @@ func (m *Error) DecodeValues(data []byte, vals ...any) error {
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
-	return NewDecoder(m.config).DecodeValues(m.inputs.Value().(*TupleValue), data[4:], vals...)
+	return m.config.DecodeValues(m.inputs, data[4:], vals...)
 }
 
 // String returns the human-readable signature of the error.

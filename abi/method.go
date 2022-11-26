@@ -6,13 +6,13 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
-// Method represents a method in an jsonABI. The method can be used to encode
+// Method represents a method in an Contract. The method can be used to encode
 // arguments for a method call and decode return values from a method call.
 type Method struct {
 	name    string
 	inputs  *TupleType
 	outputs *TupleType
-	config  *Config
+	config  *ABI
 
 	fourBytes FourBytes
 	signature string
@@ -20,20 +20,56 @@ type Method struct {
 
 // NewMethod creates a new Method instance.
 func NewMethod(name string, inputs, outputs *TupleType) *Method {
-	return NewMethodWithConfig(name, inputs, outputs, DefaultConfig)
+	return Default.NewMethod(name, inputs, outputs)
 }
 
-// NewMethodWithConfig creates a new Method instance with a custom config.
-func NewMethodWithConfig(name string, inputs, outputs *TupleType, config *Config) *Method {
+// ParseMethod parses a method signature and returns a new Method.
+//
+// The method accepts Solidity method signatures, but allows to omit the
+// "function" keyword, argument names and the "returns" keyword. Method
+// modifiers and argument data location specifiers are allowed, but ignored.
+// Tuple types are indicated by parentheses, with the optional keyword "tuple"
+// before the parentheses.
+//
+// The following examples are valid signatures:
+//
+//   foo((uint256,bytes32)[])(uint256)
+//   foo((uint256 a, bytes32 b)[] c)(uint256 d)
+//   function foo(tuple(uint256 a, bytes32 b)[] memory c) pure returns (uint256 d)
+//
+// This function is equivalent to calling Parser.ParseMethod with the default
+// configuration.
+func ParseMethod(signature string) (*Method, error) {
+	return Default.ParseMethod(signature)
+}
+
+// MustParseMethod is like ParseMethod but panics on error.
+func MustParseMethod(signature string) *Method {
+	m, err := ParseMethod(signature)
+	if err != nil {
+		panic(err)
+	}
+	return m
+}
+
+// NewMethod creates a new Method instance.
+func (a *ABI) NewMethod(name string, inputs, outputs *TupleType) *Method {
 	m := &Method{
 		name:    name,
 		inputs:  inputs,
 		outputs: outputs,
-		config:  config,
+		config:  a,
 	}
 	m.generateSignature()
 	m.calculateFourBytes()
 	return m
+}
+
+// ParseMethod parses a method signature and returns a new Method.
+//
+// See ParseMethod for more information.
+func (a *ABI) ParseMethod(signature string) (*Method, error) {
+	return parseMethod(a, signature)
 }
 
 // Name returns the name of the method.
@@ -67,7 +103,7 @@ func (m *Method) Signature() string {
 // structure. The map or structure must have fields with the same names as
 // the method arguments.
 func (m *Method) EncodeArg(arg any) ([]byte, error) {
-	encoded, err := NewEncoder(m.config).EncodeValue(m.inputs.Value(), arg)
+	encoded, err := m.config.EncodeValue(m.inputs, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +112,7 @@ func (m *Method) EncodeArg(arg any) ([]byte, error) {
 
 // EncodeArgs encodes arguments for a method call.
 func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
-	encoded, err := NewEncoder(m.config).EncodeValues(m.inputs.Value().(*TupleValue), args...)
+	encoded, err := m.config.EncodeValues(m.inputs, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,12 +123,12 @@ func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
 // structure. If a structure is given, it must have fields with the same names
 // as the values returned by the method.
 func (m *Method) DecodeValue(data []byte, val any) error {
-	return NewDecoder(m.config).DecodeValue(m.outputs.Value(), data, val)
+	return m.config.DecodeValue(m.outputs, data, val)
 }
 
 // DecodeValues decodes return values from a method call to a given values.
 func (m *Method) DecodeValues(data []byte, vals ...any) error {
-	return NewDecoder(m.config).DecodeValues(m.outputs.Value().(*TupleValue), data, vals...)
+	return m.config.DecodeValues(m.outputs, data, vals...)
 }
 
 // String returns the human-readable signature of the method.

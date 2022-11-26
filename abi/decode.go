@@ -7,38 +7,41 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-func DecodeValue(t Value, abi []byte, val any) error {
-	return NewDecoder(DefaultConfig).DecodeValue(t, abi, val)
+// DecodeValue decodes the given ABI-encoded data into the given value.
+func DecodeValue(t Type, abi []byte, val any) error {
+	return Default.DecodeValue(t, abi, val)
 }
 
-func DecodeValues(t *TupleValue, abi []byte, vals ...any) error {
-	return NewDecoder(DefaultConfig).DecodeValues(t, abi, vals...)
+// DecodeValues decodes the given ABI-encoded data into the given values.
+// The t type must be a tuple type.
+func DecodeValues(t Type, abi []byte, vals ...any) error {
+	return Default.DecodeValues(t, abi, vals...)
 }
 
-type Decoder struct {
-	Config *Config
-}
-
-func NewDecoder(c *Config) *Decoder {
-	return &Decoder{Config: c}
-}
-
-func (d *Decoder) DecodeValue(t Value, abi []byte, val any) error {
-	if _, err := t.DecodeABI(BytesToWords(abi)); err != nil {
+// DecodeValue decodes the given ABI-encoded data into the given value.
+func (a *ABI) DecodeValue(t Type, abi []byte, val any) error {
+	v := t.Value()
+	if _, err := v.DecodeABI(BytesToWords(abi)); err != nil {
 		return err
 	}
-	return d.Config.Mapper.Map(t, val)
+	return a.Mapper.Map(v, val)
 }
 
-func (d *Decoder) DecodeValues(t *TupleValue, abi []byte, vals ...any) error {
-	if len(*t) != len(vals) {
-		return fmt.Errorf("abi: cannot decode tuple, expected %d values, got %d", len(*t), len(vals))
+// DecodeValues decodes the given ABI-encoded data into the given values.
+// The t type must be a tuple type.
+func (a *ABI) DecodeValues(t Type, abi []byte, vals ...any) error {
+	v, ok := t.Value().(*TupleValue)
+	if !ok {
+		return fmt.Errorf("abi: cannot decode values, expected tuple type")
 	}
-	if _, err := t.DecodeABI(BytesToWords(abi)); err != nil {
+	if len(*v) != len(vals) {
+		return fmt.Errorf("abi: cannot decode tuple, expected %d values, got %d", len(*v), len(vals))
+	}
+	if _, err := v.DecodeABI(BytesToWords(abi)); err != nil {
 		return err
 	}
-	for i, elem := range *t {
-		if err := d.Config.Mapper.Map(elem.Value, vals[i]); err != nil {
+	for i, elem := range *v {
+		if err := a.Mapper.Map(elem.Value, vals[i]); err != nil {
 			return err
 		}
 	}

@@ -7,25 +7,36 @@ import (
 	"github.com/defiweb/go-anymapper"
 )
 
-var DefaultConfig *Config
+// Default is the default ABI instance that is used by the package-level
+// functions.
+var Default *ABI
 
-// Config holds the configuration for the jsonABI parser, encoder and decoder.
-type Config struct {
-	// Types is a map of types that can be used in the jsonABI.
+// ABI structure implements the Ethereum ABI (Application Binary Interface).
+//
+// It provides methods for working with ABI, such as parsing, encoding and
+// decoding data.
+//
+// The package provides default ABI instance that is used by the package-level
+// functions. It is possible to create custom ABI instances and use them
+// instead of the default one. To do this, use the Copy method to create a copy
+// of the default ABI instance and modify it as needed.
+type ABI struct {
+	// Types is a map of types that can be used in the ABU.
 	// The key is the name of the type, and the value is the type.
 	Types map[string]Type
 
 	// Mapper is the instance of the mapper that will be used to map
-	// values to and from jsonABI types.
+	// values to and from Contract types.
 	Mapper *anymapper.Mapper
 }
 
-func (c *Config) Copy() *Config {
-	cpy := &Config{
-		Types:  make(map[string]Type, len(c.Types)),
-		Mapper: c.Mapper.Copy(),
+// Copy returns a copy of the ABI instance.
+func (a *ABI) Copy() *ABI {
+	cpy := &ABI{
+		Types:  make(map[string]Type, len(a.Types)),
+		Mapper: a.Mapper.Copy(),
 	}
-	for k, v := range c.Types {
+	for k, v := range a.Types {
 		cpy.Types[k] = v
 	}
 	return cpy
@@ -72,7 +83,7 @@ func init() {
 		types[fmt.Sprintf("bytes%d", i)] = NewFixedBytesType(i)
 	}
 
-	DefaultConfig = &Config{
+	Default = &ABI{
 		Types:  types,
 		Mapper: mapper,
 	}

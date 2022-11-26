@@ -1,24 +1,57 @@
 package abi
 
-// Constructor represents a constructor in an jsonABI. The constructor can be used to
+// Constructor represents a constructor in an Contract. The constructor can be used to
 // encode arguments for a constructor call.
 type Constructor struct {
 	inputs *TupleType
-	config *Config
+	config *ABI
 }
 
 // NewConstructor creates a new Constructor instance.
 func NewConstructor(inputs *TupleType) *Constructor {
-	return NewConstructorWithConfig(inputs, DefaultConfig)
+	return Default.NewConstructor(inputs)
 }
 
-// NewConstructorWithConfig creates a new Constructor instance with a custom
-// config.
-func NewConstructorWithConfig(inputs *TupleType, config *Config) *Constructor {
+// ParseConstructor parses a constructor signature and returns a new Constructor.
+//
+// A constructor signature is similar to a method signature, but it does not
+// have a name and returns no values. It can be optionally prefixed with the
+// "constructor" keyword.
+//
+// The following examples are valid signatures:
+//
+//   ((uint256,bytes32)[])
+//   ((uint256 a, bytes32 b)[] c)
+//   constructor(tuple(uint256 a, bytes32 b)[] memory c)
+//
+// This function is equivalent to calling Parser.ParseConstructor with the
+// default configuration.
+func ParseConstructor(signature string) (*Constructor, error) {
+	return Default.ParseConstructor(signature)
+}
+
+// MustParseConstructor is like ParseConstructor but panics on error.
+func MustParseConstructor(signature string) *Constructor {
+	c, err := ParseConstructor(signature)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
+// NewConstructor creates a new Constructor instance.
+func (a *ABI) NewConstructor(inputs *TupleType) *Constructor {
 	return &Constructor{
 		inputs: inputs,
-		config: config,
+		config: a,
 	}
+}
+
+// ParseConstructor parses a constructor signature and returns a new Constructor.
+//
+// See ParseConstructor for more information.
+func (a *ABI) ParseConstructor(signature string) (*Constructor, error) {
+	return parseConstructor(a, signature)
 }
 
 // Inputs returns the input arguments of the constructor as a tuple type.
@@ -30,7 +63,7 @@ func (m *Constructor) Inputs() *TupleType {
 // structure. The map or structure must have fields with the same names as
 // the constructor arguments.
 func (m *Constructor) EncodeArg(arg any) ([]byte, error) {
-	encoded, err := NewEncoder(m.config).EncodeValue(m.inputs.Value(), arg)
+	encoded, err := m.config.EncodeValue(m.inputs, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +72,7 @@ func (m *Constructor) EncodeArg(arg any) ([]byte, error) {
 
 // EncodeArgs encodes arguments for a constructor call.
 func (m *Constructor) EncodeArgs(args ...any) ([]byte, error) {
-	encoded, err := NewEncoder(m.config).EncodeValues(m.inputs.Value().(*TupleValue), args...)
+	encoded, err := m.config.EncodeValues(m.inputs, args...)
 	if err != nil {
 		return nil, err
 	}

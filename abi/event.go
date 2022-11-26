@@ -8,13 +8,13 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-// Event represents an event in an jsonABI. The event can be used to decode events
+// Event represents an event in an Contract. The event can be used to decode events
 // emitted by a contract.
 type Event struct {
 	name      string
 	inputs    *EventTupleType
 	anonymous bool
-	config    *Config
+	config    *ABI
 
 	topic0    types.Hash
 	signature string
@@ -22,20 +22,53 @@ type Event struct {
 
 // NewEvent creates a new Event instance.
 func NewEvent(name string, inputs *EventTupleType, anonymous bool) *Event {
-	return NewEventWithConfig(name, inputs, anonymous, DefaultConfig)
+	return Default.NewEvent(name, inputs, anonymous)
 }
 
-// NewEventWithConfig creates a new Event instance with a custom config.
-func NewEventWithConfig(name string, inputs *EventTupleType, anonymous bool, config *Config) *Event {
+// ParseEvent parses an event signature and returns a new Event.
+//
+// An event signature is similar to a method signature, but returns no values.
+// It can be optionally prefixed with the "event" keyword.
+//
+// The following examples are valid signatures:
+//
+//   foo(int indexed,(uint256,bytes32)[])
+//   foo(int indexed a, (uint256 b, bytes32 c)[] d)
+//   event foo(int indexed a tuple(uint256 b, bytes32 c)[] d)
+//
+// This function is equivalent to calling Parser.ParseEvent with the default
+// configuration.
+func ParseEvent(signature string) (*Event, error) {
+	return Default.ParseEvent(signature)
+}
+
+// MustParseEvent is like ParseEvent but panics on error.
+func MustParseEvent(signature string) *Event {
+	e, err := ParseEvent(signature)
+	if err != nil {
+		panic(err)
+	}
+	return e
+}
+
+// NewEvent creates a new Event instance.
+func (a *ABI) NewEvent(name string, inputs *EventTupleType, anonymous bool) *Event {
 	e := &Event{
 		name:      name,
 		inputs:    inputs,
 		anonymous: anonymous,
-		config:    config,
+		config:    a,
 	}
 	e.generateSignature()
 	e.calculateTopic0()
 	return e
+}
+
+// ParseEvent parses an event signature and returns a new Event.
+//
+// See ParseEvent for more information.
+func (a *ABI) ParseEvent(signature string) (*Event, error) {
+	return parseEvent(a, signature)
 }
 
 // Name returns the name of the event.
@@ -64,11 +97,7 @@ func (e *Event) Signature() string {
 // given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 	if e.anonymous {
-		return NewDecoder(e.config).DecodeValue(
-			e.inputs.Value().(*TupleValue),
-			data,
-			val,
-		)
+		return e.config.DecodeValue(e.inputs, data, val)
 	}
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
@@ -76,22 +105,14 @@ func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 	if topics[0] != e.topic0 {
 		return fmt.Errorf("abi: topic0 mismatch for event %s", e.name)
 	}
-	return NewDecoder(e.config).DecodeValue(
-		e.inputs.Value(),
-		e.mergeData(topics[1:], data),
-		val,
-	)
+	return e.config.DecodeValue(e.inputs, e.mergeData(topics[1:], data), val)
 }
 
 // DecodeValues decodes the event into a map or structure. If a structure is
 // given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) error {
 	if e.anonymous {
-		return NewDecoder(e.config).DecodeValues(
-			e.inputs.Value().(*TupleValue),
-			data,
-			vals...,
-		)
+		return e.config.DecodeValues(e.inputs, data, vals...)
 	}
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
@@ -99,11 +120,7 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 	if topics[0] != e.topic0 {
 		return fmt.Errorf("abi: topic0 mismatch for event %s", e.name)
 	}
-	return NewDecoder(e.config).DecodeValues(
-		e.inputs.Value().(*TupleValue),
-		e.mergeData(topics[1:], data),
-		vals...,
-	)
+	return e.config.DecodeValues(e.inputs, e.mergeData(topics[1:], data), vals...)
 }
 
 // String returns the human-readable signature of the event.

@@ -307,7 +307,7 @@ func TestEncodeABI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.NoError(t, DefaultConfig.Mapper.Map(tt.arg, tt.val))
+			require.NoError(t, Default.Mapper.Map(tt.arg, tt.val))
 			enc, err := tt.val.EncodeABI()
 			if tt.wantErr {
 				assert.Error(t, err)

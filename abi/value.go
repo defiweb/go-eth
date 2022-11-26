@@ -10,24 +10,24 @@ import (
 	"github.com/defiweb/go-anymapper"
 )
 
-// Value represents a value that can be encoded to and from jsonABI.
+// Value represents a value that can be encoded to and from Contract.
 //
 // Values are used as an intermediate representation during encoding and
-// decoding jsonABI data. Usually, they are not used outside the abi package.
+// decoding Contract data. Usually, they are not used outside the abi package.
 //
 // When data is encoded using Encoder, the values provided to Encoder are
 // mapped to Value instances using the anymapper package, and then they are used
-// to encode the jsonABI data. When the data is decoded using Decoder, the Value
-// instances are used to decode the jsonABI data, and then the values are mapped to
+// to encode the Contract data. When the data is decoded using Decoder, the Value
+// instances are used to decode the Contract data, and then the values are mapped to
 // the target types.
 type Value interface {
 	// IsDynamic indicates whether the type is dynamic.
 	IsDynamic() bool
 
-	// EncodeABI returns the jsonABI encoding of the value.
+	// EncodeABI returns the Contract encoding of the value.
 	EncodeABI() (Words, error)
 
-	// DecodeABI sets the value from the jsonABI encoded data.
+	// DecodeABI sets the value from the Contract encoded data.
 	DecodeABI(Words) (int, error)
 }
 
@@ -47,7 +47,7 @@ type TupleValueElem struct {
 	Name string
 
 	// Value is the value of the tuple element. It is used to encode and decode
-	// the jsonABI data.
+	// the Contract data.
 	Value Value
 }
 
@@ -88,8 +88,8 @@ func (t *TupleValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return m.MapRefl(src, reflect.ValueOf(vals))
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (t *TupleValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (t *TupleValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	vals := make(map[string]Value)
 	for _, elem := range *t {
 		vals[elem.Name] = elem.Value
@@ -135,8 +135,8 @@ func (a *ArrayValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return m.MapRefl(src, reflect.ValueOf(&a.Elems))
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (a *ArrayValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (a *ArrayValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	return m.MapRefl(reflect.ValueOf(&a.Elems), dest)
 }
 
@@ -175,8 +175,8 @@ func (a FixedArrayValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return m.MapRefl(src, reflect.ValueOf((*[]Value)(&a)))
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (a FixedArrayValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (a FixedArrayValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	return m.MapRefl(reflect.ValueOf(([]Value)(a)), dest)
 }
 
@@ -206,8 +206,8 @@ func (b *BytesValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return m.MapRefl(src, reflect.ValueOf((*[]byte)(b)))
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (b *BytesValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (b *BytesValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	return m.MapRefl(reflect.ValueOf((*[]byte)(b)), dest)
 }
 
@@ -242,8 +242,8 @@ func (s *StringValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return m.MapRefl(src, reflect.ValueOf((*string)(s)))
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (s *StringValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (s *StringValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	return m.MapRefl(reflect.ValueOf((*string)(s)), dest)
 }
 
@@ -283,8 +283,8 @@ func (b FixedBytesValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return nil
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (b FixedBytesValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (b FixedBytesValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	return m.MapRefl(reflect.ValueOf((*[]byte)(&b)), dest)
 }
 
@@ -326,8 +326,8 @@ func (u *UintValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return m.MapRefl(src, reflect.ValueOf(&u.Int))
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (u *UintValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (u *UintValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	return m.MapRefl(reflect.ValueOf(&u.Int), dest)
 }
 
@@ -369,8 +369,8 @@ func (i *IntValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return m.MapRefl(src, reflect.ValueOf(&i.Int))
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (i *IntValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (i *IntValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	return m.MapRefl(reflect.ValueOf(&i.Int), dest)
 }
 
@@ -400,8 +400,8 @@ func (b *BoolValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return m.MapRefl(src, reflect.ValueOf((*bool)(b)))
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (b *BoolValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (b *BoolValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	return m.MapRefl(reflect.ValueOf((*bool)(b)), dest)
 }
 
@@ -445,8 +445,8 @@ func (a *AddressValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 	return nil
 }
 
-// MapInto implements the anymapper.MapInto interface.
-func (a *AddressValue) MapInto(m *anymapper.Mapper, dest reflect.Value) error {
+// MapTo implements the anymapper.MapTo interface.
+func (a *AddressValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
 	if !m.StrictTypes && dest.Type().Kind() == reflect.String {
 		dest.SetString(types.Address(*a).String())
 		return nil
