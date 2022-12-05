@@ -9,7 +9,7 @@ import (
 
 // Default is the default ABI instance that is used by the package-level
 // functions.
-var Default *ABI
+var Default = NewABI()
 
 // ABI structure implements the Ethereum ABI (Application Binary Interface).
 //
@@ -25,21 +25,36 @@ type ABI struct {
 	// The key is the name of the type, and the value is the type.
 	Types map[string]Type
 
-	// Mapper is the instance of the mapper that will be used to map
-	// values to and from Contract types.
-	Mapper *anymapper.Mapper
+	// Mapper is used to map values to and from ABI types.
+	Mapper Mapper
 }
 
-// Copy returns a copy of the ABI instance.
-func (a *ABI) Copy() *ABI {
-	cpy := &ABI{
-		Types:  make(map[string]Type, len(a.Types)),
-		Mapper: a.Mapper.Copy(),
+type Mapper interface {
+	Map(src any, dst any) error
+}
+
+func NewABI() *ABI {
+	mapper := anymapper.DefaultMapper.Copy()
+	mapper.Tag = "abi"
+	mapper.FieldMapper = fieldMapper
+
+	types := map[string]Type{}
+	types["bool"] = NewBoolType()
+	types["bytes"] = NewBytesType()
+	types["string"] = NewStringType()
+	types["address"] = NewAddressType()
+	types["int"] = NewAliasType("int", NewIntType(256))
+	types["uint"] = NewAliasType("uint", NewUintType(256))
+	for i := 1; i <= 32; i++ {
+		types[fmt.Sprintf("int%d", i*8)] = NewIntType(i * 8)
+		types[fmt.Sprintf("uint%d", i*8)] = NewUintType(i * 8)
+		types[fmt.Sprintf("bytes%d", i)] = NewFixedBytesType(i)
 	}
-	for k, v := range a.Types {
-		cpy.Types[k] = v
+
+	return &ABI{
+		Types:  types,
+		Mapper: mapper,
 	}
-	return cpy
 }
 
 // fieldMapper lowercase the first letter of the field name. If the field name
@@ -63,28 +78,4 @@ var fieldMapper = func(field string) string {
 		}
 	}
 	return string(runes)
-}
-
-func init() {
-	mapper := anymapper.DefaultMapper.Copy()
-	mapper.Tag = "abi"
-	mapper.FieldMapper = fieldMapper
-
-	types := map[string]Type{}
-	types["bool"] = NewBoolType()
-	types["bytes"] = NewBytesType()
-	types["string"] = NewStringType()
-	types["address"] = NewAddressType()
-	types["int"] = NewAliasType("int", NewIntType(256))
-	types["uint"] = NewAliasType("uint", NewUintType(256))
-	for i := 1; i <= 32; i++ {
-		types[fmt.Sprintf("int%d", i*8)] = NewIntType(i * 8)
-		types[fmt.Sprintf("uint%d", i*8)] = NewUintType(i * 8)
-		types[fmt.Sprintf("bytes%d", i)] = NewFixedBytesType(i)
-	}
-
-	Default = &ABI{
-		Types:  types,
-		Mapper: mapper,
-	}
 }
