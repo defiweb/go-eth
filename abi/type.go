@@ -29,7 +29,7 @@ type Type interface {
 // the parentheses. Parameter names are optional.
 //
 // The generated types can be used to create new values, which can then be used
-// to encode or decode Contract data.
+// to encode or decode ABI data.
 //
 // Custom types may be added to the ABI.Types, this will allow the parser to
 // handle them.

@@ -6,7 +6,7 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
-// Error represents an error in an Contract. The error can be used to decode errors
+// Error represents an error in an ABI. The error can be used to decode errors
 // returned by a contract call.
 type Error struct {
 	name   string
@@ -89,7 +89,7 @@ func (m *Error) Signature() string {
 	return m.signature
 }
 
-// Is returns true if the Contract encoded data is an error of this type.
+// Is returns true if the ABI encoded data is an error of this type.
 func (m *Error) Is(data []byte) bool {
 	return m.fourBytes.Match(data)
 }

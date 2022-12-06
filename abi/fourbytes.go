@@ -20,7 +20,7 @@ func (f FourBytes) String() string {
 	return f.Hex()
 }
 
-// Match returns true if the given Contract data matches the four byte selector.
+// Match returns true if the given ABI data matches the four byte selector.
 func (f FourBytes) Match(data []byte) bool {
 	if len(data) < 4 {
 		return false

@@ -6,7 +6,7 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
-// Method represents a method in an Contract. The method can be used to encode
+// Method represents a method in an ABI. The method can be used to encode
 // arguments for a method call and decode return values from a method call.
 type Method struct {
 	name    string

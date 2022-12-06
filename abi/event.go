@@ -8,7 +8,7 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-// Event represents an event in an Contract. The event can be used to decode events
+// Event represents an event in an ABI. The event can be used to decode events
 // emitted by a contract.
 type Event struct {
 	name      string

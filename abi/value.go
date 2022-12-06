@@ -10,24 +10,24 @@ import (
 	"github.com/defiweb/go-anymapper"
 )
 
-// Value represents a value that can be encoded to and from Contract.
+// Value represents a value that can be encoded to and from ABI.
 //
 // Values are used as an intermediate representation during encoding and
-// decoding Contract data. Usually, they are not used outside the abi package.
+// decoding ABI data. Usually, they are not used outside the abi package.
 //
 // When data is encoded using Encoder, the values provided to Encoder are
 // mapped to Value instances using the anymapper package, and then they are used
-// to encode the Contract data. When the data is decoded using Decoder, the Value
-// instances are used to decode the Contract data, and then the values are mapped to
+// to encode the ABI data. When the data is decoded using Decoder, the Value
+// instances are used to decode the ABI data, and then the values are mapped to
 // the target types.
 type Value interface {
 	// IsDynamic indicates whether the type is dynamic.
 	IsDynamic() bool
 
-	// EncodeABI returns the Contract encoding of the value.
+	// EncodeABI returns the ABI encoding of the value.
 	EncodeABI() (Words, error)
 
-	// DecodeABI sets the value from the Contract encoded data.
+	// DecodeABI sets the value from the ABI encoded data.
 	DecodeABI(Words) (int, error)
 }
 
@@ -47,7 +47,7 @@ type TupleValueElem struct {
 	Name string
 
 	// Value is the value of the tuple element. It is used to encode and decode
-	// the Contract data.
+	// the ABI data.
 	Value Value
 }
 
@@ -81,7 +81,7 @@ func (t *TupleValue) DecodeABI(words Words) (int, error) {
 
 // MapFrom implements the anymapper.MapFrom interface.
 func (t *TupleValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
-	vals := make(map[string]Value)
+	vals := make(map[string]Value, len(*t))
 	for _, elem := range *t {
 		vals[elem.Name] = elem.Value
 	}
@@ -90,7 +90,7 @@ func (t *TupleValue) MapFrom(m *anymapper.Mapper, src reflect.Value) error {
 
 // MapTo implements the anymapper.MapTo interface.
 func (t *TupleValue) MapTo(m *anymapper.Mapper, dest reflect.Value) error {
-	vals := make(map[string]Value)
+	vals := make(map[string]Value, len(*t))
 	for _, elem := range *t {
 		vals[elem.Name] = elem.Value
 	}
