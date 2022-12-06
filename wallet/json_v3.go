@@ -39,37 +39,41 @@ func decryptV3Key(cryptoJson jsonKeyCrypto, passphrase []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return plainText, err
 }
 
 // deriveKey returns the derived key from the JSON keyfile.
 func deriveKey(cryptoJSON jsonKeyCrypto, passphrase []byte) ([]byte, error) {
-	salt := cryptoJSON.KDFParams.Salt
-	dkLen := cryptoJSON.KDFParams.DKLen
-
 	switch cryptoJSON.KDF {
 	case "scrypt":
-		n := cryptoJSON.KDFParams.N
-		r := cryptoJSON.KDFParams.R
-		p := cryptoJSON.KDFParams.P
-		return scrypt.Key(passphrase, salt, n, r, p, dkLen)
+		return scrypt.Key(
+			passphrase,
+			cryptoJSON.KDFParams.Salt,
+			cryptoJSON.KDFParams.N,
+			cryptoJSON.KDFParams.R,
+			cryptoJSON.KDFParams.P,
+			cryptoJSON.KDFParams.DKLen,
+		)
 	case "pbkdf2":
-		c := cryptoJSON.KDFParams.C
-		prf := cryptoJSON.KDFParams.PRF
-		if prf != "hmac-sha256" {
-			return nil, fmt.Errorf("unsupported PBKDF2 PRF: %s", prf)
+		if cryptoJSON.KDFParams.PRF != "hmac-sha256" {
+			return nil, fmt.Errorf("unsupported PBKDF2 PRF: %s", cryptoJSON.KDFParams.PRF)
 		}
-		key := pbkdf2.Key(passphrase, salt, c, dkLen, sha256.New)
+		key := pbkdf2.Key(
+			passphrase,
+			cryptoJSON.KDFParams.Salt,
+			cryptoJSON.KDFParams.C,
+			cryptoJSON.KDFParams.DKLen,
+			sha256.New,
+		)
 		return key, nil
 	}
-
 	return nil, fmt.Errorf("unsupported KDF: %s", cryptoJSON.KDF)
 }
 
 // aesCTRXOR performs AES-128-CTR decryption on the given cipher text with the
 // given key and IV.
 func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
-	// AES-128 is selected due to size of encryptKey.
 	aesBlock, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err

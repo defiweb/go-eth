@@ -10,6 +10,7 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+// NewKeyFromJSON loads an Ethereum key from a JSON file.
 func NewKeyFromJSON(path string, passphrase string) (*crypto.Key, error) {
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -18,6 +19,7 @@ func NewKeyFromJSON(path string, passphrase string) (*crypto.Key, error) {
 	return NewKeyFromJSONContent(content, passphrase)
 }
 
+// NewKeyFromJSONContent returns a new key from a JSON file content.
 func NewKeyFromJSONContent(content []byte, passphrase string) (*crypto.Key, error) {
 	var jKey jsonKey
 	if err := json.Unmarshal(content, &jKey); err != nil {
