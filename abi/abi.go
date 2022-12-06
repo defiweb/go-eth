@@ -21,7 +21,7 @@ var Default = NewABI()
 // instead of the default one. To do this, use the Copy method to create a copy
 // of the default ABI instance and modify it as needed.
 type ABI struct {
-	// Types is a map of types that can be used in the ABU.
+	// Types is a map of known ABI types.
 	// The key is the name of the type, and the value is the type.
 	Types map[string]Type
 

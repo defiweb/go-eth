@@ -101,6 +101,10 @@ func (t Address) String() string {
 	return hexutil.BytesToHex(t[:])
 }
 
+func (t Address) IsZero() bool {
+	return t == Address{}
+}
+
 func (t Address) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
 }
