@@ -12,6 +12,9 @@ import (
 	"github.com/defiweb/go-eth/hexutil"
 )
 
+// HashFunc returns the hash for the given input.
+type HashFunc func(data ...[]byte) Hash
+
 //
 // Address type:
 //
@@ -21,6 +24,9 @@ const AddressLength = 20
 
 // Address represents an Ethereum address encoded as a 20 byte array.
 type Address [AddressLength]byte
+
+// ZeroAddress is an address with all zeros.
+var ZeroAddress = Address{}
 
 // HexToAddress parses an address in hex format and returns an Address type.
 func HexToAddress(address string) (a Address, err error) {
@@ -101,8 +107,24 @@ func (t Address) String() string {
 	return hexutil.BytesToHex(t[:])
 }
 
+// Checksum returns the address with the checksum calculated according to
+// EIP-55.
+func (t Address) Checksum(h HashFunc) string {
+	hex := []byte(hexutil.BytesToHex(t[:])[2:])
+	hash := h(hex)
+	for i, c := range hex {
+		if c >= '0' && c <= '9' {
+			continue
+		}
+		if hash[i/2]&(uint8(1)<<(((i+1)%2)*4+3)) != 0 {
+			hex[i] = c ^ 0x20
+		}
+	}
+	return "0x" + string(hex)
+}
+
 func (t Address) IsZero() bool {
-	return t == Address{}
+	return t == ZeroAddress
 }
 
 func (t Address) MarshalJSON() ([]byte, error) {
@@ -149,6 +171,9 @@ const HashLength = 32
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.
 type Hash [HashLength]byte
+
+// ZeroHash is a hash with all zeros.
+var ZeroHash = Hash{}
 
 // HexToHash parses a hash in hex format and returns a Hash type.
 func HexToHash(x string) (h Hash, err error) {

@@ -27,11 +27,11 @@ func EcrecoverMessage(data []byte, sig types.Signature) (types.Address, error) {
 }
 
 func EcrecoverTransaction(tx *types.Transaction) (types.Address, error) {
-	d, err := tx.SigningData()
+	d, err := tx.SigningHash(Keccak256)
 	if err != nil {
 		return types.Address{}, err
 	}
-	addr, err := Ecrecover(Keccak256(d), tx.Signature)
+	addr, err := Ecrecover(d, tx.Signature)
 	if err != nil {
 		return types.Address{}, err
 	}

@@ -60,11 +60,11 @@ func (k *Key) SignMessage(data []byte) (types.Signature, error) {
 }
 
 func (k *Key) SignTransaction(tx *types.Transaction) (*types.Transaction, error) {
-	r, err := tx.SigningData()
+	r, err := tx.SigningHash(Keccak256)
 	if err != nil {
 		return nil, err
 	}
-	s, err := k.Sign(Keccak256(r))
+	s, err := k.Sign(r)
 	if err != nil {
 		return nil, err
 	}

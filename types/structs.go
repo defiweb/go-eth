@@ -317,8 +317,8 @@ func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 	return n + 1, nil
 }
 
-// SigningData returns the transaction signing data to be signed by the sender.
-func (t Transaction) SigningData() ([]byte, error) {
+// SigningHash returns the transaction hash to be signed by the sender.
+func (t Transaction) SigningHash(h HashFunc) (Hash, error) {
 	l := rlp.NewList()
 	if t.Type != LegacyTxType {
 		l.Append(rlp.NewBigInt(t.ChainID))
@@ -345,7 +345,7 @@ func (t Transaction) SigningData() ([]byte, error) {
 	}
 	b, err := rlp.Encode(l)
 	if err != nil {
-		return nil, err
+		return ZeroHash, err
 	}
 	if t.Type == AccessListTxType {
 		b = append([]byte{byte(AccessListTxType)}, b...)
@@ -353,7 +353,7 @@ func (t Transaction) SigningData() ([]byte, error) {
 	if t.Type == DynamicFeeTxType {
 		b = append([]byte{byte(DynamicFeeTxType)}, b...)
 	}
-	return b, nil
+	return h(b), nil
 }
 
 type jsonTransaction struct {

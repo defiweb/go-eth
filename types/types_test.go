@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/sha3"
 )
 
 func Test_AddressType_Unmarshal(t *testing.T) {
@@ -67,6 +68,23 @@ func Test_AddressType_Marshal(t *testing.T) {
 			j, err := tt.arg.MarshalJSON()
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, string(j))
+		})
+	}
+}
+
+func Test_AddressType_Checksum(t *testing.T) {
+	tests := []struct {
+		addr string
+	}{
+		{addr: "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359"},
+		{addr: "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"},
+		{addr: "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359"},
+		{addr: "0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB"},
+		{addr: "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb"},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			assert.Equal(t, tt.addr, MustHexToAddress(tt.addr).Checksum(keccak256))
 		})
 	}
 }
@@ -396,4 +414,12 @@ func Test_BytesType_Marshal(t *testing.T) {
 			assert.Equal(t, tt.want, string(j))
 		})
 	}
+}
+
+func keccak256(data ...[]byte) Hash {
+	h := sha3.NewLegacyKeccak256()
+	for _, i := range data {
+		h.Write(i)
+	}
+	return MustBytesToHash(h.Sum(nil))
 }

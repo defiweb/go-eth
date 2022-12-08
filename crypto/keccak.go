@@ -7,9 +7,9 @@ import (
 )
 
 // Keccak256 calculates the Keccak256
-func Keccak256(v ...[]byte) types.Hash {
+func Keccak256(data ...[]byte) types.Hash {
 	h := sha3.NewLegacyKeccak256()
-	for _, i := range v {
+	for _, i := range data {
 		h.Write(i)
 	}
 	return types.MustBytesToHash(h.Sum(nil))
