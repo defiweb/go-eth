@@ -27,6 +27,9 @@ func ParseJSON(data []byte) (*Contract, error) {
 
 // ParseSignatures parses list of signatures and returns a Contract instance.
 // Signatures must be prefixed with the kind, e.g. "function" or "event".
+//
+// It accepts signatures in the same format as ParseConstructor, ParseMethod,
+// ParseEvent, and ParseError functions.
 func ParseSignatures(signatures ...string) (*Contract, error) {
 	return Default.ParseSignatures(signatures...)
 }
@@ -187,6 +190,7 @@ type jsonField struct {
 
 type jsonParameters []jsonParameter
 
+// toTupleType converts parameters to a TupleType type.
 func (a jsonParameters) toTupleType(abi *ABI) (*TupleType, error) {
 	var elems []TupleTypeElem
 	for _, param := range a {
@@ -202,6 +206,7 @@ func (a jsonParameters) toTupleType(abi *ABI) (*TupleType, error) {
 	return NewTupleType(elems...), nil
 }
 
+// toEventTupleType converts parameters to a EventTupleType type.
 func (a jsonParameters) toEventTupleType(abi *ABI) (*EventTupleType, error) {
 	var elems []EventTupleElem
 	for _, param := range a {
@@ -225,47 +230,23 @@ type jsonParameter struct {
 	Components jsonParameters `json:"components"`
 }
 
+// toType converts a jsonParameter to a Type.
 func (a jsonParameter) toType(abi *ABI) (typ Type, err error) {
-	// Parse square brackets in the Type field to get the array dimensions.
-	// Then, array dimensions are removed from the Type field to get only the
-	// base type.
-	var arr []int
-	pos := strings.Index(a.Type, "[")
-	if pos != -1 {
-		a.Type = a.Type[:pos]
-		for pos < len(a.Type) {
-			// The bracketPos var is the position of the opening bracket.
-			bracketPos := pos
-			// Find the closing bracket.
-			for a.Type[pos] != ']' {
-				pos++
-			}
-			// Parse the array size between the brackets.
-			n := a.Type[bracketPos+1 : pos]
-			if len(n) == 0 {
-				arr = append(arr, -1)
-			} else {
-				i, err := strconv.Atoi(n)
-				if err != nil {
-					return nil, err
-				}
-				arr = append(arr, i)
-			}
-			// Skip the closing bracket.
-			pos++
-		}
+	name, arrays, err := parseArrays(a.Type)
+	if err != nil {
+		return nil, err
 	}
-	// Create type.
 	switch {
-	case len(arr) > 0:
+	case len(arrays) > 0:
+		a.Type = name
 		if typ, err = a.toType(abi); err != nil {
 			return nil, err
 		}
-		for i := len(arr) - 1; i >= 0; i-- {
-			if arr[i] == -1 {
+		for i := len(arrays) - 1; i >= 0; i-- {
+			if arrays[i] == -1 {
 				typ = NewArrayType(typ)
 			} else {
-				typ = NewFixedArrayType(typ, arr[i])
+				typ = NewFixedArrayType(typ, arrays[i])
 			}
 		}
 		return typ, nil
@@ -280,9 +261,48 @@ func (a jsonParameter) toType(abi *ABI) (typ Type, err error) {
 		}
 		return NewTupleType(tuple...), nil
 	default:
-		if typ = abi.Types[a.Type]; typ != nil {
+		if typ = abi.Types[name]; typ != nil {
 			return typ, nil
 		}
 		return nil, fmt.Errorf("abi: unknown type %q", a.Type)
 	}
+}
+
+// parseArray parses type name and returns the name and array dimensions.
+// For example, "uint256[][3]" will return "uint256" and [-1, 3].
+// For unbounded arrays, the dimension is -1.
+func parseArrays(typ string) (name string, arrays []int, err error) {
+	openBracket := strings.Index(typ, "[")
+	if openBracket == -1 {
+		name = typ
+		return
+	}
+	name = typ[:openBracket]
+	for {
+		closeBracket := openBracket
+		for closeBracket < len(typ) && typ[closeBracket] != ']' {
+			closeBracket++
+		}
+		if openBracket >= closeBracket {
+			return "", nil, fmt.Errorf("abi: invalid type %q", typ)
+		}
+		n := typ[openBracket+1 : closeBracket]
+		if len(n) == 0 {
+			arrays = append(arrays, -1)
+		} else {
+			i, err := strconv.Atoi(n)
+			if err != nil {
+				return "", nil, err
+			}
+			if i <= 0 {
+				return "", nil, fmt.Errorf("abi: invalid array size %d", i)
+			}
+			arrays = append(arrays, i)
+		}
+		if closeBracket+1 == len(typ) {
+			break
+		}
+		openBracket = closeBracket + 1
+	}
+	return
 }
