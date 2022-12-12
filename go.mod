@@ -4,14 +4,17 @@ go 1.18
 
 require (
 	github.com/btcsuite/btcd v0.22.1
+	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/defiweb/go-anymapper v0.0.0-20221206233610-e75520f9edc8
 	github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937
 	github.com/defiweb/go-sigparser v0.0.0-20221125211146-2e4b90d8e269
 	github.com/stretchr/testify v1.8.1
+	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.1.0
 )
 
 require (
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect

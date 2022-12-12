@@ -1,0 +1,23 @@
+package wallet
+
+import "github.com/defiweb/go-eth/types"
+
+type Key interface {
+	// Address returns the address of the key.
+	Address() types.Address
+
+	// Sign signs the given hash.
+	Sign(hash types.Hash) (types.Signature, error)
+
+	// SignMessage signs the given message.
+	SignMessage(data []byte) (types.Signature, error)
+
+	// SignTransaction signs the given transaction.
+	SignTransaction(tx *types.Transaction) (*types.Transaction, error)
+
+	// Verify whether the given hash is signed by the key.
+	Verify(hash types.Hash, sig types.Signature) bool
+
+	// VerifyMessage verifies whether the given data is signed by the key.
+	VerifyMessage(data []byte, sig types.Signature) bool
+}

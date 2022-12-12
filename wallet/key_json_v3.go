@@ -13,7 +13,8 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
-// The code below is based on github.com/ethereum/go-ethereum/tree/master/accounts/keystore
+// The code below is based on:
+// github.com/ethereum/go-ethereum/tree/master/accounts/keystore
 
 // decryptKey decrypts the given V3 key with the given passphrase.
 func decryptV3Key(cryptoJson jsonKeyCrypto, passphrase []byte) ([]byte, error) {

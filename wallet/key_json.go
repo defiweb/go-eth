@@ -6,12 +6,11 @@ import (
 	"errors"
 	"io/ioutil"
 
-	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/types"
 )
 
 // NewKeyFromJSON loads an Ethereum key from a JSON file.
-func NewKeyFromJSON(path string, passphrase string) (*crypto.Key, error) {
+func NewKeyFromJSON(path string, passphrase string) (*PrivateKey, error) {
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -20,7 +19,7 @@ func NewKeyFromJSON(path string, passphrase string) (*crypto.Key, error) {
 }
 
 // NewKeyFromJSONContent returns a new key from a JSON file content.
-func NewKeyFromJSONContent(content []byte, passphrase string) (*crypto.Key, error) {
+func NewKeyFromJSONContent(content []byte, passphrase string) (*PrivateKey, error) {
 	var jKey jsonKey
 	if err := json.Unmarshal(content, &jKey); err != nil {
 		return nil, err
@@ -32,7 +31,7 @@ func NewKeyFromJSONContent(content []byte, passphrase string) (*crypto.Key, erro
 	if err != nil {
 		return nil, err
 	}
-	key := crypto.NewKeyFromBytes(prv)
+	key := NewKeyFromBytes(prv)
 	if !jKey.Address.IsZero() && jKey.Address != key.Address() {
 		return nil, errors.New("decrypted key address does not match address in file")
 	}
@@ -63,12 +62,12 @@ type jsonKeyKDFParams struct {
 	DKLen int     `json:"dklen"`
 	Salt  jsonHex `json:"salt"`
 
-	// Scrypt params
+	// Scrypt params:
 	N int `json:"n"`
 	P int `json:"p"`
 	R int `json:"r"`
 
-	// PBKDF2 params
+	// PBKDF2 params:
 	C   int    `json:"c"`
 	PRF string `json:"prf"`
 }
