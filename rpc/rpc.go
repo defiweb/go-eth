@@ -6,8 +6,7 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-// https://ethereum.org/pl/developers/docs/apis/json-rpc/
-
+// RPC is an RPC client for the Ethereum-compatible nodes.
 type RPC interface {
 	// TODO: web3_clientVersion
 	// TODO: web3_sha3

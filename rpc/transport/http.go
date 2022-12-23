@@ -15,6 +15,14 @@ type HTTP struct {
 	id      uint64
 }
 
+type HTTPOptions struct {
+	// HTTPClient is used for the connection.
+	HTTPCLient *http.Client
+
+	// HTTPHeader specifies the HTTP headers included in RPC requests.
+	HTTPHeader http.Header
+}
+
 func NewHTTP(url string) *HTTP {
 	return &HTTP{
 		url:    url,
@@ -37,9 +45,10 @@ func (h *HTTP) SetHeader(key, value string) {
 }
 
 func (h *HTTP) Call(ctx context.Context, result any, method string, args ...any) error {
+	id := atomic.AddUint64(&h.id, 1)
 	rpcReq := rpcRequest{
-		JsonRPC: "2.0",
-		ID:      atomic.AddUint64(&h.id, 1),
+		JSONRPC: "2.0",
+		ID:      &id,
 		Method:  method,
 		Params:  json.RawMessage("[]"),
 	}
