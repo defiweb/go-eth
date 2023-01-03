@@ -589,6 +589,17 @@ func HexToNumberPtr(x string) *Number {
 	return &n
 }
 
+// BytesToNumber converts a byte slice to a Number type.
+func BytesToNumber(b []byte) Number {
+	return Number{x: *new(big.Int).SetBytes(b)}
+}
+
+// BytesToNumberPtr converts a byte slice to a *Number type.
+func BytesToNumberPtr(b []byte) *Number {
+	n := BytesToNumber(b)
+	return &n
+}
+
 // Uint64ToNumber converts an uint64 to a Number type.
 func Uint64ToNumber(x uint64) Number {
 	return Number{x: *new(big.Int).SetUint64(x)}

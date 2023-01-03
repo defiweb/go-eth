@@ -3,14 +3,15 @@ package rpc
 import (
 	"context"
 
+	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
 )
 
 type Client struct {
-	transport Transport
+	transport transport.Transport
 }
 
-func NewClient(transport Transport) *Client {
+func NewClient(transport transport.Transport) *Client {
 	return &Client{transport: transport}
 }
 

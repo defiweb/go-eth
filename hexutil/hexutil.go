@@ -81,6 +81,9 @@ func HexToBytes(h string) ([]byte, error) {
 	if len(h)%2 != 0 {
 		h = "0" + h
 	}
+	if len(h) == 0 {
+		return []byte{}, nil
+	}
 	l := len(h) / 2
 	b := make([]byte, l)
 	if _, err := hex.NewDecoder(strings.NewReader(h)).Read(b[len(b)-l:]); err != nil {

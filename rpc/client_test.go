@@ -12,9 +12,35 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
-	"github.com/defiweb/go-eth/rpc/testutil"
+	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
 )
+
+type roundTripFunc func(req *http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+type httpMock struct {
+	*transport.HTTP
+	Request  *http.Request
+	Response *http.Response
+}
+
+func newHTTPMock() *httpMock {
+	h := &httpMock{}
+	h.HTTP, _ = transport.NewHTTP(transport.HTTPOptions{
+		URL: "http://localhost",
+		HTTPClient: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				h.Request = req
+				return h.Response, nil
+			}),
+		},
+	})
+	return h
+}
 
 const mockGasPriceRequest = `
 	{
@@ -34,7 +60,7 @@ const mockGasPriceResponse = `
 `
 
 func TestClient_GasPrice(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -66,7 +92,7 @@ const mockBlockNumberResponse = `
 `
 
 func TestClient_BlockNumber(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -102,7 +128,7 @@ const mockGetBalanceResponse = `
 `
 
 func TestClient_GetBalance(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -143,7 +169,7 @@ const mockGetStorageAtResponse = `
 `
 
 func TestClient_GetStorageAt(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -184,7 +210,7 @@ const mockGetTransactionCountResponse = `
 `
 
 func TestClient_GetTransactionCount(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -223,7 +249,7 @@ const mockGetBlockTransactionCountByHashResponse = `
 `
 
 func TestClient_GetBlockTransactionCountByHash(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -260,7 +286,7 @@ const mockGetBlockTransactionCountByNumberResponse = `
 `
 
 func TestClient_GetBlockTransactionCountByNumber(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -297,7 +323,7 @@ const mockGetUncleCountByBlockHashResponse = `
 `
 
 func TestClient_GetUncleCountByBlockHash(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -334,7 +360,7 @@ const mockGetUncleCountByBlockNumberResponse = `
 `
 
 func TestClient_GetUncleCountByBlockNumber(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -372,7 +398,7 @@ const mockGetCodeResponse = `
 `
 
 func TestClient_GetCode(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -411,7 +437,7 @@ const mockSignResponse = `
 `
 
 func TestClient_Sign(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -470,7 +496,7 @@ const mockSignTransactionResponse = `
 `
 
 func TestClient_SignTransaction(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -526,7 +552,7 @@ const mockSendRawTransactionResponse = `
 `
 
 func TestClient_SendRawTransaction(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -571,7 +597,7 @@ const mockCallResponse = `
 `
 
 func TestClient_Call(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -624,7 +650,7 @@ const mockEstimateGasResponse = `
 `
 
 func TestClient_EstimateGas(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -706,7 +732,7 @@ const mockBlockByNumberResponse = `
 `
 
 func TestClient_BlockByNumber(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -764,7 +790,7 @@ const mockBlockByHashRequest = `
 `
 
 func TestClient_BlockByHash(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -818,7 +844,7 @@ const mockGetTransactionByHashResponse = `
 `
 
 func TestClient_GetTransactionByHash(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -863,7 +889,7 @@ const mockGetTransactionByBlockHashAndIndexRequest = `
 `
 
 func TestClient_GetTransactionByBlockHashAndIndex(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -895,7 +921,7 @@ const mockGetTransactionByBlockNumberAndIndexRequest = `
 `
 
 func TestClient_GetTransactionByBlockNumberAndIndex(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -963,7 +989,7 @@ const mockGetTransactionReceiptResponse = `
 `
 
 func TestClient_GetTransactionReceipt(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
@@ -1044,7 +1070,7 @@ const mockGetLogsResponse = `
 `
 
 func TestClient_GetLogs(t *testing.T) {
-	httpMock := testutil.NewHTTPMock()
+	httpMock := newHTTPMock()
 	client := NewClient(httpMock)
 
 	httpMock.Response = &http.Response{
