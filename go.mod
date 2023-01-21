@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
-	github.com/defiweb/go-anymapper v0.0.0-20221206233610-e75520f9edc8
+	github.com/defiweb/go-anymapper v0.0.0-20230118195840-2a5633b200f1
 	github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937
 	github.com/defiweb/go-sigparser v0.0.0-20221125211146-2e4b90d8e269
 	github.com/stretchr/testify v1.8.1

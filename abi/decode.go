@@ -8,6 +8,7 @@ import (
 )
 
 // DecodeValue decodes the given ABI-encoded data into the given value.
+// Value must be a pointer to a struct or a map.
 func DecodeValue(t Type, abi []byte, val any) error {
 	return Default.DecodeValue(t, abi, val)
 }
@@ -19,6 +20,7 @@ func DecodeValues(t Type, abi []byte, vals ...any) error {
 }
 
 // DecodeValue decodes the given ABI-encoded data into the given value.
+// Value must be a pointer to a struct or a map.
 func (a *ABI) DecodeValue(t Type, abi []byte, val any) error {
 	v := t.Value()
 	if _, err := v.DecodeABI(BytesToWords(abi)); err != nil {

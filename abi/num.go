@@ -24,7 +24,7 @@ type intX struct {
 	val  *big.Int
 }
 
-// NewIntX creates a new intX value.
+// newIntX creates a new intX value.
 func newIntX(bitSize int) *intX {
 	if bitSize < 8 || bitSize > 256 || bitSize%8 != 0 {
 		panic("abi: invalid bit size for intX")
@@ -145,7 +145,7 @@ type uintX struct {
 	val  *big.Int
 }
 
-// NewUintX creates a new uintX value.
+// newUintX creates a new uintX value.
 func newUintX(bitSize int) *uintX {
 	if bitSize < 8 || bitSize > 256 || bitSize%8 != 0 {
 		panic("abi: invalid bit size for intX")
@@ -192,11 +192,11 @@ func (i *uintX) SetUint(x uint) error {
 	if bits.Len(x) > i.size {
 		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit int", bits.Len(x), i.size)
 	}
-	i.val.SetInt64(int64(x))
+	i.val.SetUint64(uint64(x))
 	return nil
 }
 
-func (i *uintX) SetInt64(x uint64) error {
+func (i *uintX) SetUint64(x uint64) error {
 	if bits.Len64(x) > i.size {
 		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit int64", bits.Len64(x), i.size)
 	}
@@ -242,6 +242,29 @@ func signedBitLen(x *big.Int) int {
 		return bitLen
 	}
 	return bitLen + 1
+}
+
+func canSetInt(x int64, bitLen int) bool {
+	if bitLen >= 64 {
+		return true
+	}
+	if bitLen <= 0 {
+		return false
+	}
+	if x < 0 {
+		return x >= -1<<(bitLen-1)
+	}
+	return x < (1 << uint(bitLen-1))
+}
+
+func canSetUint(x uint64, bitLen int) bool {
+	if bitLen >= 64 {
+		return true
+	}
+	if bitLen <= 0 {
+		return false
+	}
+	return x < (1 << uint(bitLen))
 }
 
 func init() {

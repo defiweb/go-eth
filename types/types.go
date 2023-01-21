@@ -578,14 +578,40 @@ func (s *Signature) UnmarshalText(input []byte) error {
 type Number struct{ x big.Int }
 
 // HexToNumber converts a hex string to a Number type.
-func HexToNumber(x string) Number {
-	u, _ := hexutil.HexToBigInt(x)
-	return Number{x: *u}
+func HexToNumber(x string) (Number, error) {
+	u, err := hexutil.HexToBigInt(x)
+	if err != nil {
+		return Number{}, err
+	}
+	return Number{x: *u}, nil
 }
 
 // HexToNumberPtr converts a hex string to a *Number type.
 func HexToNumberPtr(x string) *Number {
-	n := HexToNumber(x)
+	n, err := HexToNumber(x)
+	if err != nil {
+		return nil
+	}
+	return &n
+}
+
+// MustHexToNumber converts a hex string to a Number type. It panics if the
+// conversion fails.
+func MustHexToNumber(x string) Number {
+	n, err := HexToNumber(x)
+	if err != nil {
+		panic(err)
+	}
+	return n
+}
+
+// MustHexToNumberPtr converts a hex string to a *Number type. It panics if the
+// conversion fails.
+func MustHexToNumberPtr(x string) *Number {
+	n, err := HexToNumber(x)
+	if err != nil {
+		panic(err)
+	}
 	return &n
 }
 
@@ -661,31 +687,95 @@ func (t *Number) UnmarshalText(input []byte) error {
 // and unmarshalling JSON numbers. When possible, use byte slices instead.
 type Bytes []byte
 
-func (t *Bytes) Bytes() []byte {
-	return *t
+// HexToBytes converts a hex string to a Bytes type.
+func HexToBytes(x string) (Bytes, error) {
+	return hexutil.HexToBytes(x)
 }
 
-func (t *Bytes) String() string {
-	if t == nil {
+// HexToBytesPtr converts a hex string to a *Bytes type.
+func HexToBytesPtr(x string) *Bytes {
+	b, err := HexToBytes(x)
+	if err != nil {
+		return nil
+	}
+	return &b
+}
+
+// MustHexToBytes converts a hex string to a Bytes type. It panics if the
+// input is not a valid hex string.
+func MustHexToBytes(x string) Bytes {
+	b, err := HexToBytes(x)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// MustHexToBytesPtr converts a hex string to a *Bytes type. It panics if the
+// input is not a valid hex string.
+func MustHexToBytesPtr(x string) *Bytes {
+	b := MustHexToBytes(x)
+	return &b
+}
+
+// StringToBytes converts a string to a Bytes type.
+func StringToBytes(x string) Bytes {
+	return Bytes(x)
+}
+
+// StringToBytesPtr converts a string to a *Bytes type.
+func StringToBytesPtr(x string) *Bytes {
+	b := StringToBytes(x)
+	return &b
+}
+
+// PadLeft returns a new byte slice padded with zeros to the given length.
+// If the byte slice is longer than the given length, it is truncated leaving
+// the rightmost bytes.
+func (b Bytes) PadLeft(n int) Bytes {
+	cp := make([]byte, n)
+	if len(b) > n {
+		copy(cp, b[len(b)-n:])
+	} else {
+		copy(cp[n-len(b):], b)
+	}
+	return cp
+}
+
+// PadRight returns a new byte slice padded with zeros to the given length.
+// If the byte slice is longer than the given length, it is truncated leaving
+// the leftmost bytes.
+func (b Bytes) PadRight(n int) Bytes {
+	cp := make([]byte, n)
+	copy(cp, b)
+	return cp
+}
+
+func (b *Bytes) Bytes() []byte {
+	return *b
+}
+
+func (b *Bytes) String() string {
+	if b == nil {
 		return ""
 	}
-	return hexutil.BytesToHex(*t)
+	return hexutil.BytesToHex(*b)
 }
 
-func (t Bytes) MarshalJSON() ([]byte, error) {
-	return bytesMarshalJSON(t), nil
+func (b Bytes) MarshalJSON() ([]byte, error) {
+	return bytesMarshalJSON(b), nil
 }
 
-func (t *Bytes) UnmarshalJSON(input []byte) error {
-	return bytesUnmarshalJSON(input, (*[]byte)(t))
+func (b *Bytes) UnmarshalJSON(input []byte) error {
+	return bytesUnmarshalJSON(input, (*[]byte)(b))
 }
 
-func (t Bytes) MarshalText() ([]byte, error) {
-	return bytesMarshalText(t), nil
+func (b Bytes) MarshalText() ([]byte, error) {
+	return bytesMarshalText(b), nil
 }
 
-func (t *Bytes) UnmarshalText(input []byte) error {
-	return bytesUnmarshalText(input, (*[]byte)(t))
+func (b *Bytes) UnmarshalText(input []byte) error {
+	return bytesUnmarshalText(input, (*[]byte)(b))
 }
 
 //

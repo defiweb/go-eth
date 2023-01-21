@@ -157,7 +157,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, transaction); err != nil {
 		return err
 	}
-	sig, err := BigIntToSignature(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
+	signature, err := BigIntToSignature(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	t.Input = transaction.Input
 	t.Nonce = transaction.Nonce.Big()
 	t.Value = transaction.Value.Big()
-	t.Signature = sig
+	t.Signature = signature
 	if transaction.BlockNumber != nil {
 		blockNumber := transaction.BlockNumber.Big().Uint64()
 		t.BlockNumber = &blockNumber

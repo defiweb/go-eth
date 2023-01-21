@@ -29,9 +29,9 @@ func NewError(name string, inputs *TupleType) *Error {
 //
 // The following examples are valid signatures:
 //
-//   foo((uint256,bytes32)[])(uint256)
-//   foo((uint256 a, bytes32 b)[] c)(uint256 d)
-//   error foo(tuple(uint256 a, bytes32 b)[] memory c)
+//   foo((uint256,bytes32)[])
+//   foo((uint256 a, bytes32 b)[] c)
+//   error foo(tuple(uint256 a, bytes32 b)[] c)
 //
 // This function is equivalent to calling Parser.ParseError with the default
 // configuration.
@@ -84,7 +84,7 @@ func (m *Error) FourBytes() FourBytes {
 }
 
 // Signature returns the error signature, that is, the error name and the
-// canonical type of the error arguments.
+// canonical type of error arguments.
 func (m *Error) Signature() string {
 	return m.signature
 }
@@ -95,7 +95,7 @@ func (m *Error) Is(data []byte) bool {
 }
 
 // DecodeValue decodes the error into a map or structure. If a structure is
-// given, it must have fields with the same names as the error arguments.
+// given, it must have fields with the same names as error arguments.
 func (m *Error) DecodeValue(data []byte, val any) error {
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
@@ -104,7 +104,7 @@ func (m *Error) DecodeValue(data []byte, val any) error {
 }
 
 // DecodeValues decodes the error into a map or structure. If a structure is
-// given, it must have fields with the same names as the error arguments.
+// given, it must have fields with the same names as error arguments.
 func (m *Error) DecodeValues(data []byte, vals ...any) error {
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)

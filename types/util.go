@@ -59,10 +59,10 @@ func fixedBytesUnmarshalText(input, output []byte) error {
 	if err != nil {
 		return err
 	}
-	if len(data) > len(output) {
-		return fmt.Errorf("hex string has length %d, want %d", len(data), len(output))
+	if len(data) != len(output) {
+		return fmt.Errorf("invalid length %d, want %d", len(data), len(output))
 	}
-	copy(output[len(output)-len(data):], data)
+	copy(output, data)
 	return nil
 }
 

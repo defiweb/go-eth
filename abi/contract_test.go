@@ -2,10 +2,52 @@ package abi
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+func TestABI_ParseJSON(t *testing.T) {
+	data, err := ioutil.ReadFile("testdata/abi.json")
+	require.NoError(t, err)
+
+	abi, err := ParseJSON(data)
+	require.NoError(t, err)
+
+	assert.NotNil(t, abi.Method("Foo"))
+	assert.NotNil(t, abi.Method("Bar"))
+	assert.NotNil(t, abi.Constructor())
+	assert.NotNil(t, abi.Event("EventA"))
+	assert.NotNil(t, abi.Event("EventB"))
+	assert.NotNil(t, abi.Error("ErrorA"))
+
+	assert.Equal(t, "function Foo(uint256 a) returns (uint256)", abi.Method("Foo").String())
+	assert.Equal(t, "function Bar((bytes32 A, bytes32 B)[2][2] a) returns (uint256[2][2])", abi.Method("Bar").String())
+	assert.Equal(t, "constructor(uint256 a)", abi.Constructor().String())
+	assert.Equal(t, "event EventA(uint256 indexed a, uint256 b)", abi.Event("EventA").String())
+	assert.Equal(t, "event EventB(uint256 indexed a, uint256 b) anonymous", abi.Event("EventB").String())
+	assert.Equal(t, "error ErrorA(uint256 a, uint256 b)", abi.Error("ErrorA").String())
+}
+
+func TestABI_ParseSignatures(t *testing.T) {
+	c, err := ParseSignatures(
+		"foo(uint256)",
+		"function bar(uint256) returns (uint256)",
+		"constructor(uint256)",
+		"event baz(uint256)",
+		"error qux(uint256)",
+	)
+	require.NoError(t, err)
+	assert.NotNil(t, c.Method("foo"))
+	assert.NotNil(t, c.Method("bar"))
+	assert.NotNil(t, c.MethodBySignature("foo(uint256)"))
+	assert.NotNil(t, c.MethodBySignature("bar(uint256)"))
+	assert.NotNil(t, c.Constructor())
+	assert.NotNil(t, c.Event("baz"))
+	assert.NotNil(t, c.Error("qux"))
+}
 
 func Test_parseArrays(t *testing.T) {
 	tests := []struct {

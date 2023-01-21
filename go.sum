@@ -20,6 +20,12 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/defiweb/go-anymapper v0.0.0-20221206233610-e75520f9edc8 h1:Nua6yg948Xvy5LEs8MTBuJHe3GN74lgIdS03KGVGoCs=
 github.com/defiweb/go-anymapper v0.0.0-20221206233610-e75520f9edc8/go.mod h1:O8T4tH9Cyd1fi6M/M+XVX1kNYurlRlXRv3lTbut62tc=
+github.com/defiweb/go-anymapper v0.0.0-20230117140454-95575cb09dd5 h1:5FPx8yHCB1wgFhanPlwzQMYU0oNun/C79PnW6pMksUY=
+github.com/defiweb/go-anymapper v0.0.0-20230117140454-95575cb09dd5/go.mod h1:O8T4tH9Cyd1fi6M/M+XVX1kNYurlRlXRv3lTbut62tc=
+github.com/defiweb/go-anymapper v0.0.0-20230117200437-03a7e37013ba h1:0dPQF/MHt5G3FbU88fPIv4q6atshk1Ce9C2BwLCB1vk=
+github.com/defiweb/go-anymapper v0.0.0-20230117200437-03a7e37013ba/go.mod h1:O8T4tH9Cyd1fi6M/M+XVX1kNYurlRlXRv3lTbut62tc=
+github.com/defiweb/go-anymapper v0.0.0-20230118195840-2a5633b200f1 h1:d86TVtKJEiqiYGTNi9ezgDDj0/U4S71BT5378B3x0XI=
+github.com/defiweb/go-anymapper v0.0.0-20230118195840-2a5633b200f1/go.mod h1:O8T4tH9Cyd1fi6M/M+XVX1kNYurlRlXRv3lTbut62tc=
 github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937 h1:R/f+QShq/LjTQE34x5PNJ4M1PgoyTFx0xAIVNKW27N8=
 github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937/go.mod h1:nLGzk10jAgynPvN2hL+tLnnyZ5Fcshv0wmpWDRtV0PA=
 github.com/defiweb/go-sigparser v0.0.0-20221125211146-2e4b90d8e269 h1:CxNESKI7WRY9w1pHrwL7/QS6RqflYXE09KU4+S5ZDLk=

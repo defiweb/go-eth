@@ -2,6 +2,7 @@ package abi
 
 import (
 	"fmt"
+	"reflect"
 	"unicode"
 
 	"github.com/defiweb/go-anymapper"
@@ -9,6 +10,10 @@ import (
 
 // Default is the default ABI instance that is used by the package-level
 // functions.
+//
+// It is recommended to create a new ABI instance using NewABI rather than
+// modifying the default instance, as this can potentially interfere with
+// other packages that use the default ABI instance.
 var Default = NewABI()
 
 // ABI structure implements the Ethereum ABI (Application Binary Interface).
@@ -18,8 +23,7 @@ var Default = NewABI()
 //
 // The package provides default ABI instance that is used by the package-level
 // functions. It is possible to create custom ABI instances and use them
-// instead of the default one. To do this, use the Copy method to create a copy
-// of the default ABI instance and modify it as needed.
+// instead of the default one.
 type ABI struct {
 	// Types is a map of known ABI types.
 	// The key is the name of the type, and the value is the type.
@@ -29,14 +33,103 @@ type ABI struct {
 	Mapper Mapper
 }
 
+// Mapper used to map values to and from ABI types.
 type Mapper interface {
 	Map(src any, dst any) error
 }
 
+// MapFrom maps the value from the ABI Value.
+type MapFrom interface {
+	MapFrom(m Mapper, src any) error
+}
+
+// MapTo maps the value to the ABI Value.
+type MapTo interface {
+	MapTo(m Mapper, dst any) error
+}
+
+// NewABI creates a new ABI instance.
+//
+// For most use cases, the default ABI instance should be used instead of
+// creating a new one.
 func NewABI() *ABI {
-	mapper := anymapper.DefaultMapper.Copy()
+	mapper := anymapper.New()
 	mapper.Tag = "abi"
 	mapper.FieldMapper = fieldMapper
+
+	// Those hooks add support for MapTo and MapFrom interfaces.
+	//
+	// Interfaces are used only if a source or destination type implements
+	// the Value interface.
+	//
+	// If both types implement MapTo/MapFrom, then the method from the value
+	// that does NOT implement Value interface is used. This is to ensure
+	// that mapping functions defined by the user are used.
+	mapper.Hooks = anymapper.Hooks{
+		MapFuncHook: func(m *anymapper.Mapper, src, dst reflect.Type) anymapper.MapFunc {
+			srcImplMapTo := src.Implements(mapToTy)
+			dstImplMapFrom := dst.Implements(mapFromTy)
+			switch {
+			case srcImplMapTo && dstImplMapFrom:
+				if src.Implements(valueTy) {
+					return func(m *anymapper.Mapper, src, dst reflect.Value) error {
+						return dst.Interface().(MapFrom).MapFrom(m, src.Interface())
+					}
+				}
+				if dst.Implements(valueTy) {
+					return func(m *anymapper.Mapper, src, dst reflect.Value) error {
+						return src.Interface().(MapTo).MapTo(m, dst.Addr().Interface())
+					}
+				}
+			case srcImplMapTo:
+				return func(m *anymapper.Mapper, src, dst reflect.Value) error {
+					return src.Interface().(MapTo).MapTo(m, dst.Addr().Interface())
+				}
+			case dstImplMapFrom:
+				return func(m *anymapper.Mapper, src, dst reflect.Value) error {
+					return dst.Interface().(MapFrom).MapFrom(m, src.Interface())
+				}
+			}
+			return nil
+		},
+		SourceValueHook: func(v reflect.Value) reflect.Value {
+			for {
+				if _, ok := v.Interface().(MapTo); ok {
+					for v.Kind() == reflect.Interface {
+						v = v.Elem()
+					}
+					return v
+				}
+				if v.Kind() != reflect.Interface && v.Kind() != reflect.Ptr {
+					break
+				}
+				v = v.Elem()
+			}
+			return reflect.Value{}
+		},
+		DestinationValueHook: func(v reflect.Value) reflect.Value {
+			for {
+				if v.Kind() == reflect.Ptr && v.IsNil() {
+					if !v.CanSet() {
+						return reflect.Value{}
+					}
+					// Pointers must be initialized before they can be used.
+					v.Set(reflect.New(v.Type().Elem()))
+				}
+				if _, ok := v.Interface().(MapFrom); ok {
+					for v.Kind() == reflect.Interface {
+						v = v.Elem()
+					}
+					return v
+				}
+				if v.Kind() != reflect.Interface && v.Kind() != reflect.Ptr {
+					break
+				}
+				v = v.Elem()
+			}
+			return reflect.Value{}
+		},
+	}
 
 	types := map[string]Type{}
 	types["bool"] = NewBoolType()
@@ -79,3 +172,9 @@ var fieldMapper = func(field string) string {
 	}
 	return string(runes)
 }
+
+var (
+	valueTy   = reflect.TypeOf((*Value)(nil)).Elem()
+	mapFromTy = reflect.TypeOf((*MapFrom)(nil)).Elem()
+	mapToTy   = reflect.TypeOf((*MapTo)(nil)).Elem()
+)

@@ -2,6 +2,7 @@ package abi
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 
@@ -161,6 +162,59 @@ func Test_signedBitLen(t *testing.T) {
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
 			assert.Equal(t, tt.want, signedBitLen(tt.arg))
+		})
+	}
+}
+
+func Test_canSetInt(t *testing.T) {
+	tests := []struct {
+		x      int64
+		bitLen int
+		want   bool
+	}{
+		{x: 0, bitLen: 8, want: true},
+		{x: 1, bitLen: 8, want: true},
+		{x: -1, bitLen: 8, want: true},
+		{x: 127, bitLen: 8, want: true},
+		{x: -128, bitLen: 8, want: true},
+		{x: 128, bitLen: 8, want: false},
+		{x: -129, bitLen: 8, want: false},
+		{x: 0, bitLen: 32, want: true},
+		{x: 1, bitLen: 32, want: true},
+		{x: -1, bitLen: 32, want: true},
+		{x: math.MaxInt32, bitLen: 32, want: true},
+		{x: math.MinInt32, bitLen: 32, want: true},
+		{x: math.MaxInt32 + 1, bitLen: 32, want: false},
+		{x: math.MinInt32 - 1, bitLen: 32, want: false},
+		{x: math.MaxInt64, bitLen: 64, want: true},
+		{x: math.MinInt64, bitLen: 64, want: true},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			assert.Equal(t, tt.want, canSetInt(tt.x, tt.bitLen))
+		})
+	}
+}
+
+func TestIntX_SetIntUint(t *testing.T) {
+	tests := []struct {
+		x      uint64
+		bitLen int
+		want   bool
+	}{
+		{x: 0, bitLen: 8, want: true},
+		{x: 1, bitLen: 8, want: true},
+		{x: 255, bitLen: 8, want: true},
+		{x: 256, bitLen: 8, want: false},
+		{x: 0, bitLen: 32, want: true},
+		{x: 1, bitLen: 32, want: true},
+		{x: math.MaxUint32, bitLen: 32, want: true},
+		{x: math.MaxUint32 + 1, bitLen: 32, want: false},
+		{x: math.MaxUint64, bitLen: 64, want: true},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			assert.Equal(t, tt.want, canSetUint(tt.x, tt.bitLen))
 		})
 	}
 }
