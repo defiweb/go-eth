@@ -20,10 +20,11 @@ type HTTPOptions struct {
 	// URL of the HTTP endpoint.
 	URL string
 
-	// HTTPClient is used for the connection.
+	// HTTPClient is the HTTP client to use. If nil, http.DefaultClient is
+	// used.
 	HTTPClient *http.Client
 
-	// HTTPHeader specifies the HTTP headers included in RPC requests.
+	// HTTPHeader specifies the HTTP headers to send with each request.
 	HTTPHeader http.Header
 }
 

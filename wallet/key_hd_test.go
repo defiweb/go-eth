@@ -28,7 +28,6 @@ func TestWallet_Mnemonic(t *testing.T) {
 			)
 			require.NoError(t, err)
 			assert.Equal(t, tt.addr, key.Address().String())
-
 		})
 	}
 }

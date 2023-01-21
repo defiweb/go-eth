@@ -26,10 +26,12 @@ type WebsocketOptions struct {
 	// URL of the websocket endpoint.
 	URL string
 
-	// HTTPClient is used for the connection.
+	// HTTPClient is the HTTP client to use. If nil, http.DefaultClient is
+	// used.
 	HTTPClient *http.Client
 
-	// HTTPHeader specifies the HTTP headers included in the handshake request.
+	// HTTPHeader specifies the HTTP headers to be included in the
+	// websocket handshake request.
 	HTTPHeader http.Header
 
 	// Timeout is the timeout for the websocket requests. Default is 60s.

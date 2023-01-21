@@ -98,7 +98,11 @@ func (s *stream) Unsubscribe(ctx context.Context, id string) error {
 	if !s.delSubCh(id) {
 		return errors.New("unknown subscription")
 	}
-	return s.Call(ctx, nil, "eth_unsubscribe", types.HexToNumber(id))
+	hex, err := types.HexToNumber(id)
+	if err != nil {
+		return fmt.Errorf("invalid subscription id: %w", err)
+	}
+	return s.Call(ctx, nil, "eth_unsubscribe", hex)
 }
 
 // readerRoutine reads messages from the stream connection and dispatches

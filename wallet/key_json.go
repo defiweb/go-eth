@@ -18,7 +18,7 @@ func NewKeyFromJSON(path string, passphrase string) (*PrivateKey, error) {
 	return NewKeyFromJSONContent(content, passphrase)
 }
 
-// NewKeyFromJSONContent returns a new key from a JSON file content.
+// NewKeyFromJSONContent returns a new key from a JSON.
 func NewKeyFromJSONContent(content []byte, passphrase string) (*PrivateKey, error) {
 	var jKey jsonKey
 	if err := json.Unmarshal(content, &jKey); err != nil {

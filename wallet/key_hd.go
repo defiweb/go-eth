@@ -63,6 +63,7 @@ var RootDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x8000
 // It is set to m/44'/60'/0'/0/0.
 var DefaultDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 + 60, 0x80000000 + 0, 0, 0}
 
+// Indices of the components in the derivation path.
 const (
 	PurposeComponent      = 0
 	CoinTypeComponent     = 1
@@ -85,7 +86,7 @@ func NewKeyFromMnemonic(mnemonic, password string, account, index uint32) (*Priv
 	return m.Derive(dp)
 }
 
-// NewMnemonic creates a new mnemonic.
+// NewMnemonic creates a new mnemonic that can be used to derive private keys.
 func NewMnemonic(mnemonic, password string) (Mnemonic, error) {
 	if mnemonic == "" {
 		return Mnemonic{}, errors.New("mnemonic is required")
