@@ -45,26 +45,26 @@ func TestMethod_EncodeArgs(t *testing.T) {
 
 	const TypeCall = "(address target,bytes callData)"
 	type Call struct {
-		Address types.Address
-		Data    []byte
+		Target types.Address
+		Data   []byte `abi:"callData"`
 	}
 	require.NoError(t, addType("Call", TypeCall))
 	const TypeResult = "(bool success,bytes returnData)"
 	type Result struct {
-		Success bool
-		Data    []byte
+		OK   bool   `abi:"success"`
+		Data []byte `abi:"returnData"`
 	}
 	require.NoError(t, addType("Result", TypeResult))
 	outerFunc := MustParseMethod(FuncTryAggregate)
 
 	data := make([]Call, 2)
 	data[0] = Call{
-		Address: types.MustHexToAddress(ZeroAddr),
-		Data:    mustFn[[]byte](t)(innerFunc.EncodeArgs(types.MustHexToAddress(ZeroAddr), 0)),
+		Target: types.MustAddressFromHex(ZeroAddr),
+		Data:   mustFn[[]byte](t)(innerFunc.EncodeArgs(types.MustAddressFromHex(ZeroAddr), 0)),
 	}
 	data[1] = Call{
-		Address: types.MustHexToAddress(ZeroAddr),
-		Data:    mustFn[[]byte](t)(innerFunc.EncodeArgs(types.MustHexToAddress(ZeroAddr), 1)),
+		Target: types.MustAddressFromHex(ZeroAddr),
+		Data:   mustFn[[]byte](t)(innerFunc.EncodeArgs(types.MustAddressFromHex(ZeroAddr), 1)),
 	}
 
 	mustFn[[]byte](t)(outerFunc.EncodeArgs(false, data))
