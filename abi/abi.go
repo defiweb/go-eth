@@ -64,7 +64,7 @@ func NewABI() *ABI {
 	//
 	// If both types implement MapTo/MapFrom, then the method from the value
 	// that does NOT implement Value interface is used. This is to ensure
-	// that mapping functions defined by the user are used.
+	// that mapping functions defined by the user have higher priority.
 	mapper.Hooks = anymapper.Hooks{
 		MapFuncHook: func(m *anymapper.Mapper, src, dst reflect.Type) anymapper.MapFunc {
 			srcImplMapTo := src.Implements(mapToTy)

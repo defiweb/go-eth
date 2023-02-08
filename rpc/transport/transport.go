@@ -11,8 +11,8 @@ type Transport interface {
 	Call(ctx context.Context, result any, method string, args ...any) error
 }
 
-// Subscriber is am transport that supports subscriptions.
-type Subscriber interface {
+// SubscriptionTransport is transport that supports subscriptions.
+type SubscriptionTransport interface {
 	Transport
 
 	// Subscribe starts a new subscription. It returns a channel that receives

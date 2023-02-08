@@ -3,6 +3,7 @@ package abi
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -13,11 +14,20 @@ import (
 // be created from a JSON ABI definition using the ParseJSON function or from
 // a list of signatures using the ParseSignatures function.
 type Contract struct {
-	constructor        *Constructor
-	methods            map[string]*Method
-	methodsBySignature map[string]*Method
-	events             map[string]*Event
-	errors             map[string]*Error
+	Constructor        *Constructor
+	Methods            map[string]*Method
+	MethodsBySignature map[string]*Method
+	Events             map[string]*Event
+	Errors             map[string]*Error
+}
+
+// LoadJSON loads the ABI from the given JSON file and returns a Contract instance.
+func LoadJSON(path string) (*Contract, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return ParseJSON(data)
 }
 
 // ParseJSON parses the given ABI JSON and returns a Contract instance.
@@ -52,31 +62,6 @@ func MustParseSignatures(signatures ...string) *Contract {
 	return abi
 }
 
-// Constructor returns the contract constructor.
-func (a *Contract) Constructor() *Constructor {
-	return a.constructor
-}
-
-// Method returns the method with the given name.
-func (a *Contract) Method(name string) *Method {
-	return a.methods[name]
-}
-
-// MethodBySignature returns the method with the given signature.
-func (a *Contract) MethodBySignature(signature string) *Method {
-	return a.methodsBySignature[signature]
-}
-
-// Event returns the event with the given name.
-func (a *Contract) Event(name string) *Event {
-	return a.events[name]
-}
-
-// Error returns the error with the given name.
-func (a *Contract) Error(name string) *Error {
-	return a.errors[name]
-}
-
 // ParseJSON parses the given ABI JSON and returns a Contract instance.
 func (a *ABI) ParseJSON(data []byte) (*Contract, error) {
 	var fields []jsonField
@@ -84,10 +69,10 @@ func (a *ABI) ParseJSON(data []byte) (*Contract, error) {
 		return nil, err
 	}
 	abi := &Contract{
-		methods:            make(map[string]*Method),
-		methodsBySignature: make(map[string]*Method),
-		events:             make(map[string]*Event),
-		errors:             make(map[string]*Error),
+		Methods:            make(map[string]*Method),
+		MethodsBySignature: make(map[string]*Method),
+		Events:             make(map[string]*Event),
+		Errors:             make(map[string]*Error),
 	}
 	for _, f := range fields {
 		switch f.Type {
@@ -96,7 +81,7 @@ func (a *ABI) ParseJSON(data []byte) (*Contract, error) {
 			if err != nil {
 				return nil, err
 			}
-			abi.constructor = a.NewConstructor(inputs)
+			abi.Constructor = a.NewConstructor(inputs)
 		case "function", "":
 			inputs, err := f.Inputs.toTupleType(a)
 			if err != nil {
@@ -107,20 +92,20 @@ func (a *ABI) ParseJSON(data []byte) (*Contract, error) {
 				return nil, err
 			}
 			method := a.NewMethod(f.Name, inputs, outputs)
-			abi.methods[f.Name] = method
-			abi.methodsBySignature[method.Signature()] = method
+			abi.Methods[f.Name] = method
+			abi.MethodsBySignature[method.Signature()] = method
 		case "event":
 			inputs, err := f.Inputs.toEventTupleType(a)
 			if err != nil {
 				return nil, err
 			}
-			abi.events[f.Name] = a.NewEvent(f.Name, inputs, f.Anonymous)
+			abi.Events[f.Name] = a.NewEvent(f.Name, inputs, f.Anonymous)
 		case "error":
 			inputs, err := f.Inputs.toTupleType(a)
 			if err != nil {
 				return nil, err
 			}
-			abi.errors[f.Name] = a.NewError(f.Name, inputs)
+			abi.Errors[f.Name] = a.NewError(f.Name, inputs)
 		case "fallback":
 		case "receive":
 		default:
@@ -135,10 +120,10 @@ func (a *ABI) ParseJSON(data []byte) (*Contract, error) {
 // For functions, the "function" prefix can be omitted.
 func (a *ABI) ParseSignatures(signatures ...string) (*Contract, error) {
 	abi := &Contract{
-		methods:            make(map[string]*Method),
-		methodsBySignature: make(map[string]*Method),
-		events:             make(map[string]*Event),
-		errors:             make(map[string]*Error),
+		Methods:            make(map[string]*Method),
+		MethodsBySignature: make(map[string]*Method),
+		Events:             make(map[string]*Event),
+		Errors:             make(map[string]*Error),
 	}
 	for _, s := range signatures {
 		sig, err := sigparser.ParseSignature(s)
@@ -151,26 +136,26 @@ func (a *ABI) ParseSignatures(signatures ...string) (*Contract, error) {
 			if err != nil {
 				return nil, err
 			}
-			abi.constructor = constructor
+			abi.Constructor = constructor
 		case sigparser.FunctionKind, sigparser.UnknownKind:
 			method, err := newMethodFromSig(a, sig)
 			if err != nil {
 				return nil, err
 			}
-			abi.methods[method.Name()] = method
-			abi.methodsBySignature[method.Signature()] = method
+			abi.Methods[method.Name()] = method
+			abi.MethodsBySignature[method.Signature()] = method
 		case sigparser.EventKind:
 			event, err := newEventFromSig(a, sig)
 			if err != nil {
 				return nil, err
 			}
-			abi.events[event.Name()] = event
+			abi.Events[event.Name()] = event
 		case sigparser.ErrorKind:
 			errsig, err := newErrorFromSig(a, sig)
 			if err != nil {
 				return nil, err
 			}
-			abi.errors[errsig.Name()] = errsig
+			abi.Errors[errsig.Name()] = errsig
 		default:
 			return nil, fmt.Errorf("unknown kind: %s", sig.Kind)
 		}

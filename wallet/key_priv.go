@@ -3,11 +3,17 @@ package wallet
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"errors"
 
 	"github.com/btcsuite/btcd/btcec"
 
 	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/types"
+)
+
+var (
+	ErrMissingChainID = errors.New("missing chain ID")
+	ErrInvalidSender  = errors.New("transaction sender does not match signer address")
 )
 
 var s256 = btcec.S256()
@@ -59,6 +65,12 @@ func (k *PrivateKey) SignMessage(data []byte) (types.Signature, error) {
 
 // SignTransaction implements the Key interface.
 func (k *PrivateKey) SignTransaction(tx *types.Transaction) (*types.Transaction, error) {
+	if tx.ChainID == nil {
+		return nil, ErrMissingChainID
+	}
+	if tx.From != nil && *tx.From != k.Address() {
+		return nil, ErrInvalidSender
+	}
 	r, err := tx.SigningHash(crypto.Keccak256)
 	if err != nil {
 		return nil, err
@@ -71,6 +83,8 @@ func (k *PrivateKey) SignTransaction(tx *types.Transaction) (*types.Transaction,
 	if tx.Type == 0 {
 		v = v + 35 + tx.ChainID.Uint64()*2
 	}
+	addr := k.Address()
+	tx.From = &addr
 	tx.Signature = s
 	return tx, nil
 }

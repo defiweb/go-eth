@@ -11,9 +11,8 @@ var Revert = NewError("Error", NewTupleType(TupleTypeElem{Name: "error", Type: N
 // keccak256 hash of the string "Error(string)".
 var revertPrefix = FourBytes{0x08, 0xc3, 0x79, 0xa0}
 
-// IsRevert returns true if the data is a revert message. It does not check
-// whether the data is a valid revert message, hence DecodeRevert may still
-// return an error.
+// IsRevert returns true if the data has the revert prefix. It does not check
+// whether the data is a valid revert message.
 func IsRevert(data []byte) bool {
 	return revertPrefix.Match(data)
 }

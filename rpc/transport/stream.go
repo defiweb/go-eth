@@ -76,7 +76,7 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 	return nil
 }
 
-// Subscribe implements the Subscriber interface.
+// Subscribe implements the SubscriptionTransport interface.
 func (s *stream) Subscribe(ctx context.Context, method string, args ...any) (chan json.RawMessage, string, error) {
 	rawID := types.Number{}
 	params := make([]any, 0, 2)
@@ -93,7 +93,7 @@ func (s *stream) Subscribe(ctx context.Context, method string, args ...any) (cha
 	return ch, id, nil
 }
 
-// Unsubscribe implements the Subscriber interface.
+// Unsubscribe implements the SubscriptionTransport interface.
 func (s *stream) Unsubscribe(ctx context.Context, id string) error {
 	if !s.delSubCh(id) {
 		return errors.New("unknown subscription")

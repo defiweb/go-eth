@@ -12,11 +12,11 @@ import (
 // WebSockets for subscriptions.
 type Combined struct {
 	calls Transport
-	subs  Subscriber
+	subs  SubscriptionTransport
 }
 
 // NewCombined creates a new Combined transport.
-func NewCombined(call Transport, subscriber Subscriber) *Combined {
+func NewCombined(call Transport, subscriber SubscriptionTransport) *Combined {
 	return &Combined{
 		calls: call,
 		subs:  subscriber,
@@ -28,12 +28,12 @@ func (c *Combined) Call(ctx context.Context, result any, method string, args ...
 	return c.calls.Call(ctx, result, method, args...)
 }
 
-// Subscribe implements the Subscriber interface.
+// Subscribe implements the SubscriptionTransport interface.
 func (c *Combined) Subscribe(ctx context.Context, method string, args ...any) (ch chan json.RawMessage, id string, err error) {
 	return c.subs.Subscribe(ctx, method, args...)
 }
 
-// Unsubscribe implements the Subscriber interface.
+// Unsubscribe implements the SubscriptionTransport interface.
 func (c *Combined) Unsubscribe(ctx context.Context, id string) error {
 	return c.subs.Unsubscribe(ctx, id)
 }

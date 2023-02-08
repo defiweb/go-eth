@@ -66,8 +66,8 @@ func BytesToHex(b []byte) string {
 }
 
 // HexToBytes returns the bytes representation of the given hex string.
-// Unlike hex.DecodeString, it does not require an even number of digits.
-// The hex string may be prefixed with "0x".
+// The number of hex digits must be even. The hex string may be prefixed with
+// "0x".
 func HexToBytes(h string) ([]byte, error) {
 	if len(h) == 0 {
 		return []byte{}, nil
@@ -78,11 +78,11 @@ func HexToBytes(h string) ([]byte, error) {
 	if len(h) == 1 && h[0] == '0' {
 		return []byte{0}, nil
 	}
-	if len(h)%2 != 0 {
-		h = "0" + h
-	}
 	if len(h) == 0 {
 		return []byte{}, nil
+	}
+	if len(h)%2 != 0 {
+		return nil, fmt.Errorf("invalid hex string, length must be even")
 	}
 	l := len(h) / 2
 	b := make([]byte, l)

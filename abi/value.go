@@ -85,7 +85,10 @@ func (t *TupleValue) MapFrom(m Mapper, src any) error {
 	for _, elem := range *t {
 		vals[elem.Name] = elem.Value
 	}
-	return m.Map(src, vals)
+	if err := m.Map(src, vals); err != nil {
+		return fmt.Errorf("abi: cannot map tuple from %s: %w", reflect.TypeOf(src), err)
+	}
+	return nil
 }
 
 // MapTo implements the anymapper.MapTo interface.
@@ -94,7 +97,10 @@ func (t *TupleValue) MapTo(m Mapper, dst any) error {
 	for _, elem := range *t {
 		vals[elem.Name] = elem.Value
 	}
-	return m.Map(vals, dst)
+	if err := m.Map(vals, dst); err != nil {
+		return fmt.Errorf("abi: cannot map tuple to %s: %w", reflect.TypeOf(dst), err)
+	}
+	return nil
 }
 
 // ArrayValue is a value of array type.
@@ -133,12 +139,18 @@ func (a *ArrayValue) MapFrom(m Mapper, src any) error {
 	for i := 0; i < srcRef.Len(); i++ {
 		a.Elems[i] = a.Type.Value()
 	}
-	return m.Map(src, &a.Elems)
+	if err := m.Map(src, &a.Elems); err != nil {
+		return fmt.Errorf("abi: cannot map array from %s: %w", reflect.TypeOf(src), err)
+	}
+	return nil
 }
 
 // MapTo implements the anymapper.MapTo interface.
 func (a *ArrayValue) MapTo(m Mapper, dst any) error {
-	return m.Map(&a.Elems, dst)
+	if err := m.Map(&a.Elems, dst); err != nil {
+		return fmt.Errorf("abi: cannot map array to %s: %w", reflect.TypeOf(dst), err)
+	}
+	return nil
 }
 
 // FixedArrayValue is a value of fixed array type. The size of a slice is
@@ -174,12 +186,18 @@ func (a FixedArrayValue) MapFrom(m Mapper, src any) error {
 	if srcRef.Len() != len(a) {
 		return fmt.Errorf("abi: cannot map %d elements to array[%d]", srcRef.Len(), len(a))
 	}
-	return m.Map(src, (*[]Value)(&a))
+	if err := m.Map(src, (*[]Value)(&a)); err != nil {
+		return fmt.Errorf("abi: cannot map array from %s: %w", reflect.TypeOf(src), err)
+	}
+	return nil
 }
 
 // MapTo implements the anymapper.MapTo interface.
 func (a FixedArrayValue) MapTo(m Mapper, dst any) error {
-	return m.Map(([]Value)(a), dst)
+	if err := m.Map(([]Value)(a), dst); err != nil {
+		return fmt.Errorf("abi: cannot map array to %s: %w", reflect.TypeOf(dst), err)
+	}
+	return nil
 }
 
 // BytesValue is a value of bytes type.
@@ -187,6 +205,16 @@ func (a FixedArrayValue) MapTo(m Mapper, dst any) error {
 // During encoding ad decoding, the BytesValue can be mapped using the slice
 // rules described in the documentation of anymapper package.
 type BytesValue []byte
+
+// Bytes returns the value of the BytesValue.
+func (b *BytesValue) Bytes() []byte {
+	return *b
+}
+
+// SetBytes sets the value of the BytesValue.
+func (b *BytesValue) SetBytes(data []byte) {
+	*b = data
+}
 
 // IsDynamic implements the Value interface.
 func (b *BytesValue) IsDynamic() bool {
@@ -251,6 +279,16 @@ func (b *BytesValue) MapTo(m Mapper, dst any) error {
 // rules described in the documentation of anymapper package.
 type StringValue string
 
+// String returns the value of the StringValue.
+func (s *StringValue) String() string {
+	return string(*s)
+}
+
+// SetString sets the value of the StringValue.
+func (s *StringValue) SetString(str string) {
+	*s = StringValue(str)
+}
+
 // IsDynamic implements the Value interface.
 func (s *StringValue) IsDynamic() bool {
 	return true
@@ -275,13 +313,15 @@ func (s *StringValue) DecodeABI(data Words) (int, error) {
 func (s *StringValue) MapFrom(m Mapper, src any) error {
 	srcRef := reflect.ValueOf(src)
 	switch srcRef.Type().Kind() {
-	case reflect.String:
-		*s = StringValue(srcRef.String())
 	case reflect.Slice:
 		if srcRef.Type().Elem().Kind() != reflect.Uint8 {
 			return fmt.Errorf("abi: cannot map %s to string", srcRef.Type())
 		}
-		*s = StringValue(srcRef.Bytes())
+		if err := m.Map(src, (*string)(s)); err != nil {
+			return fmt.Errorf("abi: cannot map %s to string: %v", srcRef.Type(), err)
+		}
+	case reflect.String:
+		*s = StringValue(srcRef.String())
 	default:
 		return fmt.Errorf("abi: cannot map %s to string", srcRef.Type())
 	}
@@ -292,13 +332,15 @@ func (s *StringValue) MapFrom(m Mapper, src any) error {
 func (s *StringValue) MapTo(m Mapper, dst any) error {
 	dstRef := reflect.ValueOf(dst).Elem()
 	switch dstRef.Type().Kind() {
-	case reflect.String:
-		dstRef.SetString(string(*s))
 	case reflect.Slice:
 		if dstRef.Type().Elem().Kind() != reflect.Uint8 {
 			return fmt.Errorf("abi: cannot map string to %s", dstRef.Type())
 		}
-		dstRef.SetBytes([]byte(*s))
+		if err := m.Map((*string)(s), &dst); err != nil {
+			return fmt.Errorf("abi: cannot map string to %s: %v", dstRef.Type(), err)
+		}
+	case reflect.String:
+		dstRef.SetString(string(*s))
 	default:
 		return fmt.Errorf("abi: cannot map string to %s", dstRef.Type())
 	}
@@ -312,6 +354,20 @@ func (s *StringValue) MapTo(m Mapper, dst any) error {
 // rules described in the documentation of anymapper package. Both values must
 // have the same size.
 type FixedBytesValue []byte
+
+// Bytes returns the value of the FixedBytesValue.
+func (b *FixedBytesValue) Bytes() []byte {
+	return *b
+}
+
+// SetBytes sets the value of the FixedBytesValue.
+func (b *FixedBytesValue) SetBytes(data []byte) error {
+	if len(data) != len(*b) {
+		return fmt.Errorf("abi: cannot set bytes of length %d to bytes%d", len(data), len(*b))
+	}
+	*b = data
+	return nil
+}
 
 // IsDynamic implements the Value interface.
 func (b FixedBytesValue) IsDynamic() bool {
@@ -332,7 +388,16 @@ func (b FixedBytesValue) DecodeABI(data Words) (int, error) {
 func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 	srcRef := reflect.ValueOf(src)
 	switch srcRef.Type().Kind() {
-	case reflect.Slice, reflect.Array:
+	case reflect.Slice:
+		if srcRef.Type().Elem().Kind() != reflect.Uint8 {
+			return fmt.Errorf("abi: cannot map %s to bytes", srcRef.Type())
+		}
+		bin := srcRef.Bytes()
+		if len(bin) != len(b) {
+			return fmt.Errorf("abi: cannot map %d bytes to bytes%d", len(bin), len(b))
+		}
+		copy(b, bin)
+	case reflect.Array:
 		if srcRef.Type().Elem().Kind() != reflect.Uint8 {
 			return fmt.Errorf("abi: cannot map %s to bytes", srcRef.Type())
 		}
@@ -340,11 +405,8 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 		if err := m.Map(src, &bin); err != nil {
 			return fmt.Errorf("abi: cannot map %s to bytes%d: %v", srcRef.Type(), len(b), err)
 		}
-		if len(bin) > len(b) {
+		if len(bin) != len(b) {
 			return fmt.Errorf("abi: cannot map %d bytes to bytes%d", len(bin), len(b))
-		}
-		for i := len(bin); i < len(b); i++ {
-			b[i] = 0
 		}
 		copy(b, bin)
 	case reflect.String:
@@ -352,11 +414,8 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 		if err != nil {
 			return fmt.Errorf("abi: cannot map %s to bytes%d: %v", srcRef.Type(), len(b), err)
 		}
-		if len(bin) > len(b) {
+		if len(bin) != len(b) {
 			return fmt.Errorf("abi: cannot map %d bytes to bytes%d", len(bin), len(b))
-		}
-		for i := len(bin); i < len(b); i++ {
-			b[i] = 0
 		}
 		copy(b, bin)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -396,15 +455,6 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 				b[i] = 0
 			}
 			copy(b[len(b)-len(bin):], bin)
-		case types.Address:
-			bin := srcTyp.Bytes()
-			if len(bin) > len(b) {
-				return fmt.Errorf("abi: cannot map %d bytes to bytes%d", len(bin), len(b))
-			}
-			for i := 0; i < len(b)-len(bin); i++ {
-				b[i] = 0
-			}
-			copy(b[len(b)-len(bin):], bin)
 		case types.Number:
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map %s to bytes%d: only bytes32 is supported", srcRef.Type(), len(b))
@@ -414,6 +464,31 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 				return fmt.Errorf("abi: cannot map %s to bytes%d: %v", srcRef.Type(), len(b), err)
 			}
 			bin := x.Bytes()
+			for i := 0; i < len(b)-len(bin); i++ {
+				b[i] = 0
+			}
+			copy(b[len(b)-len(bin):], bin)
+		case types.BlockNumber:
+			if srcTyp.Big().Sign() < 0 {
+				return fmt.Errorf("abi: cannot map %s to bytes%d: latest, earliest and pending are not supported", srcRef.Type(), len(b))
+			}
+			if len(b) != 32 {
+				return fmt.Errorf("abi: cannot map %s to bytes%d: only bytes32 is supported", srcRef.Type(), len(b))
+			}
+			x := newIntX(len(b) * 8)
+			if err := x.SetBigInt(srcTyp.Big()); err != nil {
+				return fmt.Errorf("abi: cannot map %s to bytes%d: %v", srcRef.Type(), len(b), err)
+			}
+			bin := x.Bytes()
+			for i := 0; i < len(b)-len(bin); i++ {
+				b[i] = 0
+			}
+			copy(b[len(b)-len(bin):], bin)
+		case types.Address:
+			bin := srcTyp.Bytes()
+			if len(bin) > len(b) {
+				return fmt.Errorf("abi: cannot map %d bytes to bytes%d", len(bin), len(b))
+			}
 			for i := 0; i < len(b)-len(bin); i++ {
 				b[i] = 0
 			}
@@ -438,14 +513,11 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 		if dstRef.Type().Elem().Kind() != reflect.Uint8 {
 			return fmt.Errorf("abi: cannot map bytes to %s", dstRef.Type())
 		}
-		if dstRef.Len() < len(b) {
-			return fmt.Errorf("abi: cannot map bytes%d to %s: array too short", len(b), dstRef.Type())
+		if dstRef.Len() != len(b) {
+			return fmt.Errorf("abi: cannot map bytes%d to %s: length mismatch", len(b), dstRef.Type())
 		}
-		for i := 0; i < dstRef.Len()-len(b); i++ {
+		for i := 0; i < dstRef.Len(); i++ {
 			dstRef.Index(i).SetUint(uint64(b[i]))
-		}
-		for i := dstRef.Len() - len(b); i < dstRef.Len(); i++ {
-			dstRef.Index(i).SetUint(uint64(b[i-dstRef.Len()+len(b)]))
 		}
 	case reflect.String:
 		dstRef.SetString(hexutil.BytesToHex(b))
@@ -489,6 +561,24 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 			}
 			dstRef.Set(reflect.ValueOf(x.BigInt()).Elem())
+		case types.Number:
+			if len(b) != 32 {
+				return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
+			}
+			x := newIntX(256)
+			if err := x.SetBytes(b); err != nil {
+				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
+			}
+			dstRef.Set(reflect.ValueOf(types.BigIntToNumber(x.BigInt())))
+		case types.BlockNumber:
+			if len(b) != 32 {
+				return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
+			}
+			x := newIntX(256)
+			if err := x.SetBytes(b); err != nil {
+				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
+			}
+			dstRef.Set(reflect.ValueOf(types.BigIntToBlockNumber(x.BigInt())))
 		case types.Address:
 			if len(b) < types.AddressLength {
 				return fmt.Errorf("abi: cannot map bytes%d to %s", len(b), dstRef.Type())
@@ -499,15 +589,6 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 				}
 			}
 			copy(destTyp[:], b[len(b)-types.AddressLength:])
-		case types.Number:
-			if len(b) != 32 {
-				return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
-			}
-			x := newIntX(256)
-			if err := x.SetBytes(b); err != nil {
-				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
-			}
-			dstRef.Set(reflect.ValueOf(types.BigIntToNumber(x.BigInt())))
 		default:
 			return fmt.Errorf("abi: cannot map bytes%d to %s", len(b), dstRef.Type())
 		}
@@ -589,6 +670,15 @@ func (u *UintValue) MapFrom(m Mapper, src any) error {
 			}
 			u.Int = srcTyp
 		case types.Number:
+			bn := srcTyp.Big()
+			if bn.Sign() < 0 {
+				return fmt.Errorf("abi: cannot map %s to uint%d: negative value", srcRef.Type(), u.Size)
+			}
+			if bn.BitLen() > u.Size {
+				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), u.Size)
+			}
+			u.Int = *bn
+		case types.BlockNumber:
 			bn := srcTyp.Big()
 			if bn.Sign() < 0 {
 				return fmt.Errorf("abi: cannot map %s to uint%d: negative value", srcRef.Type(), u.Size)
@@ -708,6 +798,15 @@ func (i *IntValue) MapFrom(m Mapper, src any) error {
 				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), i.Size)
 			}
 			i.Int = *bn
+		case types.BlockNumber:
+			bn := srcTyp.Big()
+			if bn.Sign() < 0 {
+				return fmt.Errorf("abi: cannot map %s to uint%d: latest, earliest and pending are not supported", srcRef.Type(), i.Size)
+			}
+			if signedBitLen(bn) > i.Size {
+				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), i.Size)
+			}
+			i.Int = *bn
 		default:
 			return fmt.Errorf("abi: cannot map %s to uint%d", srcRef.Type(), i.Size)
 		}
@@ -741,6 +840,9 @@ func (i *IntValue) MapTo(m Mapper, dst any) error {
 		case types.Number:
 			dstRef.Set(reflect.ValueOf(types.BigIntToNumber(&i.Int)))
 		case types.BlockNumber:
+			if i.Sign() < 0 {
+				return fmt.Errorf("abi: cannot map int%d to %s: value is negative", i.Size, dstRef.Type())
+			}
 			dstRef.Set(reflect.ValueOf(types.BigIntToBlockNumber(&i.Int)))
 		default:
 			return fmt.Errorf("abi: cannot map int%d to %s", i.Size, dstRef.Type())
@@ -754,6 +856,11 @@ func (i *IntValue) MapTo(m Mapper, dst any) error {
 // During encoding and decoding, the BoolValue is mapped using the bool rules
 // described in the documentation of anymapper package.
 type BoolValue bool
+
+// SetBool sets the value of the BoolValue.
+func (b *BoolValue) SetBool(v bool) {
+	*b = BoolValue(v)
+}
 
 // IsDynamic implements the Value interface.
 func (b *BoolValue) IsDynamic() bool {
@@ -800,6 +907,16 @@ func (b *BoolValue) MapTo(m Mapper, dst any) error {
 // string as a hex-encoded address. For other types, the rules for []byte slice
 // described in the documentation of anymapper package are used.
 type AddressValue types.Address
+
+// Address returns the address value.
+func (a *AddressValue) Address() types.Address {
+	return types.Address(*a)
+}
+
+// SetAddress sets the value of the AddressValue.
+func (a *AddressValue) SetAddress(v types.Address) {
+	*a = AddressValue(v)
+}
 
 // IsDynamic implements the Value interface.
 func (a *AddressValue) IsDynamic() bool {

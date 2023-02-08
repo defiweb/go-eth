@@ -338,7 +338,7 @@ func (t Transaction) SigningHash(h HashFunc) (Hash, error) {
 		l.Append(&t.AccessList)
 	}
 	// EIP-155 replay-protection
-	if t.ChainID.Sign() != 0 && t.Type == LegacyTxType {
+	if t.ChainID != nil && t.ChainID.Sign() != 0 && t.Type == LegacyTxType {
 		l.Append(rlp.NewBigInt(t.ChainID))
 		l.Append(rlp.NewBigInt(big.NewInt(0)))
 		l.Append(rlp.NewBigInt(big.NewInt(0)))
