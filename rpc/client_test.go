@@ -547,7 +547,7 @@ const mockSendRawTransactionResponse = `
 	{
 	  "jsonrpc": "2.0",
 	  "id": 1,
-	  "result": "0x111111111111111111111111111111111111111111111111111111111111111"
+	  "result": "0x1111111111111111111111111111111111111111111111111111111111111111"
 	}
 `
 
@@ -566,7 +566,7 @@ func TestClient_SendRawTransaction(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockSendRawTransactionRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.MustHexToHash("0x111111111111111111111111111111111111111111111111111111111111111"), *txHash)
+	assert.Equal(t, types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), *txHash)
 }
 
 const mockCallRequest = `

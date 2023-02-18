@@ -35,7 +35,7 @@ func TestEncodeABI(t *testing.T) {
 				TupleValueElem{Value: new(BoolValue), Name: "b"},
 			},
 			arg:  map[string]bool{"a": true, "b": true},
-			want: Words{padL("1"), padL("1")},
+			want: Words{padL("01"), padL("01")},
 		},
 		{
 			name: "tuple#dynamic",
@@ -45,7 +45,7 @@ func TestEncodeABI(t *testing.T) {
 			arg: map[string][]byte{"a": {1, 2, 3}},
 			want: Words{
 				padL("20"),     // offset
-				padL("3"),      // length
+				padL("03"),     // length
 				padR("010203"), // data
 			},
 		},
@@ -57,9 +57,9 @@ func TestEncodeABI(t *testing.T) {
 			},
 			arg: map[string]interface{}{"a": true, "b": []byte{1, 2, 3}},
 			want: Words{
-				padL("1"),      // a
+				padL("01"),     // a
 				padL("40"),     // offset to b
-				padL("3"),      // length of b
+				padL("03"),     // length of b
 				padR("010203"), // b
 			},
 		},
@@ -87,10 +87,10 @@ func TestEncodeABI(t *testing.T) {
 				padL("40"),     // offset to a
 				padL("a0"),     // offset to b
 				padL("20"),     // offset to a.x
-				padL("3"),      // length of a.x
+				padL("03"),     // length of a.x
 				padR("010203"), // a.x
 				padL("20"),     // offset to b.x
-				padL("3"),      // length of b.x
+				padL("03"),     // length of b.x
 				padR("040506"), // b.x
 			},
 		},
@@ -106,9 +106,9 @@ func TestEncodeABI(t *testing.T) {
 			val:  &ArrayValue{Type: NewBoolType()},
 			arg:  []bool{true, true},
 			want: Words{
-				padL("2"), // array length
-				padL("1"), // first element
-				padL("1"), // second element
+				padL("02"), // array length
+				padL("01"), // first element
+				padL("01"), // second element
 			},
 		},
 		{
@@ -116,12 +116,12 @@ func TestEncodeABI(t *testing.T) {
 			val:  &ArrayValue{Type: NewBytesType()},
 			arg:  [][]byte{{1, 2, 3}, {4, 5, 6}},
 			want: Words{
-				padL("2"),      // array length
+				padL("02"),     // array length
 				padL("40"),     // offset to first element
 				padL("80"),     // offset to second element
-				padL("3"),      // length of first element
+				padL("03"),     // length of first element
 				padR("010203"), // first element
-				padL("3"),      // length of second element
+				padL("03"),     // length of second element
 				padR("040506"), // second element
 			},
 		},
@@ -137,8 +137,8 @@ func TestEncodeABI(t *testing.T) {
 			val:  &FixedArrayValue{new(BoolValue), new(BoolValue)},
 			arg:  []bool{true, true},
 			want: Words{
-				padL("1"), // first element
-				padL("1"), // second element
+				padL("01"), // first element
+				padL("01"), // second element
 			},
 		},
 		{
@@ -148,9 +148,9 @@ func TestEncodeABI(t *testing.T) {
 			want: Words{
 				padL("40"),     // offset to first element
 				padL("80"),     // offset to second element
-				padL("3"),      // length of first element
+				padL("03"),     // length of first element
 				padR("010203"), // first element
-				padL("3"),      // length of second element
+				padL("03"),     // length of second element
 				padR("040506"), // second element
 			},
 		},
@@ -159,14 +159,14 @@ func TestEncodeABI(t *testing.T) {
 			name: "bytes#empty",
 			val:  new(BytesValue),
 			arg:  []byte{},
-			want: Words{padL("0")},
+			want: Words{padL("00")},
 		},
 		{
 			name: "bytes#one-word",
 			val:  new(BytesValue),
 			arg:  []byte{1, 2, 3},
 			want: Words{
-				padL("3"),      // length
+				padL("03"),     // length
 				padR("010203"), // data
 			},
 		},
@@ -193,7 +193,7 @@ func TestEncodeABI(t *testing.T) {
 			val:  new(StringValue),
 			arg:  "abc",
 			want: Words{
-				padL("3"),      // length
+				padL("03"),     // length
 				padR("616263"), // data
 			},
 		},
@@ -212,22 +212,20 @@ func TestEncodeABI(t *testing.T) {
 			name: "fixed#bytes-empty",
 			val:  make(FixedBytesValue, 0),
 			arg:  []byte{},
-			want: Words{padL("0")},
+			want: Words{padL("00")},
 		},
 		{
 			name: "fixed#bytes-non-empty",
 			val:  make(FixedBytesValue, 3),
 			arg:  []byte{1, 2, 3},
-			want: Words{
-				padR("010203"),
-			},
+			want: Words{padR("010203")},
 		},
 		// UintValue:
 		{
 			name: "uint256#0",
 			val:  &UintValue{Size: 256},
 			arg:  big.NewInt(0),
-			want: Words{padL("0")},
+			want: Words{padL("00")},
 		},
 		{
 			name: "uint256#MaxUint256",
@@ -240,13 +238,13 @@ func TestEncodeABI(t *testing.T) {
 			name: "int256#0",
 			val:  &IntValue{Size: 256},
 			arg:  big.NewInt(0),
-			want: Words{padL("0")},
+			want: Words{padL("00")},
 		},
 		{
 			name: "int256#1",
 			val:  &IntValue{Size: 256},
 			arg:  big.NewInt(1),
-			want: Words{padL("1")},
+			want: Words{padL("01")},
 		},
 		{
 			name: "int256#-1",
@@ -283,20 +281,20 @@ func TestEncodeABI(t *testing.T) {
 			name: "bool#true",
 			val:  new(BoolValue),
 			arg:  true,
-			want: Words{padL("1")},
+			want: Words{padL("01")},
 		},
 		{
 			name: "bool#false",
 			val:  new(BoolValue),
 			arg:  false,
-			want: Words{padL("0")},
+			want: Words{padL("00")},
 		},
 		// AddressValue:
 		{
 			name: "address#empty",
 			val:  new(AddressValue),
 			arg:  types.Address{},
-			want: Words{padL("0")},
+			want: Words{padL("00")},
 		},
 		{
 			name: "address#non-empty",
@@ -337,8 +335,8 @@ func TestDecodeABI(t *testing.T) {
 		{
 			name: "tuple#static",
 			abi: Words{
-				padL("1"),
-				padL("1"),
+				padL("01"),
+				padL("01"),
 			},
 			val: &TupleValue{
 				TupleValueElem{Value: new(BoolValue), Name: "a"},
@@ -353,7 +351,7 @@ func TestDecodeABI(t *testing.T) {
 			name: "tuple#dynamic",
 			abi: Words{
 				padL("20"),     // offset
-				padL("3"),      // length
+				padL("03"),     // length
 				padR("010203"), // data
 			},
 			val: &TupleValue{
@@ -366,9 +364,9 @@ func TestDecodeABI(t *testing.T) {
 		{
 			name: "tuple#static-and-dynamic",
 			abi: Words{
-				padL("1"),      // a
+				padL("01"),     // a
 				padL("40"),     // offset to b
-				padL("3"),      // length of b
+				padL("03"),     // length of b
 				padR("010203"), // b
 			},
 			val: &TupleValue{
@@ -386,10 +384,10 @@ func TestDecodeABI(t *testing.T) {
 				padL("40"),     // offset to a
 				padL("a0"),     // offset to b
 				padL("20"),     // offset to a.x
-				padL("3"),      // length of a.x
+				padL("03"),     // length of a.x
 				padR("010203"), // a.x
 				padL("20"),     // offset to b.x
-				padL("3"),      // length of b.x
+				padL("03"),     // length of b.x
 				padR("040506"), // b.x
 			},
 			val: &TupleValue{
@@ -424,16 +422,16 @@ func TestDecodeABI(t *testing.T) {
 		// ArrayValue:
 		{
 			name: "array#empty",
-			abi:  Words{padL("0")},
+			abi:  Words{padL("00")},
 			val:  &ArrayValue{Type: NewBoolType()},
 			want: &ArrayValue{Type: NewBoolType(), Elems: []Value{}},
 		},
 		{
 			name: "array#two-static-elements",
 			abi: Words{
-				padL("2"), // array length
-				padL("1"), // first element
-				padL("1"), // second element
+				padL("02"), // array length
+				padL("01"), // first element
+				padL("01"), // second element
 			},
 			val: &ArrayValue{Type: NewBoolType()},
 			want: &ArrayValue{
@@ -447,12 +445,12 @@ func TestDecodeABI(t *testing.T) {
 		{
 			name: "array#two-dynamic-elements",
 			abi: Words{
-				padL("2"),      // array length
+				padL("02"),     // array length
 				padL("40"),     // offset to first element
 				padL("80"),     // offset to second element
-				padL("3"),      // length of first element
+				padL("03"),     // length of first element
 				padR("010203"), // first element
-				padL("3"),      // length of second element
+				padL("03"),     // length of second element
 				padR("040506"), // second element
 			},
 			val: &ArrayValue{Type: NewBytesType()},
@@ -474,8 +472,8 @@ func TestDecodeABI(t *testing.T) {
 		{
 			name: "fixed-array#two-static-elements",
 			abi: Words{
-				padL("1"), // first element
-				padL("1"), // second element
+				padL("01"), // first element
+				padL("01"), // second element
 			},
 			val: &FixedArrayValue{new(BoolValue), new(BoolValue)},
 			want: &FixedArrayValue{
@@ -488,9 +486,9 @@ func TestDecodeABI(t *testing.T) {
 			abi: Words{
 				padL("40"),     // offset to first element
 				padL("80"),     // offset to second element
-				padL("3"),      // length of first element
+				padL("03"),     // length of first element
 				padR("010203"), // first element
-				padL("3"),      // length of second element
+				padL("03"),     // length of second element
 				padR("040506"), // second element
 			},
 			val: &FixedArrayValue{new(BytesValue), new(BytesValue)},
@@ -502,14 +500,14 @@ func TestDecodeABI(t *testing.T) {
 		// BytesValue:
 		{
 			name: "bytes#empty",
-			abi:  Words{padL("0")},
+			abi:  Words{padL("00")},
 			val:  new(BytesValue),
 			want: func() *BytesValue { b := BytesValue([]byte{}); return &b }(),
 		},
 		{
 			name: "bytes#one-word",
 			abi: Words{
-				padL("3"),      // length
+				padL("03"),     // length
 				padR("010203"), // data
 			},
 			val:  new(BytesValue),
@@ -535,7 +533,7 @@ func TestDecodeABI(t *testing.T) {
 		{
 			name: "string#one-word",
 			abi: Words{
-				padL("3"),      // length
+				padL("03"),     // length
 				padR("616263"), // data
 			},
 			val:  new(StringValue),
@@ -569,7 +567,7 @@ func TestDecodeABI(t *testing.T) {
 		// UintValue:
 		{
 			name: "uint256#0",
-			abi:  Words{padL("0")},
+			abi:  Words{padL("00")},
 			val:  &UintValue{Size: 256},
 			want: func() *UintValue { u := UintValue{Size: 256, Int: *big.NewInt(0)}; return &u }(),
 		},
@@ -582,13 +580,13 @@ func TestDecodeABI(t *testing.T) {
 		// IntValue:
 		{
 			name: "int256#0",
-			abi:  Words{padL("0")},
+			abi:  Words{padL("00")},
 			val:  &IntValue{Size: 256},
 			want: func() *IntValue { i := IntValue{Size: 256, Int: *big.NewInt(0)}; return &i }(),
 		},
 		{
 			name: "int256#1",
-			abi:  Words{padL("1")},
+			abi:  Words{padL("01")},
 			val:  &IntValue{Size: 256},
 			want: func() *IntValue { i := IntValue{Size: 256, Int: *big.NewInt(1)}; return &i }(),
 		},
@@ -625,20 +623,20 @@ func TestDecodeABI(t *testing.T) {
 		// BoolValue:
 		{
 			name: "bool#true",
-			abi:  Words{padL("1")},
+			abi:  Words{padL("01")},
 			val:  new(BoolValue),
 			want: func() *BoolValue { b := BoolValue(true); return &b }(),
 		},
 		{
 			name: "bool#false",
-			abi:  Words{padL("0")},
+			abi:  Words{padL("00")},
 			val:  new(BoolValue),
 			want: func() *BoolValue { b := BoolValue(false); return &b }(),
 		},
 		// AddressValue:
 		{
 			name: "address#empty",
-			abi:  Words{padL("0")},
+			abi:  Words{padL("00")},
 			val:  new(AddressValue),
 			want: func() *AddressValue { a := AddressValue{}; return &a }(),
 		},
@@ -770,28 +768,46 @@ func TestMapFrom(t *testing.T) {
 		},
 		// FixedBytesValue
 		{
-			name: "[]byte->bytes32",
-			val:  make(FixedBytesValue, 32),
+			name: "[]byte->bytes4",
+			val:  make(FixedBytesValue, 4),
 			data: []byte{1, 2, 3, 4},
 			want: Words{
 				padR("01020304"),
 			},
 		},
 		{
-			name: "array->bytes32",
-			val:  make(FixedBytesValue, 32),
+			name:    "[]byte->bytes32#InvalidLength",
+			val:     make(FixedBytesValue, 32),
+			data:    []byte{1, 2, 3, 4},
+			wantErr: true,
+		},
+		{
+			name: "array->bytes4",
+			val:  make(FixedBytesValue, 4),
 			data: [4]byte{1, 2, 3, 4},
 			want: Words{
 				padR("01020304"),
 			},
 		},
 		{
-			name: "string->bytes32",
-			val:  make(FixedBytesValue, 32),
-			data: "0x2a",
+			name:    "array->bytes32#InvalidLength",
+			val:     make(FixedBytesValue, 32),
+			data:    [4]byte{1, 2, 3, 4},
+			wantErr: true,
+		},
+		{
+			name: "string->bytes4",
+			val:  make(FixedBytesValue, 4),
+			data: "0x01020304",
 			want: Words{
-				padR("2a"),
+				padR("01020304"),
 			},
+		},
+		{
+			name:    "string->bytes32#InvalidLength",
+			val:     make(FixedBytesValue, 32),
+			data:    "0x01020304",
+			wantErr: true,
 		},
 		{
 			name: "uint64->bytes32",
@@ -858,12 +874,10 @@ func TestMapFrom(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "types.Address->bytes32",
-			val:  make(FixedBytesValue, 32),
-			data: types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314"),
-			want: Words{
-				padR("0102030405060708090a0b0c0d0e0f1011121314"),
-			},
+			name:    "types.Address->bytes32",
+			val:     make(FixedBytesValue, 32),
+			data:    types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314"),
+			wantErr: true,
 		},
 		{
 			name: "types.Address->bytes20",
