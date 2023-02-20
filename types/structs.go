@@ -100,20 +100,21 @@ const (
 
 // Transaction represents a transaction.
 type Transaction struct {
-	Type TransactionType
+	Type      TransactionType
+	From      *Address
+	To        *Address
+	Gas       uint64
+	GasPrice  *big.Int
+	Input     []byte
+	Nonce     *big.Int
+	Value     *big.Int
+	Signature Signature
 
+	// On-chain fields
 	Hash             Hash
 	BlockHash        *Hash
 	BlockNumber      *uint64
 	TransactionIndex uint64
-	From             *Address
-	To               *Address
-	Gas              uint64
-	GasPrice         *big.Int
-	Input            []byte
-	Nonce            *big.Int
-	Value            *big.Int
-	Signature        Signature
 
 	// EIP-2930 fields
 	ChainID    *big.Int
