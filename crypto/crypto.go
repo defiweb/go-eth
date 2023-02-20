@@ -69,7 +69,7 @@ func SignMessage(key *ecdsa.PrivateKey, data []byte) (types.Signature, error) {
 	return Sign(key, Keccak256(FormatMessage(data)))
 }
 
-// FormatMessage add the Ethereum message prefix to the given data.
+// FormatMessage adds the Ethereum message prefix to the given data.
 func FormatMessage(data []byte) []byte {
 	return []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data))
 }

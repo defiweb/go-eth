@@ -169,13 +169,13 @@ import (
 
 func main() {
 	// Load the private key.
-	key, err := wallet.NewKeyFromJSON("./keys/key.json", "password")
+	key, err := wallet.NewKeyFromJSON("./examples/keys/key.json", "test123")
 	if err != nil {
 		panic(err)
 	}
 
 	// Create a transport.
-	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://example.com/rpc-node"})
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://eth-mainnet.g.alchemy.com/v2/qKEbaF9zKM0suM_hJLkdmf_6mF8_z-8p"})
 	if err != nil {
 		panic(err)
 	}
@@ -203,13 +203,13 @@ func main() {
 	}
 
 	// Sign the transaction.
-	signedTx, err := key.SignTransaction(&tx)
+	err = key.SignTransaction(&tx)
 	if err != nil {
 		panic(err)
 	}
 
 	// Send the transaction.
-	rawTx, err := signedTx.Raw()
+	rawTx, err := tx.Raw()
 	if err != nil {
 		panic(err)
 	}
@@ -221,7 +221,6 @@ func main() {
 	// Print the transaction hash.
 	println(txHash.String())
 }
-
 ```
 
 ## Transports

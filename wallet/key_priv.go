@@ -64,20 +64,20 @@ func (k *PrivateKey) SignMessage(data []byte) (types.Signature, error) {
 }
 
 // SignTransaction implements the Key interface.
-func (k *PrivateKey) SignTransaction(tx *types.Transaction) (*types.Transaction, error) {
+func (k *PrivateKey) SignTransaction(tx *types.Transaction) error {
 	if tx.ChainID == nil {
-		return nil, ErrMissingChainID
+		return ErrMissingChainID
 	}
 	if tx.From != nil && *tx.From != k.Address() {
-		return nil, ErrInvalidSender
+		return ErrInvalidSender
 	}
 	r, err := tx.SigningHash(crypto.Keccak256)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	s, err := k.Sign(r)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	v := uint64(s[types.SignatureLength-1])
 	if tx.Type == 0 {
@@ -86,7 +86,7 @@ func (k *PrivateKey) SignTransaction(tx *types.Transaction) (*types.Transaction,
 	addr := k.Address()
 	tx.From = &addr
 	tx.Signature = s
-	return tx, nil
+	return nil
 }
 
 // Verify implements the Key interface.

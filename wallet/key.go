@@ -13,7 +13,7 @@ type Key interface {
 	SignMessage(data []byte) (types.Signature, error)
 
 	// SignTransaction signs the given transaction.
-	SignTransaction(tx *types.Transaction) (*types.Transaction, error)
+	SignTransaction(tx *types.Transaction) error
 
 	// Verify whether the given hash is signed by the key.
 	Verify(hash types.Hash, sig types.Signature) bool
