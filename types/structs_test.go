@@ -5,13 +5,14 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/defiweb/go-eth/hexutil"
 )
 
-func TestTransaction_Raw(t1 *testing.T) {
+func TestTransaction_RLP(t1 *testing.T) {
 	tests := []struct {
 		tx   *Transaction
 		want []byte
@@ -27,7 +28,6 @@ func TestTransaction_Raw(t1 *testing.T) {
 				Nonce:     new(big.Int).SetUint64(1),
 				Value:     new(big.Int).SetUint64(1000000000000000000),
 				Signature: HexToSignature("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-				ChainID:   new(big.Int).SetUint64(1),
 			},
 			want: hexutil.MustHexToBytes("f87001843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a764000084010203046fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
 		},
@@ -53,7 +53,7 @@ func TestTransaction_Raw(t1 *testing.T) {
 					},
 				},
 			},
-			want: hexutil.MustHexToBytes("01f8ce0101843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a05555555555555555555555555555555555555555555555555555555555555555a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
+			want: hexutil.MustHexToBytes("01f8ce0101843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
 		},
 		{
 			tx: &Transaction{
@@ -78,7 +78,7 @@ func TestTransaction_Raw(t1 *testing.T) {
 					},
 				},
 			},
-			want: hexutil.MustHexToBytes("02f8d30101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a05555555555555555555555555555555555555555555555555555555555555555a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
+			want: hexutil.MustHexToBytes("02f8d30101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
 		},
 		{
 			tx: &Transaction{
@@ -99,9 +99,30 @@ func TestTransaction_Raw(t1 *testing.T) {
 	}
 	for n, tt := range tests {
 		t1.Run(fmt.Sprintf("case-%d", n+1), func(t1 *testing.T) {
+			// Encode
 			rlp, err := tt.tx.Raw()
 			require.NoError(t1, err)
-			require.Equal(t1, tt.want, rlp)
+			assert.Equal(t1, tt.want, rlp)
+
+			// Decode
+			tx := new(Transaction)
+			_, err = tx.DecodeRLP(rlp)
+			require.NoError(t1, err)
+			assert.Equal(t1, tt.tx.Type, tx.Type)
+			assert.Equal(t1, tt.tx.To, tx.To)
+			assert.Equal(t1, tt.tx.Gas, tx.Gas)
+			assert.Equal(t1, tt.tx.GasPrice, tx.GasPrice)
+			assert.Equal(t1, tt.tx.Input, tx.Input)
+			assert.Equal(t1, tt.tx.Nonce, tx.Nonce)
+			assert.Equal(t1, tt.tx.Value, tx.Value)
+			assert.Equal(t1, tt.tx.Signature, tx.Signature)
+			assert.Equal(t1, tt.tx.ChainID, tx.ChainID)
+			assert.Equal(t1, tt.tx.MaxPriorityFeePerGas, tx.MaxPriorityFeePerGas)
+			assert.Equal(t1, tt.tx.MaxFeePerGas, tx.MaxFeePerGas)
+			for i, accessTuple := range tt.tx.AccessList {
+				assert.Equal(t1, accessTuple.Address, tx.AccessList[i].Address)
+				assert.Equal(t1, accessTuple.StorageKeys, tx.AccessList[i].StorageKeys)
+			}
 		})
 	}
 }
@@ -148,7 +169,7 @@ func TestTransaction_SingingHash(t1 *testing.T) {
 					},
 				},
 			},
-			want: MustHexToHash("0f0ef55dca9a5f856088348ced1f393078ccbf2ddcda78b7146dd8280a824b4a"),
+			want: MustHexToHash("71cba0039a020b7a524d7746b79bf6d1f8a521eb1a76715d00116ef1c0f56107"),
 		},
 		{
 			tx: &Transaction{
@@ -173,7 +194,7 @@ func TestTransaction_SingingHash(t1 *testing.T) {
 					},
 				},
 			},
-			want: MustHexToHash("5fb17026de309d639bdc2cd78050bc1629aeda743ad2b9b51e131e19f73df6b9"),
+			want: MustHexToHash("a66ab756479bfd56f29658a8a199319094e84711e8a2de073ec136ef5179c4c9"),
 		},
 		{
 			tx: &Transaction{

@@ -386,6 +386,7 @@ type AccessTuple struct {
 func (a AccessList) EncodeRLP() ([]byte, error) {
 	l := rlp.NewList()
 	for _, tuple := range a {
+		tuple := tuple
 		l.Append(&tuple)
 	}
 	return rlp.Encode(l)
@@ -413,6 +414,7 @@ func (a *AccessList) DecodeRLP(data []byte) (int, error) {
 func (a AccessTuple) EncodeRLP() ([]byte, error) {
 	h := rlp.NewList()
 	for _, hash := range a.StorageKeys {
+		hash := hash
 		h.Append(&hash)
 	}
 	return rlp.Encode(rlp.NewList(&a.Address, h))
