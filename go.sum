@@ -18,12 +18,6 @@ github.com/davecgh/go-spew v0.0.0-20171005155431-ecdeabc65495/go.mod h1:J7Y8YcW2
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/defiweb/go-anymapper v0.0.0-20221206233610-e75520f9edc8 h1:Nua6yg948Xvy5LEs8MTBuJHe3GN74lgIdS03KGVGoCs=
-github.com/defiweb/go-anymapper v0.0.0-20221206233610-e75520f9edc8/go.mod h1:O8T4tH9Cyd1fi6M/M+XVX1kNYurlRlXRv3lTbut62tc=
-github.com/defiweb/go-anymapper v0.0.0-20230117140454-95575cb09dd5 h1:5FPx8yHCB1wgFhanPlwzQMYU0oNun/C79PnW6pMksUY=
-github.com/defiweb/go-anymapper v0.0.0-20230117140454-95575cb09dd5/go.mod h1:O8T4tH9Cyd1fi6M/M+XVX1kNYurlRlXRv3lTbut62tc=
-github.com/defiweb/go-anymapper v0.0.0-20230117200437-03a7e37013ba h1:0dPQF/MHt5G3FbU88fPIv4q6atshk1Ce9C2BwLCB1vk=
-github.com/defiweb/go-anymapper v0.0.0-20230117200437-03a7e37013ba/go.mod h1:O8T4tH9Cyd1fi6M/M+XVX1kNYurlRlXRv3lTbut62tc=
 github.com/defiweb/go-anymapper v0.0.0-20230118195840-2a5633b200f1 h1:d86TVtKJEiqiYGTNi9ezgDDj0/U4S71BT5378B3x0XI=
 github.com/defiweb/go-anymapper v0.0.0-20230118195840-2a5633b200f1/go.mod h1:O8T4tH9Cyd1fi6M/M+XVX1kNYurlRlXRv3lTbut62tc=
 github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937 h1:R/f+QShq/LjTQE34x5PNJ4M1PgoyTFx0xAIVNKW27N8=
@@ -55,6 +49,8 @@ github.com/golang/protobuf v1.3.5/go.mod h1:6O5/vntMXwX2lRkT1hjjk0nAC1IDOTvTlVgj
 github.com/google/go-cmp v0.4.0 h1:xsAVV57WRhGj6kEIi8ReJzQlHHqcBYCElAvkovg3B/4=
 github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=
+github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
+github.com/google/uuid v1.3.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gorilla/websocket v1.4.1 h1:q7AeDBpnBk8AogcD4DSag/Ukw/KV+YhzLj2bP5HvKCM=
 github.com/gorilla/websocket v1.4.1/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=

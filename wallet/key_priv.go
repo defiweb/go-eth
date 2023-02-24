@@ -3,6 +3,7 @@ package wallet
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 
 	"github.com/btcsuite/btcd/btcec"
@@ -46,6 +47,15 @@ func NewRandomKey() *PrivateKey {
 		panic(err)
 	}
 	return NewKeyFromECDSA(priv)
+}
+
+// JSON returns the JSON representation of the private key.
+func (k *PrivateKey) JSON(passphrase string, scryptN, scryptP int) ([]byte, error) {
+	key, err := encryptV3Key(k.private, passphrase, scryptN, scryptP)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(key)
 }
 
 // Address implements the Key interface.

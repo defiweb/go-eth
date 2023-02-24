@@ -8,6 +8,7 @@ require (
 	github.com/defiweb/go-anymapper v0.0.0-20230118195840-2a5633b200f1
 	github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937
 	github.com/defiweb/go-sigparser v0.0.0-20221125211146-2e4b90d8e269
+	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.1
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.1.0

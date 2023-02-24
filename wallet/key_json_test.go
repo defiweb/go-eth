@@ -19,3 +19,14 @@ func TestNewKeyFromJSON(t *testing.T) {
 		assert.Equal(t, "0x008aeeda4d805471df9b2a5b0f38a0c3bcba786b", key.Address().String())
 	})
 }
+
+func TestPrivateKey_JSON(t *testing.T) {
+	key1 := NewRandomKey()
+	j, err := key1.JSON("test123", LightScryptN, LightScryptP)
+	require.NoError(t, err)
+
+	key2, err := NewKeyFromJSONContent(j, "test123")
+	require.NoError(t, err)
+
+	assert.Equal(t, key1.Address(), key2.Address())
+}
