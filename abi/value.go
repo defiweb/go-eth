@@ -484,15 +484,6 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 				b[i] = 0
 			}
 			copy(b[len(b)-len(bin):], bin)
-		case types.Address:
-			bin := srcTyp.Bytes()
-			if len(bin) > len(b) {
-				return fmt.Errorf("abi: cannot map %d bytes to bytes%d", len(bin), len(b))
-			}
-			for i := 0; i < len(b)-len(bin); i++ {
-				b[i] = 0
-			}
-			copy(b[len(b)-len(bin):], bin)
 		default:
 			return fmt.Errorf("abi: cannot map %s to bytes", srcRef.Type())
 		}
@@ -551,7 +542,7 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 		}
 		dstRef.SetInt(i64)
 	default:
-		switch destTyp := dstRef.Interface().(type) {
+		switch dstRef.Interface().(type) {
 		case big.Int:
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
@@ -579,16 +570,6 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 			}
 			dstRef.Set(reflect.ValueOf(types.BigIntToBlockNumber(x.BigInt())))
-		case types.Address:
-			if len(b) < types.AddressLength {
-				return fmt.Errorf("abi: cannot map bytes%d to %s", len(b), dstRef.Type())
-			}
-			for i := 0; i < len(b)-types.AddressLength; i++ {
-				if b[i] != 0 {
-					return fmt.Errorf("abi: cannot map bytes%d to %s: non-zero padding", len(b), dstRef.Type())
-				}
-			}
-			copy(destTyp[:], b[len(b)-types.AddressLength:])
 		default:
 			return fmt.Errorf("abi: cannot map bytes%d to %s", len(b), dstRef.Type())
 		}

@@ -12,22 +12,26 @@ import (
 )
 
 type Call struct {
-	From       Address    // the sender of the 'transaction'.
-	To         *Address   // the destination contract (nil for contract creation).
-	Gas        uint64     // if 0, the call executes with near-infinite gas.
-	GasPrice   *big.Int   // wei <-> gas exchange ratio.
-	GasFeeCap  *big.Int   // EIP-1559 fee cap per gas.
-	GasTipCap  *big.Int   // EIP-1559 tip per gas.
-	Value      *big.Int   // amount of wei sent along with the call.
-	Data       []byte     // input data, usually an ABI-encoded contract method invocation.
-	AccessList AccessList // EIP-2930 access list.
+	From     Address  // From is the sender address.
+	To       *Address // To is the recipient address. nil means contract creation.
+	Gas      uint64   // Gas is the gas limit, if 0, there is no limit.
+	GasPrice *big.Int // GasPrice is the gas price in wei per gas unit.
+	Value    *big.Int // Value is the amount of wei to send.
+	Input    []byte   // Input is the input data.
+
+	// EIP-2930 fields:
+	AccessList AccessList // AccessList is the list of addresses and storage keys that the transaction can access.
+
+	// EIP-1559 fields:
+	MaxPriorityFeePerGas *big.Int // MaxPriorityFeePerGas is the maximum priority fee per gas the sender is willing to pay.
+	MaxFeePerGas         *big.Int // MaxFeePerGas is the maximum fee per gas the sender is willing to pay.
 }
 
 func (c Call) MarshalJSON() ([]byte, error) {
 	call := &jsonCall{
 		From:       c.From,
 		To:         c.To,
-		Data:       c.Data,
+		Data:       c.Input,
 		AccessList: c.AccessList,
 	}
 	if c.Gas != 0 {
@@ -37,13 +41,13 @@ func (c Call) MarshalJSON() ([]byte, error) {
 		gasPrice := BigIntToNumber(c.GasPrice)
 		call.GasPrice = &gasPrice
 	}
-	if c.GasFeeCap != nil {
-		gasFeeCap := BigIntToNumber(c.GasFeeCap)
-		call.GasFeeCap = &gasFeeCap
+	if c.MaxFeePerGas != nil {
+		gasFeeCap := BigIntToNumber(c.MaxFeePerGas)
+		call.MaxFeePerGas = &gasFeeCap
 	}
-	if c.GasTipCap != nil {
-		gasTipCap := BigIntToNumber(c.GasTipCap)
-		call.GasTipCap = &gasTipCap
+	if c.MaxPriorityFeePerGas != nil {
+		gasTipCap := BigIntToNumber(c.MaxPriorityFeePerGas)
+		call.MaxPriorityFeePerGas = &gasTipCap
 	}
 	if c.Value != nil {
 		value := BigIntToNumber(c.Value)
@@ -60,16 +64,16 @@ func (c *Call) UnmarshalJSON(data []byte) error {
 	c.From = call.From
 	c.To = call.To
 	c.Gas = call.Gas.Big().Uint64()
-	c.Data = call.Data
+	c.Input = call.Data
 	c.AccessList = call.AccessList
 	if call.GasPrice != nil {
 		c.GasPrice = call.GasPrice.Big()
 	}
-	if call.GasFeeCap != nil {
-		c.GasFeeCap = call.GasFeeCap.Big()
+	if call.MaxFeePerGas != nil {
+		c.MaxFeePerGas = call.MaxFeePerGas.Big()
 	}
-	if call.GasTipCap != nil {
-		c.GasTipCap = call.GasTipCap.Big()
+	if call.MaxPriorityFeePerGas != nil {
+		c.MaxPriorityFeePerGas = call.MaxPriorityFeePerGas.Big()
 	}
 	if call.Value != nil {
 		c.Value = call.Value.Big()
@@ -78,15 +82,15 @@ func (c *Call) UnmarshalJSON(data []byte) error {
 }
 
 type jsonCall struct {
-	From       Address    `json:"from"`
-	To         *Address   `json:"to,omitempty"`
-	Gas        *Number    `json:"gas"`
-	GasPrice   *Number    `json:"gasPrice,omitempty"`
-	GasFeeCap  *Number    `json:"maxFeePerGas,omitempty"`
-	GasTipCap  *Number    `json:"maxPriorityFeePerGas,omitempty"`
-	Value      *Number    `json:"value,omitempty"`
-	Data       Bytes      `json:"data"`
-	AccessList AccessList `json:"accessList,omitempty"`
+	From                 Address    `json:"from"`
+	To                   *Address   `json:"to,omitempty"`
+	Gas                  *Number    `json:"gas"`
+	GasPrice             *Number    `json:"gasPrice,omitempty"`
+	MaxFeePerGas         *Number    `json:"maxFeePerGas,omitempty"`
+	MaxPriorityFeePerGas *Number    `json:"maxPriorityFeePerGas,omitempty"`
+	Value                *Number    `json:"value,omitempty"`
+	Data                 Bytes      `json:"data"`
+	AccessList           AccessList `json:"accessList,omitempty"`
 }
 
 type TransactionType uint64
@@ -100,29 +104,29 @@ const (
 
 // Transaction represents a transaction.
 type Transaction struct {
-	Type      TransactionType
-	From      *Address
-	To        *Address
-	Gas       uint64
-	GasPrice  *big.Int
-	Input     []byte
-	Nonce     *big.Int
-	Value     *big.Int
-	Signature Signature
+	Type      TransactionType // Type is the transaction type.
+	From      *Address        // Address of the sender.
+	To        *Address        // Address of the receiver. nil means contract creation.
+	Gas       *uint64         // Gas provided by the sender.
+	GasPrice  *big.Int        // GasPrice provided by the sender in Wei.
+	Input     []byte          // Input data sent along with the transaction.
+	Nonce     *big.Int        // Nonce is the number of transactions made by the sender prior to this one.
+	Value     *big.Int        // Value is the amount of Wei sent with this transaction.
+	Signature *Signature      // Signature of the transaction.
 
-	// On-chain fields
-	Hash             Hash
-	BlockHash        *Hash
-	BlockNumber      *uint64
-	TransactionIndex uint64
+	// On-chain fields:
+	Hash             *Hash   // Hash of the transaction.
+	BlockHash        *Hash   // BlockHash is the hash of the block where this transaction was in.
+	BlockNumber      *uint64 // BlockNumber is the block number where this transaction was in.
+	TransactionIndex *uint64 // TransactionIndex is the index of the transaction in the block.
 
-	// EIP-2930 fields
-	ChainID    *big.Int
-	AccessList AccessList
+	// EIP-2930 fields:
+	ChainID    *big.Int   // ChainID is the chain ID of the transaction.
+	AccessList AccessList // AccessList is the list of addresses and storage keys that the transaction can access.
 
-	// EIP-1559 fields
-	MaxPriorityFeePerGas *big.Int
-	MaxFeePerGas         *big.Int
+	// EIP-1559 fields:
+	MaxPriorityFeePerGas *big.Int // MaxPriorityFeePerGas is the maximum priority fee per gas the sender is willing to pay.
+	MaxFeePerGas         *big.Int // MaxFeePerGas is the maximum fee per gas the sender is willing to pay.
 }
 
 // Raw returns the raw transaction data that could be sent to the network.
@@ -132,19 +136,31 @@ func (t Transaction) Raw() ([]byte, error) {
 
 func (t Transaction) MarshalJSON() ([]byte, error) {
 	transaction := &jsonTransaction{
-		Hash:             t.Hash,
-		BlockHash:        t.BlockHash,
-		TransactionIndex: Uint64ToNumber(t.TransactionIndex),
-		From:             t.From,
-		To:               t.To,
-		Gas:              Uint64ToNumber(t.Gas),
-		GasPrice:         BigIntToNumber(t.GasPrice),
-		Input:            t.Input,
-		Nonce:            BigIntToNumber(t.Nonce),
-		Value:            BigIntToNumber(t.Value),
-		V:                BigIntToNumber(t.Signature.BigV()),
-		R:                BigIntToNumber(t.Signature.BigR()),
-		S:                BigIntToNumber(t.Signature.BigS()),
+		Hash:      t.Hash,
+		BlockHash: t.BlockHash,
+		From:      t.From,
+		To:        t.To,
+		Input:     t.Input,
+	}
+	if t.TransactionIndex != nil {
+		transaction.TransactionIndex = Uint64ToNumberPtr(*t.TransactionIndex)
+	}
+	if t.Gas != nil {
+		transaction.Gas = Uint64ToNumberPtr(*t.Gas)
+	}
+	if t.GasPrice != nil {
+		transaction.GasPrice = BigIntToNumberPtr(t.GasPrice)
+	}
+	if t.Nonce != nil {
+		transaction.Nonce = BigIntToNumberPtr(t.Nonce)
+	}
+	if t.Value != nil {
+		transaction.Value = BigIntToNumberPtr(t.Value)
+	}
+	if t.Signature != nil {
+		transaction.V = BigIntToNumberPtr(t.Signature.BigV())
+		transaction.R = BigIntToNumberPtr(t.Signature.BigR())
+		transaction.S = BigIntToNumberPtr(t.Signature.BigS())
 	}
 	if t.BlockNumber != nil {
 		blockNumber := Uint64ToNumber(*t.BlockNumber)
@@ -158,21 +174,35 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, transaction); err != nil {
 		return err
 	}
-	signature, err := BigIntToSignature(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
-	if err != nil {
-		return err
-	}
 	t.Hash = transaction.Hash
 	t.BlockHash = transaction.BlockHash
-	t.TransactionIndex = transaction.TransactionIndex.Big().Uint64()
+	if transaction.TransactionIndex != nil {
+		transactionIndex := transaction.TransactionIndex.Big().Uint64()
+		t.TransactionIndex = &transactionIndex
+	}
 	t.From = transaction.From
 	t.To = transaction.To
-	t.Gas = transaction.Gas.Big().Uint64()
-	t.GasPrice = transaction.GasPrice.Big()
+	if transaction.Gas != nil {
+		gas := transaction.Gas.Big().Uint64()
+		t.Gas = &gas
+	}
+	if transaction.GasPrice != nil {
+		t.GasPrice = transaction.GasPrice.Big()
+	}
 	t.Input = transaction.Input
-	t.Nonce = transaction.Nonce.Big()
-	t.Value = transaction.Value.Big()
-	t.Signature = signature
+	if transaction.Nonce != nil {
+		t.Nonce = transaction.Nonce.Big()
+	}
+	if transaction.Value != nil {
+		t.Value = transaction.Value.Big()
+	}
+	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
+		signature, err := BigIntToSignature(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
+		if err != nil {
+			return err
+		}
+		t.Signature = &signature
+	}
 	if transaction.BlockNumber != nil {
 		blockNumber := transaction.BlockNumber.Big().Uint64()
 		t.BlockNumber = &blockNumber
@@ -192,16 +222,30 @@ func (t Transaction) EncodeRLP() ([]byte, error) {
 	} else {
 		l.Append(rlp.NewBigInt(t.GasPrice))
 	}
-	l.Append(rlp.NewUint(t.Gas))
-	l.Append(t.To)
+	if t.Gas != nil {
+		l.Append(rlp.NewUint(*t.Gas))
+	} else {
+		l.Append(rlp.NewUint(0))
+	}
+	if t.To != nil {
+		l.Append(t.To)
+	} else {
+		l.Append(rlp.NewBytes(nil))
+	}
 	l.Append(rlp.NewBigInt(t.Value))
 	l.Append(rlp.NewBytes(t.Input))
 	if t.Type != LegacyTxType {
 		l.Append(&t.AccessList)
 	}
-	l.Append(rlp.NewBigInt(t.Signature.BigV()))
-	l.Append(rlp.NewBigInt(t.Signature.BigR()))
-	l.Append(rlp.NewBigInt(t.Signature.BigS()))
+	if t.Signature != nil {
+		l.Append(rlp.NewBigInt(t.Signature.BigV()))
+		l.Append(rlp.NewBigInt(t.Signature.BigR()))
+		l.Append(rlp.NewBigInt(t.Signature.BigS()))
+	} else {
+		l.Append(rlp.NewBigInt(big.NewInt(0)))
+		l.Append(rlp.NewBigInt(big.NewInt(0)))
+		l.Append(rlp.NewBigInt(big.NewInt(0)))
+	}
 	b, err := rlp.Encode(l)
 	if err != nil {
 		return nil, err
@@ -273,25 +317,31 @@ func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 		}
 		elemIdx++
 	}
-	if t.Gas, err = l[elemIdx].GetUint(); err != nil {
+	if err := l[elemIdx].Get(&rlp.UintItem{}, func(i rlp.Item) { gas := i.(*rlp.UintItem).X; t.Gas = &gas }); err != nil {
 		return 0, err
 	}
 	elemIdx++
-	if err := l[elemIdx].Get(&Address{}, func(i rlp.Item) { t.To = i.(*Address) }); err != nil {
-		return 0, err
+	if l[elemIdx].Length() > 0 {
+		if err := l[elemIdx].Get(&Address{}, func(i rlp.Item) { t.To = i.(*Address) }); err != nil {
+			return 0, err
+		}
 	}
 	elemIdx++
 	if t.Value, err = l[elemIdx].GetBigInt(); err != nil {
 		return 0, err
 	}
 	elemIdx++
-	if t.Input, err = l[elemIdx].GetBytes(); err != nil {
-		return 0, err
+	if l[elemIdx].Length() > 0 {
+		if t.Input, err = l[elemIdx].GetBytes(); err != nil {
+			return 0, err
+		}
 	}
 	elemIdx++
 	if t.Type != LegacyTxType {
-		if err := l[elemIdx].Get(&AccessList{}, func(i rlp.Item) { t.AccessList = *i.(*AccessList) }); err != nil {
-			return 0, err
+		if l[elemIdx].Length() > 0 {
+			if err := l[elemIdx].Get(&AccessList{}, func(i rlp.Item) { t.AccessList = *i.(*AccessList) }); err != nil {
+				return 0, err
+			}
 		}
 		elemIdx++
 	}
@@ -311,7 +361,9 @@ func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	t.Signature = sig
+	if !sig.IsZero() {
+		t.Signature = &sig
+	}
 	if t.Type == LegacyTxType {
 		return n, nil
 	}
@@ -331,14 +383,22 @@ func (t Transaction) SigningHash(h HashFunc) (Hash, error) {
 	} else {
 		l.Append(rlp.NewBigInt(t.GasPrice))
 	}
-	l.Append(rlp.NewUint(t.Gas))
-	l.Append(t.To)
+	if t.Gas != nil {
+		l.Append(rlp.NewUint(*t.Gas))
+	} else {
+		l.Append(rlp.NewUint(0))
+	}
+	if t.To != nil {
+		l.Append(t.To)
+	} else {
+		l.Append(rlp.NewBytes(nil))
+	}
 	l.Append(rlp.NewBigInt(t.Value))
 	l.Append(rlp.NewBytes(t.Input))
 	if t.Type != LegacyTxType {
 		l.Append(&t.AccessList)
 	}
-	// EIP-155 replay-protection
+	// EIP-155 replay-protection:
 	if t.ChainID != nil && t.ChainID.Sign() != 0 && t.Type == LegacyTxType {
 		l.Append(rlp.NewBigInt(t.ChainID))
 		l.Append(rlp.NewBigInt(big.NewInt(0)))
@@ -358,20 +418,20 @@ func (t Transaction) SigningHash(h HashFunc) (Hash, error) {
 }
 
 type jsonTransaction struct {
-	Hash             Hash     `json:"hash"`
-	BlockHash        *Hash    `json:"blockHash"`
-	BlockNumber      *Number  `json:"blockNumber"`
-	TransactionIndex Number   `json:"transactionIndex"`
-	From             *Address `json:"from"`
-	To               *Address `json:"to"`
-	Gas              Number   `json:"gas"`
-	GasPrice         Number   `json:"gasPrice"`
-	Input            Bytes    `json:"input"`
-	Nonce            Number   `json:"nonce"`
-	Value            Number   `json:"value"`
-	V                Number   `json:"v"`
-	R                Number   `json:"r"`
-	S                Number   `json:"s"`
+	Hash             *Hash    `json:"hash,omitempty"`
+	BlockHash        *Hash    `json:"blockHash,omitempty"`
+	BlockNumber      *Number  `json:"blockNumber,omitempty"`
+	TransactionIndex *Number  `json:"transactionIndex,omitempty"`
+	From             *Address `json:"from,omitempty,omitempty"`
+	To               *Address `json:"to,omitempty,omitempty"`
+	Gas              *Number  `json:"gas,omitempty"`
+	GasPrice         *Number  `json:"gasPrice,omitempty"`
+	Input            Bytes    `json:"input,omitempty"`
+	Nonce            *Number  `json:"nonce,omitempty"`
+	Value            *Number  `json:"value,omitempty"`
+	V                *Number  `json:"v,omitempty"`
+	R                *Number  `json:"r,omitempty"`
+	S                *Number  `json:"s,omitempty"`
 }
 
 // AccessList is an EIP-2930 access list.
@@ -451,20 +511,20 @@ func (a *AccessTuple) DecodeRLP(data []byte) (int, error) {
 
 // TransactionReceipt represents transaction receipt.
 type TransactionReceipt struct {
-	TransactionHash   Hash
-	TransactionIndex  uint64
-	BlockHash         Hash
-	BlockNumber       uint64
-	From              Address
-	To                Address
-	CumulativeGasUsed uint64
-	EffectiveGasPrice *big.Int
-	GasUsed           uint64
-	ContractAddress   *Address
-	Logs              []Log
-	LogsBloom         []byte
-	Root              *Hash
-	Status            *uint64
+	TransactionHash   Hash     // TransactionHash is the hash of the transaction.
+	TransactionIndex  uint64   // TransactionIndex is the index of the transaction in the block.
+	BlockHash         Hash     // BlockHash is the hash of the block.
+	BlockNumber       uint64   // BlockNumber is the number of the block.
+	From              Address  // From is the sender of the transaction.
+	To                Address  // To is the recipient of the transaction.
+	CumulativeGasUsed uint64   // CumulativeGasUsed is the total amount of gas used when this transaction was executed in the block.
+	EffectiveGasPrice *big.Int // EffectiveGasPrice is the effective gas price of the transaction.
+	GasUsed           uint64   // GasUsed is the amount of gas used by this specific transaction alone.
+	ContractAddress   *Address // ContractAddress is the contract address created, if the transaction was a contract creation, otherwise nil.
+	Logs              []Log    // Logs is the list of logs generated by the transaction.
+	LogsBloom         []byte   // LogsBloom is the bloom filter for the logs of the transaction.
+	Root              *Hash    // Root is the root of the state trie after the transaction.
+	Status            *uint64  // Status is the status of the transaction.
 }
 
 func (t TransactionReceipt) MarshalJSON() ([]byte, error) {
@@ -532,101 +592,28 @@ type jsonTransactionReceipt struct {
 	Status            *Number  `json:"status"`
 }
 
-// SignTransaction represents a transaction to be signed.
-type SignTransaction struct {
-	From     Address
-	To       *Address
-	Gas      *uint64
-	GasPrice *big.Int
-	Data     []byte
-	Nonce    *big.Int
-	Value    *big.Int
-}
-
-func (t SignTransaction) MarshalJSON() ([]byte, error) {
-	transaction := &jsonSignTransaction{
-		From: t.From,
-		To:   t.To,
-		Data: t.Data,
-	}
-	if t.Gas != nil {
-		gas := Uint64ToNumber(*t.Gas)
-		transaction.Gas = &gas
-	}
-	if t.GasPrice != nil {
-		gasPrice := BigIntToNumber(t.GasPrice)
-		transaction.GasPrice = &gasPrice
-	}
-	if t.Nonce != nil {
-		nonce := BigIntToNumber(t.Nonce)
-		transaction.Nonce = &nonce
-	}
-	if t.Value != nil {
-		value := BigIntToNumber(t.Value)
-		transaction.Value = &value
-	}
-	return json.Marshal(transaction)
-}
-
-func (t *SignTransaction) UnmarshalJSON(data []byte) error {
-	transaction := &jsonSignTransaction{}
-	if err := json.Unmarshal(data, transaction); err != nil {
-		return err
-	}
-	t.From = transaction.From
-	t.To = transaction.To
-	t.Data = transaction.Data
-	if transaction.Gas != nil {
-		gas := transaction.Gas.Big().Uint64()
-		t.Gas = &gas
-	}
-	if transaction.GasPrice != nil {
-		gasPrice := transaction.GasPrice.Big()
-		t.GasPrice = gasPrice
-	}
-	if transaction.Nonce != nil {
-		nonce := transaction.Nonce.Big()
-		t.Nonce = nonce
-	}
-	if transaction.Value != nil {
-		value := transaction.Value.Big()
-		t.Value = value
-	}
-	return nil
-}
-
-type jsonSignTransaction struct {
-	From     Address  `json:"from"`
-	To       *Address `json:"to,omitempty"`
-	Gas      *Number  `json:"gas,omitempty"`
-	GasPrice *Number  `json:"gasPrice,omitempty"`
-	Data     Bytes    `json:"data"`
-	Nonce    *Number  `json:"nonce,omitempty"`
-	Value    *Number  `json:"value,omitempty"`
-}
-
 type Block struct {
-	Number            uint64
-	Hash              Hash
-	ParentHash        Hash
-	StateRoot         Hash
-	ReceiptsRoot      Hash
-	TransactionsRoot  Hash
-	MixHash           Hash
-	Sha3Uncles        Hash
-	Nonce             *big.Int
-	Miner             Address
-	LogsBloom         []byte
-	Difficulty        *big.Int
-	TotalDifficulty   *big.Int
-	Size              uint64
-	GasLimit          uint64
-	GasUsed           uint64
-	Timestamp         time.Time
-	Uncles            []Hash
-	Transactions      []Transaction
-	TransactionHashes []Hash
-	ExtraData         []byte
+	Number            uint64        // Block is the block number.
+	Hash              Hash          // Hash is the hash of the block.
+	ParentHash        Hash          // ParentHash is the hash of the parent block.
+	StateRoot         Hash          // StateRoot is the root hash of the state trie.
+	ReceiptsRoot      Hash          // ReceiptsRoot is the root hash of the receipts trie.
+	TransactionsRoot  Hash          // TransactionsRoot is the root hash of the transactions trie.
+	MixHash           Hash          // MixHash is the hash of the seed used for the DAG.
+	Sha3Uncles        Hash          // Sha3Uncles is the SHA3 hash of the uncles data in the block.
+	Nonce             *big.Int      // Nonce is the block's nonce.
+	Miner             Address       // Miner is the address of the beneficiary to whom the mining rewards were given.
+	LogsBloom         []byte        // LogsBloom is the bloom filter for the logs of the block.
+	Difficulty        *big.Int      // Difficulty is the difficulty for this block.
+	TotalDifficulty   *big.Int      // TotalDifficulty is the total difficulty of the chain until this block.
+	Size              uint64        // Size is the size of the block in bytes.
+	GasLimit          uint64        // GasLimit is the maximum gas allowed in this block.
+	GasUsed           uint64        // GasUsed is the total used gas by all transactions in this block.
+	Timestamp         time.Time     // Timestamp is the time at which the block was collated.
+	Uncles            []Hash        // Uncles is the list of uncle hashes.
+	Transactions      []Transaction // Transactions is the list of transactions in the block.
+	TransactionHashes []Hash        // TransactionHashes is the list of transaction hashes in the block.
+	ExtraData         []byte        // ExtraData is the "extra data" field of this block.
 }
 
 func (b Block) MarshalJSON() ([]byte, error) {
@@ -736,10 +723,10 @@ func (b *jsonBlockTransactions) UnmarshalJSON(data []byte) error {
 
 // FeeHistory represents the result of the feeHistory Client call.
 type FeeHistory struct {
-	OldestBlock   uint64
-	Reward        [][]*big.Int
-	BaseFeePerGas []*big.Int
-	GasUsedRatio  []float64
+	OldestBlock   uint64       // OldestBlock is the oldest block number for which the base fee and gas used are returned.
+	Reward        [][]*big.Int // Reward is the reward for each block in the range [OldestBlock, LatestBlock].
+	BaseFeePerGas []*big.Int   // BaseFeePerGas is the base fee per gas for each block in the range [OldestBlock, LatestBlock].
+	GasUsedRatio  []float64    // GasUsedRatio is the gas used ratio for each block in the range [OldestBlock, LatestBlock].
 }
 
 func (f FeeHistory) MarshalJSON() ([]byte, error) {
@@ -796,29 +783,35 @@ type jsonFeeHistory struct {
 
 // Log represents a contract log event.
 type Log struct {
-	Address     Address
-	Topics      []Hash
-	Data        []byte
-	BlockHash   Hash
-	BlockNumber uint64
-	TxHash      Hash
-	TxIndex     uint64
-	LogIndex    uint64
-	Removed     bool
+	Address          Address // Address of the contract that generated the event
+	Topics           []Hash  // Topics provide information about the event type.
+	Data             []byte  // Data contains the non-indexed arguments of the event.
+	BlockHash        *Hash   // BlockHash is the hash of the block where this log was in. Nil when pending.
+	BlockNumber      *uint64 // BlockNumber is the block number where this log was in. Nil when pending.
+	TransactionHash  *Hash   // TransactionHash is the hash of the transaction that generated this log. Nil when pending.
+	TransactionIndex *uint64 // TransactionIndex is the index of the transaction in the block. Nil when pending.
+	LogIndex         *uint64 // LogIndex is the index of the log in the block. Nil when pending.
+	Removed          bool    // Removed is true if the log was reverted due to a chain reorganization. False if unknown.
 }
 
 func (l Log) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&jsonLog{
-		Address:     l.Address,
-		Topics:      l.Topics,
-		Data:        l.Data,
-		BlockHash:   l.BlockHash,
-		BlockNumber: Uint64ToNumber(l.BlockNumber),
-		TxHash:      l.TxHash,
-		TxIndex:     Uint64ToNumber(l.TxIndex),
-		LogIndex:    Uint64ToNumber(l.LogIndex),
-		Removed:     l.Removed,
-	})
+	j := &jsonLog{}
+	j.Address = l.Address
+	j.Topics = l.Topics
+	j.Data = l.Data
+	j.BlockHash = l.BlockHash
+	if l.BlockNumber != nil {
+		j.BlockNumber = Uint64ToNumberPtr(*l.BlockNumber)
+	}
+	j.TransactionHash = l.TransactionHash
+	if l.TransactionIndex != nil {
+		j.TransactionIndex = Uint64ToNumberPtr(*l.TransactionIndex)
+	}
+	if l.LogIndex != nil {
+		j.LogIndex = Uint64ToNumberPtr(*l.LogIndex)
+	}
+	j.Removed = l.Removed
+	return json.Marshal(j)
 }
 
 func (l *Log) UnmarshalJSON(input []byte) error {
@@ -830,24 +823,33 @@ func (l *Log) UnmarshalJSON(input []byte) error {
 	l.Topics = log.Topics
 	l.Data = log.Data
 	l.BlockHash = log.BlockHash
-	l.BlockNumber = log.BlockNumber.Big().Uint64()
-	l.TxHash = log.TxHash
-	l.TxIndex = log.TxIndex.Big().Uint64()
-	l.LogIndex = log.LogIndex.Big().Uint64()
+	if log.BlockNumber != nil {
+		l.BlockNumber = new(uint64)
+		*l.BlockNumber = log.BlockNumber.Big().Uint64()
+	}
+	l.TransactionHash = log.TransactionHash
+	if log.TransactionIndex != nil {
+		l.TransactionIndex = new(uint64)
+		*l.TransactionIndex = log.TransactionIndex.Big().Uint64()
+	}
+	if log.LogIndex != nil {
+		l.LogIndex = new(uint64)
+		*l.LogIndex = log.LogIndex.Big().Uint64()
+	}
 	l.Removed = log.Removed
 	return nil
 }
 
 type jsonLog struct {
-	Address     Address `json:"address"`
-	Topics      []Hash  `json:"topics"`
-	Data        Bytes   `json:"data"`
-	BlockHash   Hash    `json:"blockHash"`
-	BlockNumber Number  `json:"blockNumber"`
-	TxHash      Hash    `json:"transactionHash"`
-	TxIndex     Number  `json:"transactionIndex"`
-	LogIndex    Number  `json:"logIndex"`
-	Removed     bool    `json:"removed"`
+	Address          Address `json:"address"`
+	Topics           []Hash  `json:"topics"`
+	Data             Bytes   `json:"data"`
+	BlockHash        *Hash   `json:"blockHash"`
+	BlockNumber      *Number `json:"blockNumber"`
+	TransactionHash  *Hash   `json:"transactionHash"`
+	TransactionIndex *Number `json:"transactionIndex"`
+	LogIndex         *Number `json:"logIndex"`
+	Removed          bool    `json:"removed"`
 }
 
 // FilterLogsQuery represents a query to filter logs.

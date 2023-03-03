@@ -45,7 +45,10 @@ func EcrecoverTransaction(tx *types.Transaction) (types.Address, error) {
 	if err != nil {
 		return types.ZeroAddress, err
 	}
-	addr, err := Ecrecover(d, tx.Signature)
+	if tx.Signature == nil {
+		return types.ZeroAddress, fmt.Errorf("signature is missing")
+	}
+	addr, err := Ecrecover(d, *tx.Signature)
 	if err != nil {
 		return types.ZeroAddress, err
 	}

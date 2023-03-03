@@ -80,9 +80,13 @@ type RPC interface {
 	// SignTransaction performs eth_signTransaction RPC call.
 	//
 	// It signs the given transaction.
-	SignTransaction(ctx context.Context, tx types.SignTransaction) ([]byte, *types.Transaction, error)
+	SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error)
 
-	// TODO: eth_sendTransaction
+	// SendTransaction performs eth_sendTransaction RPC call.
+	//
+	// It creates new message call transaction or a contract creation for
+	// signed transactions.
+	SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error)
 
 	// SendRawTransaction performs eth_sendRawTransaction RPC call.
 	//
@@ -91,8 +95,8 @@ type RPC interface {
 
 	// Call performs eth_call RPC call.
 	//
-	// It executes a new message call immediately without creating a
-	// transaction on the blockchain.
+	// Creates new message call transaction or a contract creation, if the data
+	// field contains code.
 	Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, error)
 
 	// EstimateGas performs eth_estimateGas RPC call.

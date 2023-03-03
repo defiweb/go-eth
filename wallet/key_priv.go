@@ -95,7 +95,7 @@ func (k *PrivateKey) SignTransaction(tx *types.Transaction) error {
 	}
 	addr := k.Address()
 	tx.From = &addr
-	tx.Signature = s
+	tx.Signature = &s
 	return nil
 }
 

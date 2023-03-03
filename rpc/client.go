@@ -103,12 +103,20 @@ func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (
 	return res, nil
 }
 
-func (c *Client) SignTransaction(ctx context.Context, tx types.SignTransaction) ([]byte, *types.Transaction, error) {
+func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error) {
 	var res signTransactionResult
 	if err := c.transport.Call(ctx, &res, "eth_signTransaction", tx); err != nil {
 		return nil, nil, err
 	}
 	return res.Raw, res.Tx, nil
+}
+
+func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
+	var res types.Hash
+	if err := c.transport.Call(ctx, &res, "eth_sendTransaction", tx); err != nil {
+		return nil, err
+	}
+	return &res, nil
 }
 
 func (c *Client) SendRawTransaction(ctx context.Context, data []byte) (*types.Hash, error) {

@@ -467,7 +467,7 @@ const mockSignTransactionRequest = `
 		  "gas": "0x76c0",
 		  "gasPrice": "0x9184e72a000",
 		  "value": "0x2540be400",
-		  "data": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"
+		  "input": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"
 		}
 	  ]
 	}
@@ -509,27 +509,81 @@ func TestClient_SignTransaction(t *testing.T) {
 	gas := uint64(30400)
 	raw, tx, err := client.SignTransaction(
 		context.Background(),
-		types.SignTransaction{
-			From:     from,
+		types.Transaction{
+			From:     &from,
 			To:       &to,
 			Gas:      &gas,
 			GasPrice: big.NewInt(10000000000000),
 			Value:    big.NewInt(10000000000),
-			Data:     hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"),
+			Input:    hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"),
 		},
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockSignTransactionRequest, readBody(httpMock.Request))
 	assert.Equal(t, hexToBytes("0x0f86c808509184e72a00008276c094d46e8dd67c5d32be8058bb8eb970870f072445678080b844d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"), raw)
 	assert.Equal(t, &to, tx.To)
-	assert.Equal(t, uint64(30400), tx.Gas)
+	assert.Equal(t, uint64(30400), *tx.Gas)
 	assert.Equal(t, big.NewInt(10000000000000), tx.GasPrice)
 	assert.Equal(t, big.NewInt(10000000000), tx.Value)
 	assert.Equal(t, hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"), tx.Input)
 	assert.Equal(t, uint8(0x11), tx.Signature.Bytes()[64])
 	assert.Equal(t, hexToBytes("0x2222222222222222222222222222222222222222222222222222222222222222"), tx.Signature.Bytes()[:32])
 	assert.Equal(t, hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333"), tx.Signature.Bytes()[32:64])
-	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), *tx.Hash)
+}
+
+const mockSendTransactionRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_sendTransaction",
+	  "params": [
+	    {
+		  "from": "0xb60e8dd61c5d32be8058bb8eb970870f07233155",
+		  "to": "0xd46e8dd67c5d32be8058bb8eb970870f07244567",
+		  "gas": "0x76c0",
+		  "gasPrice": "0x9184e72a000",
+		  "value": "0x2540be400",
+		  "input": "0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"
+	    }
+	  ]
+	}
+`
+
+const mockSendTransactionResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1111111111111111111111111111111111111111111111111111111111111111"
+	}
+`
+
+func TestClient_SendTransaction(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := NewClient(httpMock)
+
+	httpMock.Response = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockSendTransactionResponse)),
+	}
+
+	from := types.MustHexToAddress("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
+	to := types.MustHexToAddress("0xd46e8dd67c5d32be8058bb8eb970870f07244567")
+	gas := uint64(30400)
+	txHash, err := client.SendTransaction(
+		context.Background(),
+		types.Transaction{
+			From:     &from,
+			To:       &to,
+			Gas:      &gas,
+			GasPrice: big.NewInt(10000000000000),
+			Value:    big.NewInt(10000000000),
+			Input:    hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"),
+		},
+	)
+	require.NoError(t, err)
+	assert.JSONEq(t, mockSendTransactionRequest, readBody(httpMock.Request))
+	assert.Equal(t, types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), *txHash)
 }
 
 const mockSendRawTransactionRequest = `
@@ -613,7 +667,7 @@ func TestClient_Call(t *testing.T) {
 			Gas:      30400,
 			GasPrice: big.NewInt(10000000000000),
 			Value:    big.NewInt(10000000000),
-			Data:     hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
+			Input:    hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
 		},
 		types.MustHexToBlockNumber("0x1"),
 	)
@@ -666,7 +720,7 @@ func TestClient_EstimateGas(t *testing.T) {
 			Gas:      30400,
 			GasPrice: big.NewInt(10000000000000),
 			Value:    big.NewInt(10000000000),
-			Data:     hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
+			Input:    hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
 		},
 		types.LatestBlockNumber,
 	)
@@ -766,12 +820,12 @@ func TestClient_BlockByNumber(t *testing.T) {
 	assert.Equal(t, int64(1424182926), block.Timestamp.Unix())
 	require.Len(t, block.Transactions, 1)
 	require.Len(t, block.Uncles, 1)
-	assert.Equal(t, types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), block.Transactions[0].Hash)
+	assert.Equal(t, types.MustHexToHashPtr("0x1111111111111111111111111111111111111111111111111111111111111111"), block.Transactions[0].Hash)
 	assert.Equal(t, big.NewInt(0x22), block.Transactions[0].Nonce)
 	assert.Equal(t, types.MustHexToAddressPtr("0x5555555555555555555555555555555555555555"), block.Transactions[0].From)
 	assert.Equal(t, types.MustHexToAddressPtr("0x6666666666666666666666666666666666666666"), block.Transactions[0].To)
 	assert.Equal(t, big.NewInt(10000000000), block.Transactions[0].Value)
-	assert.Equal(t, uint64(30400), block.Transactions[0].Gas)
+	assert.Equal(t, uint64(30400), *block.Transactions[0].Gas)
 	assert.Equal(t, big.NewInt(10000000000000), block.Transactions[0].GasPrice)
 	assert.Equal(t, hexToBytes("0x777777777777"), block.Transactions[0].Input)
 	assert.Equal(t, types.MustHexToHash("0x8888888888888888888888888888888888888888888888888888888888888888"), block.Uncles[0])
@@ -861,19 +915,19 @@ func TestClient_GetTransactionByHash(t *testing.T) {
 	assert.JSONEq(t, mockGetTransactionByHashRequest, readBody(httpMock.Request))
 	assert.Equal(t, types.MustHexToHashPtr("0x1111111111111111111111111111111111111111111111111111111111111111"), tx.BlockHash)
 	assert.Equal(t, uint64(0x22), *tx.BlockNumber)
-	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHashPtr("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 	assert.Equal(t, types.MustHexToAddressPtr("0x3333333333333333333333333333333333333333"), tx.From)
 	assert.Equal(t, types.MustHexToAddressPtr("0x7777777777777777777777777777777777777777"), tx.To)
 	assert.Equal(t, big.NewInt(10000000000), tx.Value)
-	assert.Equal(t, uint64(30400), tx.Gas)
+	assert.Equal(t, uint64(30400), *tx.Gas)
 	assert.Equal(t, big.NewInt(10000000000000), tx.GasPrice)
 	assert.Equal(t, hexToBytes("0x555555555555"), tx.Input)
 	assert.Equal(t, hexToBigInt("0x66"), tx.Nonce)
-	assert.Equal(t, hexToBigInt("0x0").Uint64(), tx.TransactionIndex)
+	assert.Equal(t, hexToBigInt("0x0").Uint64(), *tx.TransactionIndex)
 	assert.Equal(t, uint8(0x88), tx.Signature.Bytes()[64])
 	assert.Equal(t, hexToBytes("0x9999999999999999999999999999999999999999999999999999999999999999"), tx.Signature.Bytes()[:32])
 	assert.Equal(t, hexToBytes("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), tx.Signature.Bytes()[32:64])
-	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHashPtr("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 }
 
 const mockGetTransactionByBlockHashAndIndexRequest = `
@@ -905,7 +959,7 @@ func TestClient_GetTransactionByBlockHashAndIndex(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetTransactionByBlockHashAndIndexRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHashPtr("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 }
 
 const mockGetTransactionByBlockNumberAndIndexRequest = `
@@ -937,7 +991,7 @@ func TestClient_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.JSONEq(t, mockGetTransactionByBlockNumberAndIndexRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
+	assert.Equal(t, types.MustHexToHashPtr("0x4444444444444444444444444444444444444444444444444444444444444444"), tx.Hash)
 }
 
 const mockGetTransactionReceiptRequest = `
@@ -1018,11 +1072,11 @@ func TestClient_GetTransactionReceipt(t *testing.T) {
 	assert.Equal(t, hexToBytes("0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000200000000000000000000000000000"), receipt.LogsBloom)
 	assert.Equal(t, &status, receipt.Status)
 	require.Len(t, receipt.Logs, 1)
-	assert.Equal(t, types.MustHexToHash("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), receipt.Logs[0].TxHash)
-	assert.Equal(t, uint64(17), receipt.Logs[0].TxIndex)
-	assert.Equal(t, types.MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"), receipt.Logs[0].BlockHash)
-	assert.Equal(t, hexToBigInt("0x2222").Uint64(), receipt.Logs[0].BlockNumber)
-	assert.Equal(t, uint64(8), receipt.Logs[0].LogIndex)
+	assert.Equal(t, types.MustHexToHashPtr("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), receipt.Logs[0].TransactionHash)
+	assert.Equal(t, uint64(17), *receipt.Logs[0].TransactionIndex)
+	assert.Equal(t, types.MustHexToHashPtr("0x1111111111111111111111111111111111111111111111111111111111111111"), receipt.Logs[0].BlockHash)
+	assert.Equal(t, hexToBigInt("0x2222").Uint64(), *receipt.Logs[0].BlockNumber)
+	assert.Equal(t, uint64(8), *receipt.Logs[0].LogIndex)
 	assert.Equal(t, hexToBytes("0x000000000000000000000000398137383b3d25c92898c656696e41950e47316b00000000000000000000000000000000000000000000000000000000000cee6100000000000000000000000000000000000000000000000000000000000ac3e100000000000000000000000000000000000000000000000000000000005baf35"), receipt.Logs[0].Data)
 	assert.Equal(t, types.MustHexToAddress("0x7777777777777777777777777777777777777777"), receipt.Logs[0].Address)
 	assert.Equal(t, []types.Hash{types.MustHexToHash("0x9999999999999999999999999999999999999999999999999999999999999999")}, receipt.Logs[0].Topics)
@@ -1094,11 +1148,11 @@ func TestClient_GetLogs(t *testing.T) {
 	assert.Equal(t, types.MustHexToAddress("0x3333333333333333333333333333333333333333"), logs[0].Address)
 	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].Topics[0])
 	assert.Equal(t, hexToBytes("0x68656c6c6f21"), logs[0].Data)
-	assert.Equal(t, uint64(1), logs[0].BlockNumber)
-	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].TxHash)
-	assert.Equal(t, uint64(0), logs[0].TxIndex)
-	assert.Equal(t, types.MustHexToHash("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].BlockHash)
-	assert.Equal(t, uint64(0), logs[0].LogIndex)
+	assert.Equal(t, uint64(1), *logs[0].BlockNumber)
+	assert.Equal(t, types.MustHexToHashPtr("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].TransactionHash)
+	assert.Equal(t, uint64(0), *logs[0].TransactionIndex)
+	assert.Equal(t, types.MustHexToHashPtr("0x4444444444444444444444444444444444444444444444444444444444444444"), logs[0].BlockHash)
+	assert.Equal(t, uint64(0), *logs[0].LogIndex)
 	assert.Equal(t, false, logs[0].Removed)
 }
 

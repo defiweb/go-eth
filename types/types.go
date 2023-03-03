@@ -156,6 +156,10 @@ func (t *Address) DecodeRLP(data []byte) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	if len(a) == 0 {
+		*t = ZeroAddress
+		return n, nil
+	}
 	if len(a) != AddressLength {
 		return 0, fmt.Errorf("invalid address length %d", len(a))
 	}
@@ -479,6 +483,12 @@ func HexToSignature(x string) Signature {
 	return s
 }
 
+// HexToSignaturePtr parses a hex string into a *Signature.
+func HexToSignaturePtr(x string) *Signature {
+	s := HexToSignature(x)
+	return &s
+}
+
 // BytesToSignature returns Signature from bytes.
 func BytesToSignature(b []byte) Signature {
 	var sig Signature
@@ -489,9 +499,21 @@ func BytesToSignature(b []byte) Signature {
 	return sig
 }
 
+// BytesToSignaturePtr returns *Signature from bytes.
+func BytesToSignaturePtr(b []byte) *Signature {
+	sig := BytesToSignature(b)
+	return &sig
+}
+
 // VRSToSignature returns Signature from VRS values.
 func VRSToSignature(v uint8, r [32]byte, s [32]byte) Signature {
 	return BytesToSignature(append(append(append([]byte{}, r[:]...), s[:]...), v))
+}
+
+// VRSToSignaturePtr returns *Signature from VRS values.
+func VRSToSignaturePtr(v uint8, r [32]byte, s [32]byte) *Signature {
+	sig := VRSToSignature(v, r, s)
+	return &sig
 }
 
 func BigIntToSignature(v, r, s *big.Int) (Signature, error) {
@@ -506,6 +528,29 @@ func BigIntToSignature(v, r, s *big.Int) (Signature, error) {
 	copy(sig[32-len(rb):32], rb)
 	copy(sig[64-len(sb):64], sb)
 	return sig, nil
+}
+
+// BigIntToSignaturePtr returns *Signature from big.Int values.
+func BigIntToSignaturePtr(v, r, s *big.Int) (*Signature, error) {
+	sig, err := BigIntToSignature(v, r, s)
+	return &sig, err
+}
+
+// MustBigIntToSignature returns Signature from big.Int values.
+// It panics if the values are invalid.
+func MustBigIntToSignature(v, r, s *big.Int) Signature {
+	sig, err := BigIntToSignature(v, r, s)
+	if err != nil {
+		panic(err)
+	}
+	return sig
+}
+
+// MustBigIntToSignaturePtr returns *Signature from big.Int values.
+// It panics if the values are invalid.
+func MustBigIntToSignaturePtr(v, r, s *big.Int) *Signature {
+	sig := MustBigIntToSignature(v, r, s)
+	return &sig
 }
 
 // VRS returns the V, R, S values of the signature.
@@ -550,6 +595,11 @@ func (s Signature) Bytes() []byte {
 // String returns the hex representation of the signature.
 func (s Signature) String() string {
 	return hexutil.BytesToHex(s[:])
+}
+
+// IsZero returns true if the signature is zero.
+func (s Signature) IsZero() bool {
+	return s == Signature{}
 }
 
 func (s Signature) MarshalJSON() ([]byte, error) {

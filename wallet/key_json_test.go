@@ -21,12 +21,26 @@ func TestNewKeyFromJSON(t *testing.T) {
 }
 
 func TestPrivateKey_JSON(t *testing.T) {
-	key1 := NewRandomKey()
-	j, err := key1.JSON("test123", LightScryptN, LightScryptP)
-	require.NoError(t, err)
+	t.Run("random", func(t *testing.T) {
+		key1 := NewRandomKey()
+		j, err := key1.JSON("test123", LightScryptN, LightScryptP)
+		require.NoError(t, err)
 
-	key2, err := NewKeyFromJSONContent(j, "test123")
-	require.NoError(t, err)
+		key2, err := NewKeyFromJSONContent(j, "test123")
+		require.NoError(t, err)
 
-	assert.Equal(t, key1.Address(), key2.Address())
+		assert.Equal(t, key1.Address(), key2.Address())
+	})
+	t.Run("existing", func(t *testing.T) {
+		key1, err := NewKeyFromJSON("./testdata/scrypt.json", "test123")
+		require.NoError(t, err)
+
+		j, err := key1.JSON("test123", LightScryptN, LightScryptP)
+		require.NoError(t, err)
+
+		key2, err := NewKeyFromJSONContent(j, "test123")
+		require.NoError(t, err)
+
+		assert.Equal(t, key1.Address(), key2.Address())
+	})
 }
