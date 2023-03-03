@@ -207,7 +207,7 @@ func decodeAddress(v *types.Address, w Words) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode address from empty data")
 	}
-	*v = types.MustBytesToAddress(w[0].Bytes()[WordLength-types.AddressLength:])
+	*v = types.MustAddressFromBytes(w[0].Bytes()[WordLength-types.AddressLength:])
 	return 1, nil
 }
 

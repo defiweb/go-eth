@@ -55,8 +55,8 @@ func EcrecoverTransaction(tx *types.Transaction) (types.Address, error) {
 	return addr, nil
 }
 
-// Sign signs the given hash with the given key.
-func Sign(key *ecdsa.PrivateKey, hash types.Hash) (types.Signature, error) {
+// SignHash signs the given hash with the given key.
+func SignHash(key *ecdsa.PrivateKey, hash types.Hash) (types.Signature, error) {
 	sig, err := btcec.SignCompact(s256, (*btcec.PrivateKey)(key), hash.Bytes(), false)
 	if err != nil {
 		return types.Signature{}, err
@@ -64,12 +64,12 @@ func Sign(key *ecdsa.PrivateKey, hash types.Hash) (types.Signature, error) {
 	v := sig[0] - 27
 	copy(sig, sig[1:])
 	sig[64] = v
-	return types.BytesToSignature(sig), nil
+	return types.MustSignatureFromBytes(sig), nil
 }
 
 // SignMessage signs the given message with the given key.
 func SignMessage(key *ecdsa.PrivateKey, data []byte) (types.Signature, error) {
-	return Sign(key, Keccak256(FormatMessage(data)))
+	return SignHash(key, Keccak256(FormatMessage(data)))
 }
 
 // FormatMessage adds the Ethereum message prefix to the given data.

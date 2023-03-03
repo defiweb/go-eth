@@ -49,6 +49,16 @@ func NewRandomKey() *PrivateKey {
 	return NewKeyFromECDSA(priv)
 }
 
+// PublicKey returns the ECDSA public key.
+func (k *PrivateKey) PublicKey() *ecdsa.PublicKey {
+	return k.public
+}
+
+// PrivateKey returns the ECDSA private key.
+func (k *PrivateKey) PrivateKey() *ecdsa.PrivateKey {
+	return k.private
+}
+
 // JSON returns the JSON representation of the private key.
 func (k *PrivateKey) JSON(passphrase string, scryptN, scryptP int) ([]byte, error) {
 	key, err := encryptV3Key(k.private, passphrase, scryptN, scryptP)
@@ -63,9 +73,9 @@ func (k *PrivateKey) Address() types.Address {
 	return k.address
 }
 
-// Sign implements the Key interface.
-func (k *PrivateKey) Sign(hash types.Hash) (types.Signature, error) {
-	return crypto.Sign(k.private, hash)
+// SignHash implements the Key interface.
+func (k *PrivateKey) SignHash(hash types.Hash) (types.Signature, error) {
+	return crypto.SignHash(k.private, hash)
 }
 
 // SignMessage implements the Key interface.
@@ -85,7 +95,7 @@ func (k *PrivateKey) SignTransaction(tx *types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	s, err := k.Sign(r)
+	s, err := k.SignHash(r)
 	if err != nil {
 		return err
 	}
@@ -99,8 +109,8 @@ func (k *PrivateKey) SignTransaction(tx *types.Transaction) error {
 	return nil
 }
 
-// Verify implements the Key interface.
-func (k *PrivateKey) Verify(hash types.Hash, sig types.Signature) bool {
+// VerifyHash implements the Key interface.
+func (k *PrivateKey) VerifyHash(hash types.Hash, sig types.Signature) bool {
 	addr, err := crypto.Ecrecover(hash, sig)
 	if err != nil {
 		return false

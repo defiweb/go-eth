@@ -84,7 +84,7 @@ func Test_AddressType_Checksum(t *testing.T) {
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			assert.Equal(t, tt.addr, MustHexToAddress(tt.addr).Checksum(keccak256))
+			assert.Equal(t, tt.addr, MustAddressFromHex(tt.addr).Checksum(keccak256))
 		})
 	}
 }
@@ -208,14 +208,14 @@ func Test_hashesType_Marshal(t *testing.T) {
 	}{
 		{
 			arg: (hashList)([]Hash{
-				MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
+				MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111"),
 			}),
 			want: `"0x1111111111111111111111111111111111111111111111111111111111111111"`,
 		},
 		{
 			arg: (hashList)([]Hash{
-				MustHexToHash("0x1111111111111111111111111111111111111111111111111111111111111111"),
-				MustHexToHash("0x2222222222222222222222222222222222222222222222222222222222222222"),
+				MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111"),
+				MustHashFromHex("0x2222222222222222222222222222222222222222222222222222222222222222"),
 			}),
 			want: `["0x1111111111111111111111111111111111111111111111111111111111111111","0x2222222222222222222222222222222222222222222222222222222222222222"]`,
 		},
@@ -288,14 +288,14 @@ func Test_AddressesType_Marshal(t *testing.T) {
 	}{
 		{
 			arg: (addressList)([]Address{
-				MustHexToAddress("0x1111111111111111111111111111111111111111"),
+				MustAddressFromHex("0x1111111111111111111111111111111111111111"),
 			}),
 			want: `"0x1111111111111111111111111111111111111111"`,
 		},
 		{
 			arg: (addressList)([]Address{
-				MustHexToAddress("0x1111111111111111111111111111111111111111"),
-				MustHexToAddress("0x2222222222222222222222222222222222222222"),
+				MustAddressFromHex("0x1111111111111111111111111111111111111111"),
+				MustAddressFromHex("0x2222222222222222222222222222222222222222"),
 			}),
 			want: `["0x1111111111111111111111111111111111111111","0x2222222222222222222222222222222222222222"]`,
 		},
@@ -323,10 +323,10 @@ func Test_BlockNumberType_Unmarshal(t *testing.T) {
 		isLatest   bool
 		isPending  bool
 	}{
-		{arg: `"0x0"`, want: Uint64ToBlockNumber(0)},
-		{arg: `"0xF"`, want: Uint64ToBlockNumber(15)},
-		{arg: `"0"`, want: Uint64ToBlockNumber(0)},
-		{arg: `"F"`, want: Uint64ToBlockNumber(15)},
+		{arg: `"0x0"`, want: BlockNumberFromUint64(0)},
+		{arg: `"0xF"`, want: BlockNumberFromUint64(15)},
+		{arg: `"0"`, want: BlockNumberFromUint64(0)},
+		{arg: `"F"`, want: BlockNumberFromUint64(15)},
 		{arg: `"earliest"`, want: EarliestBlockNumber, isTag: true, isEarliest: true},
 		{arg: `"latest"`, want: LatestBlockNumber, isTag: true, isLatest: true},
 		{arg: `"pending"`, want: PendingBlockNumber, isTag: true, isPending: true},
@@ -356,8 +356,8 @@ func Test_BlockNumberType_Marshal(t *testing.T) {
 		arg  BlockNumber
 		want string
 	}{
-		{arg: Uint64ToBlockNumber(0), want: `"0x0"`},
-		{arg: Uint64ToBlockNumber(15), want: `"0xf"`},
+		{arg: BlockNumberFromUint64(0), want: `"0x0"`},
+		{arg: BlockNumberFromUint64(15), want: `"0xf"`},
 		{arg: EarliestBlockNumber, want: `"earliest"`},
 		{arg: LatestBlockNumber, want: `"latest"`},
 		{arg: PendingBlockNumber, want: `"pending"`},
@@ -421,5 +421,5 @@ func keccak256(data ...[]byte) Hash {
 	for _, i := range data {
 		h.Write(i)
 	}
-	return MustBytesToHash(h.Sum(nil))
+	return MustHashFromBytes(h.Sum(nil))
 }

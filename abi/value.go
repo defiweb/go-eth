@@ -560,7 +560,7 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 			if err := x.SetBytes(b); err != nil {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 			}
-			dstRef.Set(reflect.ValueOf(types.BigIntToNumber(x.BigInt())))
+			dstRef.Set(reflect.ValueOf(types.NumberFromBigInt(x.BigInt())))
 		case types.BlockNumber:
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
@@ -569,7 +569,7 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 			if err := x.SetBytes(b); err != nil {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 			}
-			dstRef.Set(reflect.ValueOf(types.BigIntToBlockNumber(x.BigInt())))
+			dstRef.Set(reflect.ValueOf(types.BlockNumberFromBigInt(x.BigInt())))
 		default:
 			return fmt.Errorf("abi: cannot map bytes%d to %s", len(b), dstRef.Type())
 		}
@@ -696,9 +696,9 @@ func (u *UintValue) MapTo(m Mapper, dst any) error {
 		case big.Int:
 			dstRef.Set(reflect.ValueOf(u.Int))
 		case types.Number:
-			dstRef.Set(reflect.ValueOf(types.BigIntToNumber(&u.Int)))
+			dstRef.Set(reflect.ValueOf(types.NumberFromBigInt(&u.Int)))
 		case types.BlockNumber:
-			dstRef.Set(reflect.ValueOf(types.BigIntToBlockNumber(&u.Int)))
+			dstRef.Set(reflect.ValueOf(types.BlockNumberFromBigInt(&u.Int)))
 		default:
 			return fmt.Errorf("abi: cannot map uint%d to %s", u.Size, dstRef.Type())
 		}
@@ -819,12 +819,12 @@ func (i *IntValue) MapTo(m Mapper, dst any) error {
 		case big.Int:
 			dstRef.Set(reflect.ValueOf(i.Int))
 		case types.Number:
-			dstRef.Set(reflect.ValueOf(types.BigIntToNumber(&i.Int)))
+			dstRef.Set(reflect.ValueOf(types.NumberFromBigInt(&i.Int)))
 		case types.BlockNumber:
 			if i.Sign() < 0 {
 				return fmt.Errorf("abi: cannot map int%d to %s: value is negative", i.Size, dstRef.Type())
 			}
-			dstRef.Set(reflect.ValueOf(types.BigIntToBlockNumber(&i.Int)))
+			dstRef.Set(reflect.ValueOf(types.BlockNumberFromBigInt(&i.Int)))
 		default:
 			return fmt.Errorf("abi: cannot map int%d to %s", i.Size, dstRef.Type())
 		}
@@ -919,7 +919,7 @@ func (a *AddressValue) MapFrom(m Mapper, src any) error {
 	srcRef := reflect.ValueOf(src)
 	switch srcRef.Type().Kind() {
 	case reflect.String:
-		addr, err := types.HexToAddress(srcRef.String())
+		addr, err := types.AddressFromHex(srcRef.String())
 		if err != nil {
 			return fmt.Errorf("abi: cannot map %s to address: %v", srcRef.Type(), err)
 		}
@@ -935,7 +935,7 @@ func (a *AddressValue) MapFrom(m Mapper, src any) error {
 		if err := m.Map(src, &bin); err != nil {
 			return err
 		}
-		*a = AddressValue(types.MustBytesToAddress(bin))
+		*a = AddressValue(types.MustAddressFromBytes(bin))
 	default:
 		return fmt.Errorf("abi: cannot map %s to address", srcRef.Type())
 	}

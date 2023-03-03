@@ -40,7 +40,7 @@ func TestWebsocket(t *testing.T) {
 					ctx,
 					res,
 					"eth_getBalance",
-					types.MustHexToAddress("0x1111111111111111111111111111111111111111"),
+					types.MustAddressFromHex("0x1111111111111111111111111111111111111111"),
 					types.LatestBlockNumber,
 				)
 

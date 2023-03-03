@@ -35,22 +35,22 @@ func (c Call) MarshalJSON() ([]byte, error) {
 		AccessList: c.AccessList,
 	}
 	if c.Gas != 0 {
-		call.Gas = Uint64ToNumberPtr(c.Gas)
+		call.Gas = NumberFromUint64Ptr(c.Gas)
 	}
 	if c.GasPrice != nil {
-		gasPrice := BigIntToNumber(c.GasPrice)
+		gasPrice := NumberFromBigInt(c.GasPrice)
 		call.GasPrice = &gasPrice
 	}
 	if c.MaxFeePerGas != nil {
-		gasFeeCap := BigIntToNumber(c.MaxFeePerGas)
+		gasFeeCap := NumberFromBigInt(c.MaxFeePerGas)
 		call.MaxFeePerGas = &gasFeeCap
 	}
 	if c.MaxPriorityFeePerGas != nil {
-		gasTipCap := BigIntToNumber(c.MaxPriorityFeePerGas)
+		gasTipCap := NumberFromBigInt(c.MaxPriorityFeePerGas)
 		call.MaxPriorityFeePerGas = &gasTipCap
 	}
 	if c.Value != nil {
-		value := BigIntToNumber(c.Value)
+		value := NumberFromBigInt(c.Value)
 		call.Value = &value
 	}
 	return json.Marshal(call)
@@ -84,12 +84,12 @@ func (c *Call) UnmarshalJSON(data []byte) error {
 type jsonCall struct {
 	From                 Address    `json:"from"`
 	To                   *Address   `json:"to,omitempty"`
-	Gas                  *Number    `json:"gas"`
+	Gas                  *Number    `json:"gas,omitempty"`
 	GasPrice             *Number    `json:"gasPrice,omitempty"`
 	MaxFeePerGas         *Number    `json:"maxFeePerGas,omitempty"`
 	MaxPriorityFeePerGas *Number    `json:"maxPriorityFeePerGas,omitempty"`
 	Value                *Number    `json:"value,omitempty"`
-	Data                 Bytes      `json:"data"`
+	Data                 Bytes      `json:"data,omitempty"`
 	AccessList           AccessList `json:"accessList,omitempty"`
 }
 
@@ -143,27 +143,27 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 		Input:     t.Input,
 	}
 	if t.TransactionIndex != nil {
-		transaction.TransactionIndex = Uint64ToNumberPtr(*t.TransactionIndex)
+		transaction.TransactionIndex = NumberFromUint64Ptr(*t.TransactionIndex)
 	}
 	if t.Gas != nil {
-		transaction.Gas = Uint64ToNumberPtr(*t.Gas)
+		transaction.Gas = NumberFromUint64Ptr(*t.Gas)
 	}
 	if t.GasPrice != nil {
-		transaction.GasPrice = BigIntToNumberPtr(t.GasPrice)
+		transaction.GasPrice = NumberFromBigIntPtr(t.GasPrice)
 	}
 	if t.Nonce != nil {
-		transaction.Nonce = BigIntToNumberPtr(t.Nonce)
+		transaction.Nonce = NumberFromBigIntPtr(t.Nonce)
 	}
 	if t.Value != nil {
-		transaction.Value = BigIntToNumberPtr(t.Value)
+		transaction.Value = NumberFromBigIntPtr(t.Value)
 	}
 	if t.Signature != nil {
-		transaction.V = BigIntToNumberPtr(t.Signature.BigV())
-		transaction.R = BigIntToNumberPtr(t.Signature.BigR())
-		transaction.S = BigIntToNumberPtr(t.Signature.BigS())
+		transaction.V = NumberFromBigIntPtr(t.Signature.BigV())
+		transaction.R = NumberFromBigIntPtr(t.Signature.BigR())
+		transaction.S = NumberFromBigIntPtr(t.Signature.BigS())
 	}
 	if t.BlockNumber != nil {
-		blockNumber := Uint64ToNumber(*t.BlockNumber)
+		blockNumber := NumberFromUint64(*t.BlockNumber)
 		transaction.BlockNumber = &blockNumber
 	}
 	return json.Marshal(transaction)
@@ -197,7 +197,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 		t.Value = transaction.Value.Big()
 	}
 	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
-		signature, err := BigIntToSignature(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
+		signature, err := SignatureFromBigInt(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
 		if err != nil {
 			return err
 		}
@@ -357,7 +357,7 @@ func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 	if s, err = l[elemIdx].GetBigInt(); err != nil {
 		return 0, err
 	}
-	sig, err := BigIntToSignature(v, r, s)
+	sig, err := SignatureFromBigInt(v, r, s)
 	if err != nil {
 		return 0, err
 	}
@@ -530,21 +530,21 @@ type TransactionReceipt struct {
 func (t TransactionReceipt) MarshalJSON() ([]byte, error) {
 	receipt := &jsonTransactionReceipt{
 		TransactionHash:   t.TransactionHash,
-		TransactionIndex:  Uint64ToNumber(t.TransactionIndex),
+		TransactionIndex:  NumberFromUint64(t.TransactionIndex),
 		BlockHash:         t.BlockHash,
-		BlockNumber:       Uint64ToNumber(t.BlockNumber),
+		BlockNumber:       NumberFromUint64(t.BlockNumber),
 		From:              t.From,
 		To:                t.To,
-		CumulativeGasUsed: Uint64ToNumber(t.CumulativeGasUsed),
-		EffectiveGasPrice: BigIntToNumber(t.EffectiveGasPrice),
-		GasUsed:           Uint64ToNumber(t.GasUsed),
+		CumulativeGasUsed: NumberFromUint64(t.CumulativeGasUsed),
+		EffectiveGasPrice: NumberFromBigInt(t.EffectiveGasPrice),
+		GasUsed:           NumberFromUint64(t.GasUsed),
 		ContractAddress:   t.ContractAddress,
 		Logs:              t.Logs,
 		LogsBloom:         t.LogsBloom,
 		Root:              t.Root,
 	}
 	if t.Status != nil {
-		status := Uint64ToNumber(*t.Status)
+		status := NumberFromUint64(*t.Status)
 		receipt.Status = &status
 	}
 	return json.Marshal(receipt)
@@ -618,7 +618,7 @@ type Block struct {
 
 func (b Block) MarshalJSON() ([]byte, error) {
 	block := &jsonBlock{
-		Number:           Uint64ToNumber(b.Number),
+		Number:           NumberFromUint64(b.Number),
 		Hash:             b.Hash,
 		ParentHash:       b.ParentHash,
 		StateRoot:        b.StateRoot,
@@ -629,12 +629,12 @@ func (b Block) MarshalJSON() ([]byte, error) {
 		Nonce:            nonceFromBigInt(b.Nonce),
 		Miner:            b.Miner,
 		LogsBloom:        bloomFromBytes(b.LogsBloom),
-		Difficulty:       BigIntToNumber(b.Difficulty),
-		TotalDifficulty:  BigIntToNumber(b.TotalDifficulty),
-		Size:             Uint64ToNumber(b.Size),
-		GasLimit:         Uint64ToNumber(b.GasLimit),
-		GasUsed:          Uint64ToNumber(b.GasUsed),
-		Timestamp:        Uint64ToNumber(uint64(b.Timestamp.Unix())),
+		Difficulty:       NumberFromBigInt(b.Difficulty),
+		TotalDifficulty:  NumberFromBigInt(b.TotalDifficulty),
+		Size:             NumberFromUint64(b.Size),
+		GasLimit:         NumberFromUint64(b.GasLimit),
+		GasUsed:          NumberFromUint64(b.GasUsed),
+		Timestamp:        NumberFromUint64(uint64(b.Timestamp.Unix())),
 		Uncles:           b.Uncles,
 		ExtraData:        b.ExtraData,
 	}
@@ -731,7 +731,7 @@ type FeeHistory struct {
 
 func (f FeeHistory) MarshalJSON() ([]byte, error) {
 	feeHistory := &jsonFeeHistory{
-		OldestBlock:  Uint64ToNumber(f.OldestBlock),
+		OldestBlock:  NumberFromUint64(f.OldestBlock),
 		GasUsedRatio: f.GasUsedRatio,
 	}
 	if len(f.Reward) > 0 {
@@ -739,14 +739,14 @@ func (f FeeHistory) MarshalJSON() ([]byte, error) {
 		for i, reward := range f.Reward {
 			feeHistory.Reward[i] = make([]Number, len(reward))
 			for j, r := range reward {
-				feeHistory.Reward[i][j] = BigIntToNumber(r)
+				feeHistory.Reward[i][j] = NumberFromBigInt(r)
 			}
 		}
 	}
 	if len(f.BaseFeePerGas) > 0 {
 		feeHistory.BaseFeePerGas = make([]Number, len(f.BaseFeePerGas))
 		for i, b := range f.BaseFeePerGas {
-			feeHistory.BaseFeePerGas[i] = BigIntToNumber(b)
+			feeHistory.BaseFeePerGas[i] = NumberFromBigInt(b)
 		}
 	}
 	return json.Marshal(feeHistory)
@@ -801,14 +801,14 @@ func (l Log) MarshalJSON() ([]byte, error) {
 	j.Data = l.Data
 	j.BlockHash = l.BlockHash
 	if l.BlockNumber != nil {
-		j.BlockNumber = Uint64ToNumberPtr(*l.BlockNumber)
+		j.BlockNumber = NumberFromUint64Ptr(*l.BlockNumber)
 	}
 	j.TransactionHash = l.TransactionHash
 	if l.TransactionIndex != nil {
-		j.TransactionIndex = Uint64ToNumberPtr(*l.TransactionIndex)
+		j.TransactionIndex = NumberFromUint64Ptr(*l.TransactionIndex)
 	}
 	if l.LogIndex != nil {
-		j.LogIndex = Uint64ToNumberPtr(*l.LogIndex)
+		j.LogIndex = NumberFromUint64Ptr(*l.LogIndex)
 	}
 	j.Removed = l.Removed
 	return json.Marshal(j)

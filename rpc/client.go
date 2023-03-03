@@ -169,7 +169,7 @@ func (c *Client) GetTransactionByHash(ctx context.Context, hash types.Hash) (*ty
 
 func (c *Client) GetTransactionByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.Transaction, error) {
 	var res types.Transaction
-	if err := c.transport.Call(ctx, &res, "eth_getTransactionByBlockHashAndIndex", hash, types.Uint64ToNumber(index)); err != nil {
+	if err := c.transport.Call(ctx, &res, "eth_getTransactionByBlockHashAndIndex", hash, types.NumberFromUint64(index)); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -177,7 +177,7 @@ func (c *Client) GetTransactionByBlockHashAndIndex(ctx context.Context, hash typ
 
 func (c *Client) GetTransactionByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.Transaction, error) {
 	var res types.Transaction
-	if err := c.transport.Call(ctx, &res, "eth_getTransactionByBlockNumberAndIndex", number, types.Uint64ToNumber(index)); err != nil {
+	if err := c.transport.Call(ctx, &res, "eth_getTransactionByBlockNumberAndIndex", number, types.NumberFromUint64(index)); err != nil {
 		return nil, err
 	}
 	return &res, nil

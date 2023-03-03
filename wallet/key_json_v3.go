@@ -101,7 +101,7 @@ func decryptV3Key(cryptoJson jsonKeyCrypto, passphrase []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// Verify the derived key matches the key in the JSON. If not, the
+	// VerifyHash the derived key matches the key in the JSON. If not, the
 	// passphrase is incorrect.
 	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cryptoJson.CipherText)
 	if !bytes.Equal(calculatedMAC.Bytes(), cryptoJson.MAC) {

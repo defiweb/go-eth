@@ -299,7 +299,7 @@ func TestEncodeABI(t *testing.T) {
 		{
 			name: "address#non-empty",
 			val:  new(AddressValue),
-			arg:  types.MustHexToAddress("0x0102030405060708090a0b0c0d0e0f1011121314"),
+			arg:  types.MustAddressFromHex("0x0102030405060708090a0b0c0d0e0f1011121314"),
 			want: Words{padL("0102030405060708090a0b0c0d0e0f1011121314")},
 		},
 	}
@@ -645,7 +645,7 @@ func TestDecodeABI(t *testing.T) {
 			abi:  Words{padL("0102030405060708090a0b0c0d0e0f1011121314")},
 			val:  new(AddressValue),
 			want: func() *AddressValue {
-				a := types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314")
+				a := types.MustAddressFromHex("0102030405060708090a0b0c0d0e0f1011121314")
 				return (*AddressValue)(&a)
 			}(),
 		},
@@ -751,19 +751,19 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Address->string",
 			val:     new(StringValue),
-			data:    types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314"),
+			data:    types.MustAddressFromHex("0102030405060708090a0b0c0d0e0f1011121314"),
 			wantErr: true,
 		},
 		{
 			name:    "types.Hash->string",
 			val:     new(StringValue),
-			data:    types.MustHexToHash("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
 			wantErr: true,
 		},
 		{
 			name:    "types.Number->string",
 			val:     new(StringValue),
-			data:    types.MustHexToNumber("2a"),
+			data:    types.MustNumberFromHex("2a"),
 			wantErr: true,
 		},
 		// FixedBytesValue
@@ -876,13 +876,13 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Address->bytes32",
 			val:     make(FixedBytesValue, 32),
-			data:    types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314"),
+			data:    types.MustAddressFromHex("0102030405060708090a0b0c0d0e0f1011121314"),
 			wantErr: true,
 		},
 		{
 			name: "types.Address->bytes20",
 			val:  make(FixedBytesValue, 20),
-			data: types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314"),
+			data: types.MustAddressFromHex("0102030405060708090a0b0c0d0e0f1011121314"),
 			want: Words{
 				padR("0102030405060708090a0b0c0d0e0f1011121314"),
 			},
@@ -890,7 +890,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name: "types.Hash->bytes32",
 			val:  make(FixedBytesValue, 32),
-			data: types.MustHexToHash("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data: types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
 			want: Words{
 				padR("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
 			},
@@ -898,7 +898,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name: "types.Number->bytes32",
 			val:  make(FixedBytesValue, 32),
-			data: types.MustHexToNumber("2a"),
+			data: types.MustNumberFromHex("2a"),
 			want: Words{
 				padL("2a"),
 			},
@@ -906,7 +906,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Number->bytes16",
 			val:     make(FixedBytesValue, 16),
-			data:    types.MustHexToNumber("2a"),
+			data:    types.MustNumberFromHex("2a"),
 			wantErr: true,
 		},
 		// UintValue:
@@ -1017,19 +1017,19 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Address->uint256",
 			val:     &UintValue{Size: 256},
-			data:    types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314"),
+			data:    types.MustAddressFromHex("0102030405060708090a0b0c0d0e0f1011121314"),
 			wantErr: true,
 		},
 		{
 			name:    "types.Hash->uint256",
 			val:     &UintValue{Size: 256},
-			data:    types.MustHexToHash("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
 			wantErr: true,
 		},
 		{
 			name: "types.Number->uint256",
 			val:  &UintValue{Size: 256},
-			data: types.MustHexToNumber("2a"),
+			data: types.MustNumberFromHex("2a"),
 			want: Words{
 				padL("2a"),
 			},
@@ -1148,19 +1148,19 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Address->int256",
 			val:     &IntValue{Size: 256},
-			data:    types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314"),
+			data:    types.MustAddressFromHex("0102030405060708090a0b0c0d0e0f1011121314"),
 			wantErr: true,
 		},
 		{
 			name:    "types.Hash->int256",
 			val:     &IntValue{Size: 256},
-			data:    types.MustHexToHash("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
 			wantErr: true,
 		},
 		{
 			name: "types.Number->int256",
 			val:  &IntValue{Size: 256},
-			data: types.MustHexToNumber("2a"),
+			data: types.MustNumberFromHex("2a"),
 			want: Words{
 				padL("2a"),
 			},
@@ -1256,7 +1256,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name: "types.Address->address",
 			val:  new(AddressValue),
-			data: types.MustHexToAddress("0102030405060708090a0b0c0d0e0f1011121314"),
+			data: types.MustAddressFromHex("0102030405060708090a0b0c0d0e0f1011121314"),
 			want: Words{
 				padL("0102030405060708090a0b0c0d0e0f1011121314"),
 			},
@@ -1264,13 +1264,13 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Hash->address",
 			val:     new(AddressValue),
-			data:    types.MustHexToHash("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
 			wantErr: true,
 		},
 		{
 			name:    "types.Number->address",
 			val:     new(AddressValue),
-			data:    types.MustHexToNumber("2a"),
+			data:    types.MustNumberFromHex("2a"),
 			wantErr: true,
 		},
 	}
@@ -1483,7 +1483,7 @@ func TestMapTo(t *testing.T) {
 				v := FixedBytesValue(hexutil.MustHexToBytes("0x0102030405060708090a0b0c0d0e0f1011121314"))
 				return &v
 			}(),
-			want: types.MustHexToAddressPtr("0x0102030405060708090a0b0c0d0e0f1011121314"),
+			want: types.MustAddressFromHexPtr("0x0102030405060708090a0b0c0d0e0f1011121314"),
 		},
 		{
 			name: "bytes32->types.Hash",
@@ -1492,7 +1492,7 @@ func TestMapTo(t *testing.T) {
 				v := FixedBytesValue(hexutil.MustHexToBytes("0x0102030405060708090a0b0c0d0e0f1011121314112233445566778899aabbcc"))
 				return &v
 			}(),
-			want: types.MustHexToHashPtr("0x0102030405060708090a0b0c0d0e0f1011121314112233445566778899aabbcc"),
+			want: types.MustHashFromHexPtr("0x0102030405060708090a0b0c0d0e0f1011121314112233445566778899aabbcc"),
 		},
 		{
 			name: "bytes32->types.Number",
@@ -1501,7 +1501,7 @@ func TestMapTo(t *testing.T) {
 				v := FixedBytesValue(hexutil.MustHexToBytes("0x000000000000000000000000000000000000000000000000000000000000002a"))
 				return &v
 			}(),
-			want: types.MustHexToNumberPtr("0x2a"),
+			want: types.MustNumberFromHexPtr("0x2a"),
 		},
 		{
 			name: "bytes16->types.Number",
@@ -1584,7 +1584,7 @@ func TestMapTo(t *testing.T) {
 			name: "uint256->types.Number",
 			arg:  new(types.Number),
 			val:  func() Value { i := &UintValue{Size: 256}; i.SetUint64(42); return i }(),
-			want: types.MustHexToNumberPtr("0x2a"),
+			want: types.MustNumberFromHexPtr("0x2a"),
 		},
 		// IntValue:
 		{
@@ -1669,7 +1669,7 @@ func TestMapTo(t *testing.T) {
 			name: "int256->types.Number",
 			arg:  new(types.Number),
 			val:  func() Value { i := &IntValue{Size: 256}; i.SetUint64(42); return i }(),
-			want: types.MustHexToNumberPtr("0x2a"),
+			want: types.MustNumberFromHexPtr("0x2a"),
 		},
 		// BoolValue:
 		{
@@ -1694,13 +1694,13 @@ func TestMapTo(t *testing.T) {
 		{
 			name: "address->string",
 			arg:  new(string),
-			val:  (*AddressValue)(types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890")),
+			val:  (*AddressValue)(types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890")),
 			want: func() *string { s := "0x1234567890123456789012345678901234567890"; return &s }(),
 		},
 		{
 			name: "address->[]byte",
 			arg:  new([]byte),
-			val:  (*AddressValue)(types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890")),
+			val:  (*AddressValue)(types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890")),
 			want: func() *[]byte {
 				b := []byte{0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90}
 				return &b
@@ -1709,7 +1709,7 @@ func TestMapTo(t *testing.T) {
 		{
 			name: "address->array",
 			arg:  new([20]byte),
-			val:  (*AddressValue)(types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890")),
+			val:  (*AddressValue)(types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890")),
 			want: func() *[20]byte {
 				b := [20]byte{0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90}
 				return &b
@@ -1718,31 +1718,31 @@ func TestMapTo(t *testing.T) {
 		{
 			name:    "address->int64",
 			arg:     new(int64),
-			val:     (*AddressValue)(types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890")),
+			val:     (*AddressValue)(types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890")),
 			wantErr: true,
 		},
 		{
 			name:    "address->big.Int",
 			arg:     new(big.Int),
-			val:     (*AddressValue)(types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890")),
+			val:     (*AddressValue)(types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890")),
 			wantErr: true,
 		},
 		{
 			name: "address->types.Address",
 			arg:  new(types.Address),
-			val:  (*AddressValue)(types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890")),
-			want: types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890"),
+			val:  (*AddressValue)(types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890")),
+			want: types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890"),
 		},
 		{
 			name:    "address->types.Hash",
 			arg:     new(types.Hash),
-			val:     (*AddressValue)(types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890")),
+			val:     (*AddressValue)(types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890")),
 			wantErr: true,
 		},
 		{
 			name:    "address->types.Number",
 			arg:     new(types.Number),
-			val:     (*AddressValue)(types.MustHexToAddressPtr("0x1234567890123456789012345678901234567890")),
+			val:     (*AddressValue)(types.MustAddressFromHexPtr("0x1234567890123456789012345678901234567890")),
 			wantErr: true,
 		},
 	}

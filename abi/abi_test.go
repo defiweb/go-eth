@@ -14,12 +14,18 @@ import (
 func Test_mappingRules(t *testing.T) {
 	// Test if mapping rules specified in the README work as expected.
 
+	// Following test works as follows:
+	// 1. src is encoded to solTyp.
+	// 2. If wantEncErr is true, encoding is expected to fail and rest of the test is skipped.
+	// 3. Encoded value is decoded to goTyp.
+	// 4. If wantDecErr is true, decoding is expected to fail and rest of the test is skipped.
+	// 5. Decoded value is compared to wantDst.
 	tests := []struct {
 		name       string
-		goTyp      any
-		solTyp     string
-		src        any
-		wantDst    any
+		goTyp      any    // Pointer to zero value to which Solidity type is mapped.
+		solTyp     string // Solidity type.
+		src        any    // Source value to be encoded.
+		wantDst    any    // Expected value after decoding.
 		wantEncErr bool
 		wantDecErr bool
 	}{
@@ -1023,8 +1029,8 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Address<=>bytes",
 			goTyp:   new(types.Address),
 			solTyp:  "bytes",
-			src:     types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
-			wantDst: types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
+			src:     types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
+			wantDst: types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
 		},
 
 		// types.Address <=> bytesX
@@ -1032,21 +1038,21 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Address<=>bytesX",
 			goTyp:   new(types.Address),
 			solTyp:  "bytes20",
-			src:     types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
-			wantDst: types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
+			src:     types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
+			wantDst: types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
 		},
 		{
 			name:       "types.Address<=>bytesX#too-long",
 			goTyp:      new(types.Address),
 			solTyp:     "bytes32",
-			src:        types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
+			src:        types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
 			wantEncErr: true,
 		},
 		{
 			name:       "types.Address<=>bytesX#too-short",
 			goTyp:      new(types.Address),
 			solTyp:     "bytes8",
-			src:        types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
+			src:        types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
 			wantEncErr: true,
 		},
 
@@ -1055,8 +1061,8 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Address<=>address",
 			goTyp:   new(types.Address),
 			solTyp:  "address",
-			src:     types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
-			wantDst: types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
+			src:     types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
+			wantDst: types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
 		},
 
 		// types.Hash <=> intX
@@ -1121,8 +1127,8 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Hash<=>bytes",
 			goTyp:   new(types.Hash),
 			solTyp:  "bytes",
-			src:     types.MustHexToHash("0x1234567890123456789012345678901234567890123456789012345678901234"),
-			wantDst: types.MustHexToHash("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			src:     types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			wantDst: types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
 		},
 
 		// types.Hash <=> bytesX
@@ -1130,14 +1136,14 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Hash<=>bytesX",
 			goTyp:   new(types.Hash),
 			solTyp:  "bytes32",
-			src:     types.MustHexToHash("0x1234567890123456789012345678901234567890123456789012345678901234"),
-			wantDst: types.MustHexToHash("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			src:     types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			wantDst: types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
 		},
 		{
 			name:       "types.Hash<=>bytesX#too-short",
 			goTyp:      new(types.Hash),
 			solTyp:     "bytes20",
-			src:        types.MustHexToHash("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			src:        types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
 			wantEncErr: true,
 		},
 
@@ -1153,7 +1159,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.Hash<=>address#decode-error",
 			goTyp:      new(types.Hash),
 			solTyp:     "address",
-			src:        types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
+			src:        types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
 			wantDecErr: true,
 		},
 
@@ -1267,28 +1273,28 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Number<=>int",
 			goTyp:   new(types.Number),
 			solTyp:  "int",
-			src:     types.BigIntToNumber(big.NewInt(0x1234)),
-			wantDst: types.BigIntToNumber(big.NewInt(0x1234)),
+			src:     types.NumberFromBigInt(big.NewInt(0x1234)),
+			wantDst: types.NumberFromBigInt(big.NewInt(0x1234)),
 		},
 		{
 			name:    "types.Number<=>int#negative",
 			goTyp:   new(types.Number),
 			solTyp:  "int",
-			src:     types.BigIntToNumber(big.NewInt(-0x1234)),
-			wantDst: types.BigIntToNumber(big.NewInt(-0x1234)),
+			src:     types.NumberFromBigInt(big.NewInt(-0x1234)),
+			wantDst: types.NumberFromBigInt(big.NewInt(-0x1234)),
 		},
 		{
 			name:    "types.Number<=>int#too-smaller-type",
 			goTyp:   new(types.Number),
 			solTyp:  "int8",
-			src:     types.BigIntToNumber(big.NewInt(42)),
-			wantDst: types.BigIntToNumber(big.NewInt(42)),
+			src:     types.NumberFromBigInt(big.NewInt(42)),
+			wantDst: types.NumberFromBigInt(big.NewInt(42)),
 		},
 		{
 			name:       "types.Number<=>int#overflow",
 			goTyp:      new(types.Number),
 			solTyp:     "int8",
-			src:        types.BigIntToNumber(big.NewInt(0x1234)),
+			src:        types.NumberFromBigInt(big.NewInt(0x1234)),
 			wantEncErr: true,
 		},
 
@@ -1297,21 +1303,21 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Number<=>uint",
 			goTyp:   new(types.Number),
 			solTyp:  "uint",
-			src:     types.BigIntToNumber(big.NewInt(0x1234)),
-			wantDst: types.BigIntToNumber(big.NewInt(0x1234)),
+			src:     types.NumberFromBigInt(big.NewInt(0x1234)),
+			wantDst: types.NumberFromBigInt(big.NewInt(0x1234)),
 		},
 		{
 			name:    "types.Number<=>uint#too-smaller-type",
 			goTyp:   new(types.Number),
 			solTyp:  "uint8",
-			src:     types.BigIntToNumber(big.NewInt(42)),
-			wantDst: types.BigIntToNumber(big.NewInt(42)),
+			src:     types.NumberFromBigInt(big.NewInt(42)),
+			wantDst: types.NumberFromBigInt(big.NewInt(42)),
 		},
 		{
 			name:       "types.Number<=>uint#overflow",
 			goTyp:      new(types.Number),
 			solTyp:     "uint8",
-			src:        types.BigIntToNumber(big.NewInt(0x1234)),
+			src:        types.NumberFromBigInt(big.NewInt(0x1234)),
 			wantEncErr: true,
 		},
 
@@ -1320,7 +1326,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.Number<=>bool#encode-error",
 			goTyp:      new(types.Number),
 			solTyp:     "bool",
-			src:        types.BigIntToNumber(big.NewInt(0x1234)),
+			src:        types.NumberFromBigInt(big.NewInt(0x1234)),
 			wantEncErr: true,
 		},
 		{
@@ -1336,7 +1342,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.Number<=>bytes#encode-error",
 			goTyp:      new(types.Number),
 			solTyp:     "bytes",
-			src:        types.BigIntToNumber(big.NewInt(0x1234)),
+			src:        types.NumberFromBigInt(big.NewInt(0x1234)),
 			wantEncErr: true,
 		},
 		{
@@ -1352,7 +1358,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.Number<=>string#encode-error",
 			goTyp:      new(types.Number),
 			solTyp:     "string",
-			src:        types.BigIntToNumber(big.NewInt(1)),
+			src:        types.NumberFromBigInt(big.NewInt(1)),
 			wantEncErr: true,
 		},
 		{
@@ -1368,7 +1374,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.Number<=>bytes#encode-error",
 			goTyp:      new(types.Number),
 			solTyp:     "bytes",
-			src:        types.BigIntToNumber(big.NewInt(1)),
+			src:        types.NumberFromBigInt(big.NewInt(1)),
 			wantEncErr: true,
 		},
 		{
@@ -1384,21 +1390,21 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Number<=>bytesX",
 			goTyp:   new(types.Number),
 			solTyp:  "bytes32",
-			src:     types.BigIntToNumber(big.NewInt(1)),
-			wantDst: types.BigIntToNumber(big.NewInt(1)),
+			src:     types.NumberFromBigInt(big.NewInt(1)),
+			wantDst: types.NumberFromBigInt(big.NewInt(1)),
 		},
 		{
 			name:    "types.Number<=>bytesX#negative",
 			goTyp:   new(types.Number),
 			solTyp:  "bytes32",
-			src:     types.BigIntToNumber(big.NewInt(-1)),
-			wantDst: types.BigIntToNumber(big.NewInt(-1)),
+			src:     types.NumberFromBigInt(big.NewInt(-1)),
+			wantDst: types.NumberFromBigInt(big.NewInt(-1)),
 		},
 		{
 			name:       "types.Number<=>bytesX#encode-error",
 			goTyp:      new(types.Number),
 			solTyp:     "bytes8",
-			src:        types.BigIntToNumber(big.NewInt(1)),
+			src:        types.NumberFromBigInt(big.NewInt(1)),
 			wantEncErr: true,
 		},
 		{
@@ -1414,7 +1420,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.Number<=>address#encode-error",
 			goTyp:      new(types.Number),
 			solTyp:     "address",
-			src:        types.BigIntToNumber(big.NewInt(1)),
+			src:        types.NumberFromBigInt(big.NewInt(1)),
 			wantEncErr: true,
 		},
 		{
@@ -1430,28 +1436,28 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.BlockNumber<=>int",
 			goTyp:   new(types.BlockNumber),
 			solTyp:  "int",
-			src:     types.BigIntToBlockNumber(big.NewInt(0x1234)),
-			wantDst: types.BigIntToBlockNumber(big.NewInt(0x1234)),
+			src:     types.BlockNumberFromBigInt(big.NewInt(0x1234)),
+			wantDst: types.BlockNumberFromBigInt(big.NewInt(0x1234)),
 		},
 		{
 			name:       "types.BlockNumber<=>int#negative",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "int",
-			src:        types.BigIntToBlockNumber(big.NewInt(-0x1234)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(-0x1234)),
 			wantEncErr: true,
 		},
 		{
 			name:    "types.BlockNumber<=>int#too-smaller-type",
 			goTyp:   new(types.BlockNumber),
 			solTyp:  "int8",
-			src:     types.BigIntToBlockNumber(big.NewInt(42)),
-			wantDst: types.BigIntToBlockNumber(big.NewInt(42)),
+			src:     types.BlockNumberFromBigInt(big.NewInt(42)),
+			wantDst: types.BlockNumberFromBigInt(big.NewInt(42)),
 		},
 		{
 			name:       "types.BlockNumber<=>int#overflow",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "int8",
-			src:        types.BigIntToBlockNumber(big.NewInt(0x1234)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(0x1234)),
 			wantEncErr: true,
 		},
 		{
@@ -1481,21 +1487,21 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.BlockNumber<=>uint",
 			goTyp:   new(types.BlockNumber),
 			solTyp:  "uint",
-			src:     types.BigIntToBlockNumber(big.NewInt(0x1234)),
-			wantDst: types.BigIntToBlockNumber(big.NewInt(0x1234)),
+			src:     types.BlockNumberFromBigInt(big.NewInt(0x1234)),
+			wantDst: types.BlockNumberFromBigInt(big.NewInt(0x1234)),
 		},
 		{
 			name:    "types.BlockNumber<=>uint#too-smaller-type",
 			goTyp:   new(types.BlockNumber),
 			solTyp:  "uint8",
-			src:     types.BigIntToBlockNumber(big.NewInt(42)),
-			wantDst: types.BigIntToBlockNumber(big.NewInt(42)),
+			src:     types.BlockNumberFromBigInt(big.NewInt(42)),
+			wantDst: types.BlockNumberFromBigInt(big.NewInt(42)),
 		},
 		{
 			name:       "types.BlockNumber<=>uint#overflow",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "uint8",
-			src:        types.BigIntToBlockNumber(big.NewInt(0x1234)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(0x1234)),
 			wantEncErr: true,
 		},
 
@@ -1504,7 +1510,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.BlockNumber<=>bool#encode-error",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "bool",
-			src:        types.BigIntToBlockNumber(big.NewInt(0x1234)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(0x1234)),
 			wantEncErr: true,
 		},
 		{
@@ -1520,7 +1526,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.BlockNumber<=>bytes#encode-error",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "bytes",
-			src:        types.BigIntToBlockNumber(big.NewInt(0x1234)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(0x1234)),
 			wantEncErr: true,
 		},
 		{
@@ -1536,7 +1542,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.BlockNumber<=>string#encode-error",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "string",
-			src:        types.BigIntToBlockNumber(big.NewInt(1)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(1)),
 			wantEncErr: true,
 		},
 		{
@@ -1552,7 +1558,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.BlockNumber<=>bytes#encode-error",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "bytes",
-			src:        types.BigIntToBlockNumber(big.NewInt(1)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(1)),
 			wantEncErr: true,
 		},
 		{
@@ -1568,21 +1574,21 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.BlockNumber<=>bytesX",
 			goTyp:   new(types.BlockNumber),
 			solTyp:  "bytes32",
-			src:     types.BigIntToBlockNumber(big.NewInt(1)),
-			wantDst: types.BigIntToBlockNumber(big.NewInt(1)),
+			src:     types.BlockNumberFromBigInt(big.NewInt(1)),
+			wantDst: types.BlockNumberFromBigInt(big.NewInt(1)),
 		},
 		{
 			name:       "types.BlockNumber<=>bytesX#negative",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "bytes32",
-			src:        types.BigIntToBlockNumber(big.NewInt(-1)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(-1)),
 			wantEncErr: true,
 		},
 		{
 			name:       "types.BlockNumber<=>bytesX#encode-error",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "bytes8",
-			src:        types.BigIntToBlockNumber(big.NewInt(1)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(1)),
 			wantEncErr: true,
 		},
 		{
@@ -1598,7 +1604,7 @@ func Test_mappingRules(t *testing.T) {
 			name:       "types.BlockNumber<=>address#encode-error",
 			goTyp:      new(types.BlockNumber),
 			solTyp:     "address",
-			src:        types.BigIntToBlockNumber(big.NewInt(1)),
+			src:        types.BlockNumberFromBigInt(big.NewInt(1)),
 			wantEncErr: true,
 		},
 		{

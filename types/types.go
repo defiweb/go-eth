@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -28,41 +29,41 @@ type Address [AddressLength]byte
 // ZeroAddress is an address with all zeros.
 var ZeroAddress = Address{}
 
-// HexToAddress parses an address in hex format and returns an Address type.
-func HexToAddress(address string) (a Address, err error) {
-	err = a.UnmarshalText([]byte(address))
+// AddressFromHex parses an address in hex format and returns an Address type.
+func AddressFromHex(h string) (a Address, err error) {
+	err = a.UnmarshalText([]byte(h))
 	return a, err
 }
 
-// HexToAddressPtr parses an address in hex format and returns an *Address type.
+// AddressFromHexPtr parses an address in hex format and returns an *Address type.
 // It returns nil if the address is invalid.
-func HexToAddressPtr(address string) *Address {
-	a, err := HexToAddress(address)
+func AddressFromHexPtr(h string) *Address {
+	a, err := AddressFromHex(h)
 	if err != nil {
 		return nil
 	}
 	return &a
 }
 
-// MustHexToAddress parses an address in hex format and returns an Address type.
+// MustAddressFromHex parses an address in hex format and returns an Address type.
 // It panics if the address is invalid.
-func MustHexToAddress(address string) Address {
-	a, err := HexToAddress(address)
+func MustAddressFromHex(h string) Address {
+	a, err := AddressFromHex(h)
 	if err != nil {
 		panic(err)
 	}
 	return a
 }
 
-// MustHexToAddressPtr parses an address in hex format and returns an *Address type.
+// MustAddressFromHexPtr parses an address in hex format and returns an *Address type.
 // It panics if the address is invalid.
-func MustHexToAddressPtr(address string) *Address {
-	a := MustHexToAddress(address)
+func MustAddressFromHexPtr(h string) *Address {
+	a := MustAddressFromHex(h)
 	return &a
 }
 
-// BytesToAddress converts a byte slice to an Address type.
-func BytesToAddress(b []byte) (Address, error) {
+// AddressFromBytes converts a byte slice to an Address type.
+func AddressFromBytes(b []byte) (Address, error) {
 	var a Address
 	if len(b) != len(a) {
 		return a, fmt.Errorf("invalid address length %d", len(b))
@@ -71,30 +72,30 @@ func BytesToAddress(b []byte) (Address, error) {
 	return a, nil
 }
 
-// BytesToAddressPtr converts a byte slice to an *Address type.
+// AddressFromBytesPtr converts a byte slice to an *Address type.
 // It returns nil if the address is invalid.
-func BytesToAddressPtr(b []byte) *Address {
-	a, err := BytesToAddress(b)
+func AddressFromBytesPtr(b []byte) *Address {
+	a, err := AddressFromBytes(b)
 	if err != nil {
 		return nil
 	}
 	return &a
 }
 
-// MustBytesToAddress converts a byte slice to an Address type.
+// MustAddressFromBytes converts a byte slice to an Address type.
 // It panics if the address is invalid.
-func MustBytesToAddress(b []byte) Address {
-	a, err := BytesToAddress(b)
+func MustAddressFromBytes(b []byte) Address {
+	a, err := AddressFromBytes(b)
 	if err != nil {
 		panic(err)
 	}
 	return a
 }
 
-// MustBytesToAddressPtr converts a byte slice to an *Address type.
+// MustAddressFromBytesPtr converts a byte slice to an *Address type.
 // It panics if the address is invalid.
-func MustBytesToAddressPtr(b []byte) *Address {
-	a := MustBytesToAddress(b)
+func MustAddressFromBytesPtr(b []byte) *Address {
+	a := MustAddressFromBytes(b)
 	return &a
 }
 
@@ -103,6 +104,7 @@ func (t Address) Bytes() []byte {
 	return t[:]
 }
 
+// String returns the hex representation of the address.
 func (t Address) String() string {
 	return hexutil.BytesToHex(t[:])
 }
@@ -123,6 +125,7 @@ func (t Address) Checksum(h HashFunc) string {
 	return "0x" + string(hex)
 }
 
+// IsZero returns true if the address is the zero address.
 func (t Address) IsZero() bool {
 	return t == ZeroAddress
 }
@@ -179,90 +182,98 @@ type Hash [HashLength]byte
 // ZeroHash is a hash with all zeros.
 var ZeroHash = Hash{}
 
-// HexToHash parses a hash in hex format and returns a Hash type.
-func HexToHash(x string) (h Hash, err error) {
-	err = h.UnmarshalText([]byte(x))
-	return
+// HashFromHex parses a hash in hex format and returns a Hash type.
+func HashFromHex(h string) (Hash, error) {
+	var hash Hash
+	err := hash.UnmarshalText([]byte(h))
+	return hash, err
 }
 
-// HexToHashPtr parses a hash in hex format and returns a *Hash type.
+// HashFromHexPtr parses a hash in hex format and returns a *Hash type.
 // It returns nil if the hash is invalid.
-func HexToHashPtr(x string) *Hash {
-	h, err := HexToHash(x)
+func HashFromHexPtr(h string) *Hash {
+	hash, err := HashFromHex(h)
 	if err != nil {
 		return nil
 	}
-	return &h
+	return &hash
 }
 
-// MustHexToHash parses a hash in hex format and returns a Hash type.
+// MustHashFromHex parses a hash in hex format and returns a Hash type.
 // It panics if the hash is invalid.
-func MustHexToHash(x string) Hash {
-	h, err := HexToHash(x)
+func MustHashFromHex(h string) Hash {
+	hash, err := HashFromHex(h)
 	if err != nil {
 		panic(err)
 	}
-	return h
+	return hash
 }
 
-// MustHexToHashPtr parses a hash in hex format and returns a *Hash type.
+// MustHashFromHexPtr parses a hash in hex format and returns a *Hash type.
 // It panics if the hash is invalid.
-func MustHexToHashPtr(x string) *Hash {
-	h := MustHexToHash(x)
-	return &h
+func MustHashFromHexPtr(h string) *Hash {
+	hash := MustHashFromHex(h)
+	return &hash
 }
 
-// BytesToHash converts a byte slice to a Hash type.
+// HashFromBytes converts a byte slice to a Hash type.
 // If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
 // If bytes is longer than 32 bytes, it returns an error.
-func BytesToHash(x []byte) (Hash, error) {
+func HashFromBytes(b []byte) (Hash, error) {
 	var h Hash
-	if len(x) > len(h) {
-		return h, fmt.Errorf("invalid hash length %d", len(x))
+	if len(b) > len(h) {
+		return h, fmt.Errorf("invalid hash length %d", len(b))
 	}
-	copy(h[HashLength-len(x):], x)
+	copy(h[HashLength-len(b):], b)
 	return h, nil
 }
 
-// BytesToHashPtr converts a byte slice to a *Hash type.
+// HashFromBytesPtr converts a byte slice to a *Hash type.
 // It returns nil if the hash is invalid.
 // If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
 // If bytes is longer than 32 bytes, it returns nil.
-func BytesToHashPtr(x []byte) *Hash {
-	h, err := BytesToHash(x)
+func HashFromBytesPtr(b []byte) *Hash {
+	h, err := HashFromBytes(b)
 	if err != nil {
 		return nil
 	}
 	return &h
 }
 
-// MustBytesToHash converts a byte slice to a Hash type.
+// MustHashFromBytes converts a byte slice to a Hash type.
 // It panics if the hash is invalid.
 // If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
 // If bytes is longer than 32 bytes, it panics.
-func MustBytesToHash(x []byte) Hash {
-	h, err := BytesToHash(x)
+func MustHashFromBytes(b []byte) Hash {
+	h, err := HashFromBytes(b)
 	if err != nil {
 		panic(err)
 	}
 	return h
 }
 
-// MustBytesToHashPtr converts a byte slice to a *Hash type.
+// MustHashFromBytesPtr converts a byte slice to a *Hash type.
 // It panics if the hash is invalid.
 // If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
 // If bytes is longer than 32 bytes, it panics.
-func MustBytesToHashPtr(x []byte) *Hash {
-	h := MustBytesToHash(x)
+func MustHashFromBytesPtr(b []byte) *Hash {
+	h := MustHashFromBytes(b)
 	return &h
 }
 
+// Bytes returns hash as a byte slice.
 func (t Hash) Bytes() []byte {
 	return t[:]
 }
 
+// String returns the hex string representation of the hash.
 func (t Hash) String() string {
 	return hexutil.BytesToHex(t[:])
+}
+
+// IsZero returns true if the hash is the zero hash.
+func (t Hash) IsZero() bool {
+	return t == ZeroHash
 }
 
 func (t Hash) MarshalJSON() ([]byte, error) {
@@ -320,62 +331,71 @@ var (
 	PendingBlockNumber  = BlockNumber{x: *new(big.Int).SetInt64(pendingBlockNumber)}
 )
 
-// HexToBlockNumber converts a string to a BlockNumber type.
+// BlockNumberFromHex converts a string to a BlockNumber type.
 // The string can be a hex number or one of the following strings:
 // "earliest", "latest", "pending".
 // If the string is not a valid block number, it returns an error.
-func HexToBlockNumber(x string) (BlockNumber, error) {
+func BlockNumberFromHex(h string) (BlockNumber, error) {
 	b := &BlockNumber{}
-	err := b.UnmarshalText([]byte(x))
+	err := b.UnmarshalText([]byte(h))
 	return *b, err
 }
 
-// HexToBlockNumberPtr converts a string to a *BlockNumber type.
+// BlockNumberFromHexPtr converts a string to a *BlockNumber type.
 // The string can be a hex number or one of the following strings:
 // "earliest", "latest", "pending".
 // If the string is not a valid block number, it returns nil.
-func HexToBlockNumberPtr(x string) *BlockNumber {
-	b, err := HexToBlockNumber(x)
+func BlockNumberFromHexPtr(h string) *BlockNumber {
+	b, err := BlockNumberFromHex(h)
 	if err != nil {
 		return nil
 	}
 	return &b
 }
 
-// MustHexToBlockNumber converts a string to a BlockNumber type.
+// MustBlockNumberFromHex converts a string to a BlockNumber type.
 // The string can be a hex number or one of the following strings:
 // "earliest", "latest", "pending".
 // It panics if the string is not a valid block number.
-func MustHexToBlockNumber(x string) BlockNumber {
-	b, err := HexToBlockNumber(x)
+func MustBlockNumberFromHex(h string) BlockNumber {
+	b, err := BlockNumberFromHex(h)
 	if err != nil {
 		panic(err)
 	}
 	return b
 }
 
-// Uint64ToBlockNumber converts an uint64 to a BlockNumber type.
-func Uint64ToBlockNumber(x uint64) BlockNumber {
-	return BlockNumber{x: *new(big.Int).SetUint64(x)}
-}
-
-// Uint64ToBlockNumberPtr converts an uint64 to a *BlockNumber type.
-func Uint64ToBlockNumberPtr(x uint64) *BlockNumber {
-	b := Uint64ToBlockNumber(x)
+// MustBlockNumberFromHexPtr converts a string to a *BlockNumber type.
+// The string can be a hex number or one of the following strings:
+// "earliest", "latest", "pending".
+// It panics if the string is not a valid block number.
+func MustBlockNumberFromHexPtr(h string) *BlockNumber {
+	b := MustBlockNumberFromHex(h)
 	return &b
 }
 
-// BigIntToBlockNumber converts a big.Int to a BlockNumber type.
-func BigIntToBlockNumber(x *big.Int) BlockNumber {
+// BlockNumberFromUint64 converts an uint64 to a BlockNumber type.
+func BlockNumberFromUint64(x uint64) BlockNumber {
+	return BlockNumber{x: *new(big.Int).SetUint64(x)}
+}
+
+// BlockNumberFromUint64Ptr converts an uint64 to a *BlockNumber type.
+func BlockNumberFromUint64Ptr(x uint64) *BlockNumber {
+	b := BlockNumberFromUint64(x)
+	return &b
+}
+
+// BlockNumberFromBigInt converts a big.Int to a BlockNumber type.
+func BlockNumberFromBigInt(x *big.Int) BlockNumber {
 	if x == nil {
 		return BlockNumber{}
 	}
 	return BlockNumber{x: *new(big.Int).Set(x)}
 }
 
-// BigIntToBlockNumberPtr converts a big.Int to a *BlockNumber type.
-func BigIntToBlockNumberPtr(x *big.Int) *BlockNumber {
-	b := BigIntToBlockNumber(x)
+// BlockNumberFromBigIntPtr converts a big.Int to a *BlockNumber type.
+func BlockNumberFromBigIntPtr(x *big.Int) *BlockNumber {
+	b := BlockNumberFromBigInt(x)
 	return &b
 }
 
@@ -404,6 +424,7 @@ func (t *BlockNumber) Big() *big.Int {
 	return new(big.Int).Set(&t.x)
 }
 
+// String returns the string representation of the block number.
 func (t *BlockNumber) String() string {
 	switch {
 	case t.IsEarliest():
@@ -476,47 +497,99 @@ const SignatureLength = 65
 // Signature represents the 65 byte signature.
 type Signature [SignatureLength]byte
 
-// HexToSignature parses a hex string into a Signature.
-func HexToSignature(x string) Signature {
+// SignatureFromHex parses a hex string into a Signature.
+func SignatureFromHex(h string) (Signature, error) {
 	var s Signature
-	_ = s.UnmarshalText([]byte(x))
-	return s
+	err := s.UnmarshalText([]byte(h))
+	if err != nil {
+		return s, err
+	}
+	return s, nil
 }
 
-// HexToSignaturePtr parses a hex string into a *Signature.
-func HexToSignaturePtr(x string) *Signature {
-	s := HexToSignature(x)
+// SignatureFromHexPtr parses a hex string into a *Signature.
+// It returns nil if the string is not a valid signature.
+func SignatureFromHexPtr(h string) *Signature {
+	s, err := SignatureFromHex(h)
+	if err != nil {
+		return nil
+	}
 	return &s
 }
 
-// BytesToSignature returns Signature from bytes.
-func BytesToSignature(b []byte) Signature {
+// MustSignatureFromHex parses a hex string into a Signature.
+// It panics if the string is not a valid signature.
+func MustSignatureFromHex(h string) Signature {
+	s, err := SignatureFromHex(h)
+	if err != nil {
+		panic(err)
+	}
+	return s
+}
+
+// MustSignatureFromHexPtr parses a hex string into a *Signature.
+// It panics if the string is not a valid signature.
+func MustSignatureFromHexPtr(h string) *Signature {
+	s, err := SignatureFromHex(h)
+	if err != nil {
+		panic(err)
+	}
+	return &s
+}
+
+// SignatureFromBytes returns Signature from bytes.
+func SignatureFromBytes(b []byte) (Signature, error) {
 	var sig Signature
 	if len(b) != SignatureLength {
-		return sig
+		return sig, errors.New("invalid signature length")
 	}
 	copy(sig[:], b)
+	return sig, nil
+}
+
+// SignatureFromBytesPtr returns *Signature from bytes.
+// It returns nil if the length of the bytes is not 65.
+func SignatureFromBytesPtr(b []byte) *Signature {
+	sig, err := SignatureFromBytes(b)
+	if err != nil {
+		return nil
+	}
+	return &sig
+}
+
+// MustSignatureFromBytes returns Signature from bytes.
+// It panics if the length of the bytes is not 65.
+func MustSignatureFromBytes(b []byte) Signature {
+	sig, err := SignatureFromBytes(b)
+	if err != nil {
+		panic(err)
+	}
 	return sig
 }
 
-// BytesToSignaturePtr returns *Signature from bytes.
-func BytesToSignaturePtr(b []byte) *Signature {
-	sig := BytesToSignature(b)
+// MustSignatureFromBytesPtr returns *Signature from bytes.
+// It panics if the length of the bytes is not 65.
+func MustSignatureFromBytesPtr(b []byte) *Signature {
+	sig, err := SignatureFromBytes(b)
+	if err != nil {
+		panic(err)
+	}
 	return &sig
 }
 
-// VRSToSignature returns Signature from VRS values.
-func VRSToSignature(v uint8, r [32]byte, s [32]byte) Signature {
-	return BytesToSignature(append(append(append([]byte{}, r[:]...), s[:]...), v))
+// SignatureFromVRS returns Signature from VRS values.
+func SignatureFromVRS(v uint8, r [32]byte, s [32]byte) Signature {
+	sig, _ := SignatureFromBytes(append(append(append([]byte{}, r[:]...), s[:]...), v))
+	return sig
 }
 
-// VRSToSignaturePtr returns *Signature from VRS values.
-func VRSToSignaturePtr(v uint8, r [32]byte, s [32]byte) *Signature {
-	sig := VRSToSignature(v, r, s)
+// SignatureFromVRSPtr returns *Signature from VRS values.
+func SignatureFromVRSPtr(v uint8, r [32]byte, s [32]byte) *Signature {
+	sig := SignatureFromVRS(v, r, s)
 	return &sig
 }
 
-func BigIntToSignature(v, r, s *big.Int) (Signature, error) {
+func SignatureFromBigInt(v, r, s *big.Int) (Signature, error) {
 	var sig Signature
 	vb := v.Bytes()
 	rb := r.Bytes()
@@ -530,25 +603,25 @@ func BigIntToSignature(v, r, s *big.Int) (Signature, error) {
 	return sig, nil
 }
 
-// BigIntToSignaturePtr returns *Signature from big.Int values.
-func BigIntToSignaturePtr(v, r, s *big.Int) (*Signature, error) {
-	sig, err := BigIntToSignature(v, r, s)
+// SignatureFromBigIntPtr returns *Signature from big.Int values.
+func SignatureFromBigIntPtr(v, r, s *big.Int) (*Signature, error) {
+	sig, err := SignatureFromBigInt(v, r, s)
 	return &sig, err
 }
 
 // MustBigIntToSignature returns Signature from big.Int values.
 // It panics if the values are invalid.
 func MustBigIntToSignature(v, r, s *big.Int) Signature {
-	sig, err := BigIntToSignature(v, r, s)
+	sig, err := SignatureFromBigInt(v, r, s)
 	if err != nil {
 		panic(err)
 	}
 	return sig
 }
 
-// MustBigIntToSignaturePtr returns *Signature from big.Int values.
+// MustSignatureFromBigIntPtr returns *Signature from big.Int values.
 // It panics if the values are invalid.
-func MustBigIntToSignaturePtr(v, r, s *big.Int) *Signature {
+func MustSignatureFromBigIntPtr(v, r, s *big.Int) *Signature {
 	sig := MustBigIntToSignature(v, r, s)
 	return &sig
 }
@@ -561,28 +634,34 @@ func (s Signature) VRS() (sv uint8, sr [32]byte, ss [32]byte) {
 	return
 }
 
+// V returns the V value of the signature.
 func (s Signature) V() uint8 {
 	return s[64]
 }
 
+// R returns the R value of the signature.
 func (s Signature) R() (r [32]byte) {
 	copy(r[:], s[:32])
 	return r
 }
 
+// S returns the S value of the signature.
 func (s Signature) S() (s2 [32]byte) {
 	copy(s2[:], s[32:64])
 	return s2
 }
 
+// BigV returns the V value of the signature as a big.Int.
 func (s Signature) BigV() *big.Int {
 	return big.NewInt(int64(s[64]))
 }
 
+// BigR returns the R value of the signature as a big.Int.
 func (s Signature) BigR() *big.Int {
 	return new(big.Int).SetBytes(s[:32])
 }
 
+// BigS returns the S value of the signature as a big.Int.
 func (s Signature) BigS() *big.Int {
 	return new(big.Int).SetBytes(s[32:64])
 }
@@ -627,88 +706,91 @@ func (s *Signature) UnmarshalText(input []byte) error {
 // instead.
 type Number struct{ x big.Int }
 
-// HexToNumber converts a hex string to a Number type.
-func HexToNumber(x string) (Number, error) {
-	u, err := hexutil.HexToBigInt(x)
+// NumberFromHex converts a hex string to a Number type.
+func NumberFromHex(h string) (Number, error) {
+	u, err := hexutil.HexToBigInt(h)
 	if err != nil {
 		return Number{}, err
 	}
 	return Number{x: *u}, nil
 }
 
-// HexToNumberPtr converts a hex string to a *Number type.
-func HexToNumberPtr(x string) *Number {
-	n, err := HexToNumber(x)
+// NumberFromHexPtr converts a hex string to a *Number type.
+func NumberFromHexPtr(h string) *Number {
+	n, err := NumberFromHex(h)
 	if err != nil {
 		return nil
 	}
 	return &n
 }
 
-// MustHexToNumber converts a hex string to a Number type. It panics if the
+// MustNumberFromHex converts a hex string to a Number type. It panics if the
 // conversion fails.
-func MustHexToNumber(x string) Number {
-	n, err := HexToNumber(x)
+func MustNumberFromHex(h string) Number {
+	n, err := NumberFromHex(h)
 	if err != nil {
 		panic(err)
 	}
 	return n
 }
 
-// MustHexToNumberPtr converts a hex string to a *Number type. It panics if the
+// MustNumberFromHexPtr converts a hex string to a *Number type. It panics if the
 // conversion fails.
-func MustHexToNumberPtr(x string) *Number {
-	n, err := HexToNumber(x)
+func MustNumberFromHexPtr(h string) *Number {
+	n, err := NumberFromHex(h)
 	if err != nil {
 		panic(err)
 	}
 	return &n
 }
 
-// BytesToNumber converts a byte slice to a Number type.
-func BytesToNumber(b []byte) Number {
+// NumberFromBytes converts a byte slice to a Number type.
+func NumberFromBytes(b []byte) Number {
 	return Number{x: *new(big.Int).SetBytes(b)}
 }
 
-// BytesToNumberPtr converts a byte slice to a *Number type.
-func BytesToNumberPtr(b []byte) *Number {
-	n := BytesToNumber(b)
+// NumberFromBytesPtr converts a byte slice to a *Number type.
+func NumberFromBytesPtr(b []byte) *Number {
+	n := NumberFromBytes(b)
 	return &n
 }
 
-// Uint64ToNumber converts an uint64 to a Number type.
-func Uint64ToNumber(x uint64) Number {
+// NumberFromUint64 converts an uint64 to a Number type.
+func NumberFromUint64(x uint64) Number {
 	return Number{x: *new(big.Int).SetUint64(x)}
 }
 
-// Uint64ToNumberPtr converts an uint64 to a *Number type.
-func Uint64ToNumberPtr(x uint64) *Number {
-	n := Uint64ToNumber(x)
+// NumberFromUint64Ptr converts an uint64 to a *Number type.
+func NumberFromUint64Ptr(x uint64) *Number {
+	n := NumberFromUint64(x)
 	return &n
 }
 
-// BigIntToNumber converts a big.Int to a Number type.
-func BigIntToNumber(x *big.Int) Number {
+// NumberFromBigInt converts a big.Int to a Number type.
+func NumberFromBigInt(x *big.Int) Number {
 	if x == nil {
 		return Number{}
 	}
 	return Number{x: *x}
 }
 
-// BigIntToNumberPtr converts a big.Int to a *Number type.
-func BigIntToNumberPtr(x *big.Int) *Number {
-	n := BigIntToNumber(x)
+// NumberFromBigIntPtr converts a big.Int to a *Number type.
+func NumberFromBigIntPtr(x *big.Int) *Number {
+	n := NumberFromBigInt(x)
 	return &n
 }
 
+// Big returns the big.Int representation of the number.
 func (t *Number) Big() *big.Int {
 	return new(big.Int).Set(&t.x)
 }
 
+// Bytes returns the byte representation of the number.
 func (t *Number) Bytes() []byte {
 	return t.x.Bytes()
 }
 
+// String returns the hex representation of the number.
 func (t *Number) String() string {
 	return hexutil.BigIntToHex(&t.x)
 }
@@ -737,45 +819,46 @@ func (t *Number) UnmarshalText(input []byte) error {
 // and unmarshalling JSON numbers. When possible, use byte slices instead.
 type Bytes []byte
 
-// HexToBytes converts a hex string to a Bytes type.
-func HexToBytes(x string) (Bytes, error) {
-	return hexutil.HexToBytes(x)
+// BytesFromHex converts a hex string to a Bytes type.
+func BytesFromHex(h string) (Bytes, error) {
+	return hexutil.HexToBytes(h)
 }
 
-// HexToBytesPtr converts a hex string to a *Bytes type.
-func HexToBytesPtr(x string) *Bytes {
-	b, err := HexToBytes(x)
+// BytesFromHexPtr converts a hex string to a *Bytes type.
+// If the input is not a valid hex string, it returns nil.
+func BytesFromHexPtr(h string) *Bytes {
+	b, err := BytesFromHex(h)
 	if err != nil {
 		return nil
 	}
 	return &b
 }
 
-// MustHexToBytes converts a hex string to a Bytes type. It panics if the
+// MustBytesFromHex converts a hex string to a Bytes type. It panics if the
 // input is not a valid hex string.
-func MustHexToBytes(x string) Bytes {
-	b, err := HexToBytes(x)
+func MustBytesFromHex(h string) Bytes {
+	b, err := BytesFromHex(h)
 	if err != nil {
 		panic(err)
 	}
 	return b
 }
 
-// MustHexToBytesPtr converts a hex string to a *Bytes type. It panics if the
+// MustBytesFromHexPtr converts a hex string to a *Bytes type. It panics if the
 // input is not a valid hex string.
-func MustHexToBytesPtr(x string) *Bytes {
-	b := MustHexToBytes(x)
+func MustBytesFromHexPtr(h string) *Bytes {
+	b := MustBytesFromHex(h)
 	return &b
 }
 
-// StringToBytes converts a string to a Bytes type.
-func StringToBytes(x string) Bytes {
-	return Bytes(x)
+// BytesFromString converts a string to a Bytes type.
+func BytesFromString(s string) Bytes {
+	return Bytes(s)
 }
 
-// StringToBytesPtr converts a string to a *Bytes type.
-func StringToBytesPtr(x string) *Bytes {
-	b := StringToBytes(x)
+// BytesFromStringPtr converts a string to a *Bytes type.
+func BytesFromStringPtr(s string) *Bytes {
+	b := BytesFromString(s)
 	return &b
 }
 
@@ -801,10 +884,12 @@ func (b Bytes) PadRight(n int) Bytes {
 	return cp
 }
 
+// Bytes returns the byte slice.
 func (b *Bytes) Bytes() []byte {
 	return *b
 }
 
+// String returns the hex-encoded string representation of the byte slice.
 func (b *Bytes) String() string {
 	if b == nil {
 		return ""

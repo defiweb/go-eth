@@ -98,7 +98,7 @@ func (s *stream) Unsubscribe(ctx context.Context, id string) error {
 	if !s.delSubCh(id) {
 		return errors.New("unknown subscription")
 	}
-	hex, err := types.HexToNumber(id)
+	hex, err := types.NumberFromHex(id)
 	if err != nil {
 		return fmt.Errorf("invalid subscription id: %w", err)
 	}

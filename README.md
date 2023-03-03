@@ -175,7 +175,7 @@ func main() {
 	}
 
 	// Create a transport.
-	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://eth-mainnet.g.alchemy.com/v2/qKEbaF9zKM0suM_hJLkdmf_6mF8_z-8p"})
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://example.com/rpc-node"})
 	if err != nil {
 		panic(err)
 	}
@@ -516,7 +516,7 @@ func main() {
 
 	// Encode method arguments.
 	abiData, err := transfer.EncodeArgs(
-		types.MustHexToAddress("0x1234567890123456789012345678901234567890"),
+		types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
 		big.NewInt(100),
 	)
 	if err != nil {
@@ -598,9 +598,9 @@ func main() {
 
 	// Fetch logs for WETH transfer events.
 	logs, err := c.GetLogs(context.Background(), types.FilterLogsQuery{
-		Address:   []types.Address{types.MustHexToAddress("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")},
-		FromBlock: types.Uint64ToBlockNumberPtr(16492400),
-		ToBlock:   types.Uint64ToBlockNumberPtr(16492400),
+		Address:   []types.Address{types.MustAddressFromHex("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")},
+		FromBlock: types.BlockNumberFromUint64Ptr(16492400),
+		ToBlock:   types.BlockNumberFromUint64Ptr(16492400),
 		Topics:    [][]types.Hash{{transfer.Topic0()}},
 	})
 	if err != nil {
