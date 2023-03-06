@@ -83,7 +83,33 @@ func TestHTTP(t *testing.T) {
 				result := types.Number{}
 				err := h.Call(context.Background(), &result, "eth_a")
 				assert.Error(t, err)
-				assert.Equal(t, err.Error(), "-32601: Method not found")
+				assert.Equal(t, "RPC error: -32601 Method not found", err.Error())
+			},
+		},
+		// Error response with non-200 status code:
+		{
+			asserts: func(t *testing.T, h *httpMock) {
+				h.Response = &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Body:       io.NopCloser(bytes.NewReader([]byte(`{"id":1, "jsonrpc":"2.0", "error":{"code":-32005, "message":"Limit exceeded"}}`))),
+				}
+				result := types.Number{}
+				err := h.Call(context.Background(), &result, "eth_a")
+				assert.Error(t, err)
+				assert.Equal(t, "RPC error: -32005 Limit exceeded", err.Error())
+			},
+		},
+		// Error response with non-200 status code and empty body:
+		{
+			asserts: func(t *testing.T, h *httpMock) {
+				h.Response = &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Body:       io.NopCloser(bytes.NewReader([]byte(``))),
+				}
+				result := types.Number{}
+				err := h.Call(context.Background(), &result, "eth_a")
+				assert.Error(t, err)
+				assert.Equal(t, "HTTP error: 429 Too Many Requests", err.Error())
 			},
 		},
 		// Invalid response:

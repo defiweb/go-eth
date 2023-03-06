@@ -57,7 +57,7 @@ func NewWebsocket(opts WebsocketOptions) (*Websocket, error) {
 		HTTPHeader: opts.HTTPHeader,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to dial websocket: %w", err)
 	}
 	i := &Websocket{
 		stream: &stream{

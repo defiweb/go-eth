@@ -50,7 +50,7 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 	id := atomic.AddUint64(&s.id, 1)
 	req, err := newRPCRequest(&id, method, args)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create RPC request: %w", err)
 	}
 
 	// Send the request.
@@ -65,10 +65,16 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 	select {
 	case res := <-ch:
 		if res.Error != nil {
-			return res.Error
+			return &RPCError{
+				Code:    res.Error.Code,
+				Message: res.Error.Message,
+				Data:    res.Error.Data,
+			}
 		}
 		if result != nil {
-			return json.Unmarshal(res.Result, result)
+			if err := json.Unmarshal(res.Result, result); err != nil {
+				return fmt.Errorf("failed to unmarshal RPC result: %w", err)
+			}
 		}
 	case <-ctx.Done():
 		return ctx.Err()
@@ -98,11 +104,11 @@ func (s *stream) Unsubscribe(ctx context.Context, id string) error {
 	if !s.delSubCh(id) {
 		return errors.New("unknown subscription")
 	}
-	hex, err := types.NumberFromHex(id)
+	num, err := types.NumberFromHex(id)
 	if err != nil {
 		return fmt.Errorf("invalid subscription id: %w", err)
 	}
-	return s.Call(ctx, nil, "eth_unsubscribe", hex)
+	return s.Call(ctx, nil, "eth_unsubscribe", num)
 }
 
 // readerRoutine reads messages from the stream connection and dispatches
@@ -119,7 +125,7 @@ func (s *stream) streamRoutine() {
 			sub := &rpcSubscription{}
 			if err := json.Unmarshal(res.Params, sub); err != nil {
 				if s.errCh != nil {
-					s.errCh <- fmt.Errorf("stream unmarshalling error: %w", err)
+					s.errCh <- fmt.Errorf("failed to unmarshal subscription: %w", err)
 				}
 				continue
 			}

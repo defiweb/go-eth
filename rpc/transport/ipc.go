@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"time"
@@ -35,7 +36,7 @@ func NewIPC(opts IPCOptions) (*IPC, error) {
 	var d net.Dialer
 	conn, err := d.DialContext(opts.Context, "unix", opts.Path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to dial IPC: %w", err)
 	}
 	if opts.Context == nil {
 		return nil, errors.New("context cannot be nil")

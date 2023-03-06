@@ -2,7 +2,6 @@ package transport
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/defiweb/go-eth/types"
 )
@@ -59,9 +58,4 @@ func newRPCRequest(id *uint64, method string, params []any) (rpcRequest, error) 
 		rpcReq.Params = params
 	}
 	return rpcReq, nil
-}
-
-// Error implements the error interface.
-func (e *rpcError) Error() string {
-	return fmt.Sprintf("%d: %s", e.Code, e.Message)
 }

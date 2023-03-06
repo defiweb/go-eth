@@ -194,7 +194,7 @@ func main() {
 	// Prepare a transaction.
 	tx := types.Transaction{
 		Type:                 types.DynamicFeeTxType,
-		To:                   types.MustHexToAddressPtr("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+		To:                   types.MustAddressFromHexPtr("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
 		Input:                calldata,
 		Nonce:                big.NewInt(0),
 		ChainID:              big.NewInt(1),
@@ -233,6 +233,7 @@ a low-level communication protocol with the node. The `go-eth` package offers th
 | HTTP      | Connects to a node using the HTTP protocol.                                                 | No            |
 | WebSocket | Connects to a node using the WebSocket protocol.                                            | Yes           |
 | IPC       | Connects to a node using the IPC protocol.                                                  | Yes           |
+| Retry     | Wraps a transport and retries requests in case of an error.                                 | Yes           |
 | Combined  | Wraps two transports and uses one for requests and the other for subscriptions.<sup>1</sup> | Yes           |
 
 1. It is recommended by some RPC providers to use HTTP for requests and WebSocket for subscriptions.

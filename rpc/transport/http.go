@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync/atomic"
 )
@@ -44,15 +45,15 @@ func (h *HTTP) Call(ctx context.Context, result any, method string, args ...any)
 	id := atomic.AddUint64(&h.id, 1)
 	rpcReq, err := newRPCRequest(&id, method, args)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create RPC request: %w", err)
 	}
 	httpBody, err := json.Marshal(rpcReq)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal RPC request: %w", err)
 	}
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", h.opts.URL, bytes.NewReader(httpBody))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	for k, v := range h.opts.HTTPHeader {
@@ -60,21 +61,27 @@ func (h *HTTP) Call(ctx context.Context, result any, method string, args ...any)
 	}
 	httpRes, err := h.opts.HTTPClient.Do(httpReq)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send HTTP request: %w", err)
 	}
 	defer httpRes.Body.Close()
 	rpcRes := &rpcResponse{}
 	if err := json.NewDecoder(httpRes.Body).Decode(rpcRes); err != nil {
-		return err
+		// If the response is not a valid JSON-RPC response, return the HTTP
+		// status code as the error code.
+		return &HTTPError{Code: httpRes.StatusCode}
 	}
 	if rpcRes.Error != nil {
-		return rpcRes.Error
+		return &RPCError{
+			Code:    rpcRes.Error.Code,
+			Message: rpcRes.Error.Message,
+			Data:    rpcRes.Error.Data,
+		}
 	}
 	if result == nil {
 		return nil
 	}
 	if err := json.Unmarshal(rpcRes.Result, result); err != nil {
-		return err
+		return fmt.Errorf("failed to unmarshal RPC result: %w", err)
 	}
 	return nil
 }
