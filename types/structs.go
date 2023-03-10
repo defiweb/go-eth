@@ -695,7 +695,7 @@ type TransactionReceipt struct {
 	TransactionHash   Hash     // TransactionHash is the hash of the transaction.
 	TransactionIndex  uint64   // TransactionIndex is the index of the transaction in the block.
 	BlockHash         Hash     // BlockHash is the hash of the block.
-	BlockNumber       uint64   // BlockNumber is the number of the block.
+	BlockNumber       *big.Int // BlockNumber is the number of the block.
 	From              Address  // From is the sender of the transaction.
 	To                Address  // To is the recipient of the transaction.
 	CumulativeGasUsed uint64   // CumulativeGasUsed is the total amount of gas used when this transaction was executed in the block.
@@ -713,7 +713,7 @@ func (t TransactionReceipt) MarshalJSON() ([]byte, error) {
 		TransactionHash:   t.TransactionHash,
 		TransactionIndex:  NumberFromUint64(t.TransactionIndex),
 		BlockHash:         t.BlockHash,
-		BlockNumber:       NumberFromUint64(t.BlockNumber),
+		BlockNumber:       NumberFromBigInt(t.BlockNumber),
 		From:              t.From,
 		To:                t.To,
 		CumulativeGasUsed: NumberFromUint64(t.CumulativeGasUsed),
@@ -739,7 +739,7 @@ func (t *TransactionReceipt) UnmarshalJSON(data []byte) error {
 	t.TransactionHash = receipt.TransactionHash
 	t.TransactionIndex = receipt.TransactionIndex.Big().Uint64()
 	t.BlockHash = receipt.BlockHash
-	t.BlockNumber = receipt.BlockNumber.Big().Uint64()
+	t.BlockNumber = receipt.BlockNumber.Big()
 	t.From = receipt.From
 	t.To = receipt.To
 	t.CumulativeGasUsed = receipt.CumulativeGasUsed.Big().Uint64()
@@ -774,7 +774,7 @@ type jsonTransactionReceipt struct {
 }
 
 type Block struct {
-	Number            uint64               // Block is the block number.
+	Number            *big.Int             // Block is the block number.
 	Hash              Hash                 // Hash is the hash of the block.
 	ParentHash        Hash                 // ParentHash is the hash of the parent block.
 	StateRoot         Hash                 // StateRoot is the root hash of the state trie.
@@ -799,7 +799,7 @@ type Block struct {
 
 func (b Block) MarshalJSON() ([]byte, error) {
 	block := &jsonBlock{
-		Number:           NumberFromUint64(b.Number),
+		Number:           NumberFromBigInt(b.Number),
 		Hash:             b.Hash,
 		ParentHash:       b.ParentHash,
 		StateRoot:        b.StateRoot,
@@ -833,7 +833,7 @@ func (b *Block) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, block); err != nil {
 		return err
 	}
-	b.Number = block.Number.Big().Uint64()
+	b.Number = block.Number.Big()
 	b.Hash = block.Hash
 	b.ParentHash = block.ParentHash
 	b.StateRoot = block.StateRoot
@@ -964,15 +964,15 @@ type jsonFeeHistory struct {
 
 // Log represents a contract log event.
 type Log struct {
-	Address          Address // Address of the contract that generated the event
-	Topics           []Hash  // Topics provide information about the event type.
-	Data             []byte  // Data contains the non-indexed arguments of the event.
-	BlockHash        *Hash   // BlockHash is the hash of the block where this log was in. Nil when pending.
-	BlockNumber      *uint64 // BlockNumber is the block number where this log was in. Nil when pending.
-	TransactionHash  *Hash   // TransactionHash is the hash of the transaction that generated this log. Nil when pending.
-	TransactionIndex *uint64 // TransactionIndex is the index of the transaction in the block. Nil when pending.
-	LogIndex         *uint64 // LogIndex is the index of the log in the block. Nil when pending.
-	Removed          bool    // Removed is true if the log was reverted due to a chain reorganization. False if unknown.
+	Address          Address  // Address of the contract that generated the event
+	Topics           []Hash   // Topics provide information about the event type.
+	Data             []byte   // Data contains the non-indexed arguments of the event.
+	BlockHash        *Hash    // BlockHash is the hash of the block where this log was in. Nil when pending.
+	BlockNumber      *big.Int // BlockNumber is the block number where this log was in. Nil when pending.
+	TransactionHash  *Hash    // TransactionHash is the hash of the transaction that generated this log. Nil when pending.
+	TransactionIndex *uint64  // TransactionIndex is the index of the transaction in the block. Nil when pending.
+	LogIndex         *uint64  // LogIndex is the index of the log in the block. Nil when pending.
+	Removed          bool     // Removed is true if the log was reverted due to a chain reorganization. False if unknown.
 }
 
 func (l Log) MarshalJSON() ([]byte, error) {
@@ -982,7 +982,7 @@ func (l Log) MarshalJSON() ([]byte, error) {
 	j.Data = l.Data
 	j.BlockHash = l.BlockHash
 	if l.BlockNumber != nil {
-		j.BlockNumber = NumberFromUint64Ptr(*l.BlockNumber)
+		j.BlockNumber = NumberFromBigIntPtr(l.BlockNumber)
 	}
 	j.TransactionHash = l.TransactionHash
 	if l.TransactionIndex != nil {
@@ -1005,8 +1005,7 @@ func (l *Log) UnmarshalJSON(input []byte) error {
 	l.Data = log.Data
 	l.BlockHash = log.BlockHash
 	if log.BlockNumber != nil {
-		l.BlockNumber = new(uint64)
-		*l.BlockNumber = log.BlockNumber.Big().Uint64()
+		l.BlockNumber = log.BlockNumber.Big()
 	}
 	l.TransactionHash = log.TransactionHash
 	if log.TransactionIndex != nil {
