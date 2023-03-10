@@ -42,6 +42,38 @@ func newHTTPMock() *httpMock {
 	return h
 }
 
+const mockChanIDRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_chainId",
+	  "params": []
+	}
+`
+
+const mockChanIDResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,	
+	  "result": "0x1"
+	}
+`
+
+func TestClient_ChainID(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := NewClient(httpMock)
+
+	httpMock.Response = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockChanIDResponse)),
+	}
+
+	chainID, err := client.ChainID(context.Background())
+	require.NoError(t, err)
+	assert.JSONEq(t, mockChanIDRequest, readBody(httpMock.Request))
+	assert.Equal(t, uint64(1), chainID)
+}
+
 const mockGasPriceRequest = `
 	{
 	  "jsonrpc": "2.0",

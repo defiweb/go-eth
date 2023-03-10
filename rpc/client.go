@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	"github.com/defiweb/go-eth/rpc/transport"
@@ -14,6 +15,17 @@ type Client struct {
 
 func NewClient(transport transport.Transport) *Client {
 	return &Client{transport: transport}
+}
+
+func (c *Client) ChainID(ctx context.Context) (uint64, error) {
+	var res types.Number
+	if err := c.transport.Call(ctx, &res, "eth_chainId"); err != nil {
+		return 0, err
+	}
+	if !res.Big().IsUint64() {
+		return 0, fmt.Errorf("chain id is too big")
+	}
+	return res.Big().Uint64(), nil
 }
 
 func (c *Client) GasPrice(ctx context.Context) (*big.Int, error) {

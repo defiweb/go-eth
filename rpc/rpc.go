@@ -20,6 +20,11 @@ type RPC interface {
 	// TODO: eth_mining
 	// TODO: eth_hashrate
 
+	// ChainID performs eth_chainId RPC call.
+	//
+	// It returns the current chain ID.
+	ChainID(ctx context.Context) (uint64, error)
+
 	// GasPrice performs eth_gasPrice RPC call.
 	//
 	// It returns the current price per gas in wei.
@@ -157,5 +162,8 @@ type RPC interface {
 	// TODO: eth_submitWork
 	// TODO: eth_submitHashrate
 
+	// MaxPriorityFeePerGas performs eth_maxPriorityFeePerGas RPC call.
+	//
+	// It returns the estimated maximum priority fee per gas.
 	MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error)
 }
