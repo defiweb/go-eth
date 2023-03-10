@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
@@ -15,28 +16,28 @@ func NewClient(transport transport.Transport) *Client {
 	return &Client{transport: transport}
 }
 
-func (c *Client) GasPrice(ctx context.Context) (uint64, error) {
+func (c *Client) GasPrice(ctx context.Context) (*big.Int, error) {
 	var res types.Number
 	if err := c.transport.Call(ctx, &res, "eth_gasPrice"); err != nil {
-		return 0, err
+		return nil, err
 	}
-	return res.Big().Uint64(), nil
+	return res.Big(), nil
 }
 
-func (c *Client) BlockNumber(ctx context.Context) (uint64, error) {
+func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
 	var res types.Number
 	if err := c.transport.Call(ctx, &res, "eth_blockNumber"); err != nil {
-		return 0, err
+		return nil, err
 	}
-	return res.Big().Uint64(), nil
+	return res.Big(), nil
 }
 
-func (c *Client) GetBalance(ctx context.Context, address types.Address, block types.BlockNumber) (uint64, error) {
+func (c *Client) GetBalance(ctx context.Context, address types.Address, block types.BlockNumber) (*big.Int, error) {
 	var res types.Number
 	if err := c.transport.Call(ctx, &res, "eth_getBalance", address, block); err != nil {
-		return 0, err
+		return nil, err
 	}
-	return res.Big().Uint64(), nil
+	return res.Big(), nil
 }
 
 func (c *Client) GetStorageAt(ctx context.Context, account types.Address, key types.Hash, block types.BlockNumber) (*types.Hash, error) {
@@ -159,24 +160,24 @@ func (c *Client) BlockByNumber(ctx context.Context, number types.BlockNumber, fu
 	return &res, nil
 }
 
-func (c *Client) GetTransactionByHash(ctx context.Context, hash types.Hash) (*types.Transaction, error) {
-	var res types.Transaction
+func (c *Client) GetTransactionByHash(ctx context.Context, hash types.Hash) (*types.OnChainTransaction, error) {
+	var res types.OnChainTransaction
 	if err := c.transport.Call(ctx, &res, "eth_getTransactionByHash", hash); err != nil {
 		return nil, err
 	}
 	return &res, nil
 }
 
-func (c *Client) GetTransactionByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.Transaction, error) {
-	var res types.Transaction
+func (c *Client) GetTransactionByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.OnChainTransaction, error) {
+	var res types.OnChainTransaction
 	if err := c.transport.Call(ctx, &res, "eth_getTransactionByBlockHashAndIndex", hash, types.NumberFromUint64(index)); err != nil {
 		return nil, err
 	}
 	return &res, nil
 }
 
-func (c *Client) GetTransactionByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.Transaction, error) {
-	var res types.Transaction
+func (c *Client) GetTransactionByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.OnChainTransaction, error) {
+	var res types.OnChainTransaction
 	if err := c.transport.Call(ctx, &res, "eth_getTransactionByBlockNumberAndIndex", number, types.NumberFromUint64(index)); err != nil {
 		return nil, err
 	}

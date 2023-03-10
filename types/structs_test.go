@@ -19,69 +19,65 @@ func TestTransaction_RLP(t1 *testing.T) {
 	}{
 		// Empty transaction:
 		{
-			tx: &Transaction{
-				Gas:      func() *uint64 { v := uint64(0); return &v }(),
-				GasPrice: func() *big.Int { v := big.NewInt(0); return v }(),
-				Nonce:    func() *big.Int { v := big.NewInt(0); return v }(),
-				Value:    func() *big.Int { v := big.NewInt(0); return v }(),
-			},
+			tx: (&Transaction{}).
+				SetGasLimit(0).
+				SetGasPrice(big.NewInt(0)).
+				SetNonce(0).
+				SetValue(big.NewInt(0)),
 			want: hexutil.MustHexToBytes("c9808080808080808080"),
 		},
 		// Legacy transaction:
 		{
-			tx: &Transaction{
-				Type:      LegacyTxType,
-				From:      AddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-				To:        AddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-				Gas:       func() *uint64 { v := uint64(100000); return &v }(),
-				GasPrice:  new(big.Int).SetUint64(1000000000),
-				Input:     []byte{1, 2, 3, 4},
-				Nonce:     new(big.Int).SetUint64(1),
-				Value:     new(big.Int).SetUint64(1000000000000000000),
-				Signature: SignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-			},
+			tx: (&Transaction{}).
+				SetType(LegacyTxType).
+				SetFrom(MustAddressFromHex("0x1111111111111111111111111111111111111111")).
+				SetTo(MustAddressFromHex("0x2222222222222222222222222222222222222222")).
+				SetGasLimit(100000).
+				SetGasPrice(big.NewInt(1000000000)).
+				SetInput([]byte{1, 2, 3, 4}).
+				SetNonce(1).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")),
 			want: hexutil.MustHexToBytes("f87001843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a764000084010203046fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
 		},
 		// Access list transaction:
 		{
-			tx: &Transaction{
-				Type:      AccessListTxType,
-				From:      AddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-				To:        AddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-				Gas:       func() *uint64 { v := uint64(100000); return &v }(),
-				GasPrice:  new(big.Int).SetUint64(1000000000),
-				Input:     []byte{1, 2, 3, 4},
-				Nonce:     new(big.Int).SetUint64(1),
-				Value:     new(big.Int).SetUint64(1000000000000000000),
-				Signature: SignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-				ChainID:   new(big.Int).SetUint64(1),
-				AccessList: AccessList{
+			tx: (&Transaction{}).
+				SetType(AccessListTxType).
+				SetFrom(MustAddressFromHex("0x1111111111111111111111111111111111111111")).
+				SetTo(MustAddressFromHex("0x2222222222222222222222222222222222222222")).
+				SetGasLimit(100000).
+				SetGasPrice(big.NewInt(1000000000)).
+				SetInput([]byte{1, 2, 3, 4}).
+				SetNonce(1).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")).
+				SetChainID(1).
+				SetAccessList(AccessList{
 					AccessTuple{
 						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 						StorageKeys: []Hash{
 							MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444"),
 							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555"),
 						},
-					},
-				},
-			},
+					}}),
 			want: hexutil.MustHexToBytes("01f8ce0101843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
 		},
 		// Dynamic fee transaction:
 		{
-			tx: &Transaction{
-				Type:                 DynamicFeeTxType,
-				From:                 AddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-				To:                   AddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-				Gas:                  func() *uint64 { v := uint64(100000); return &v }(),
-				Input:                []byte{1, 2, 3, 4},
-				Nonce:                new(big.Int).SetUint64(1),
-				Value:                new(big.Int).SetUint64(1000000000000000000),
-				Signature:            SignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-				ChainID:              new(big.Int).SetUint64(1),
-				MaxPriorityFeePerGas: new(big.Int).SetUint64(1000000000),
-				MaxFeePerGas:         new(big.Int).SetUint64(2000000000),
-				AccessList: AccessList{
+			tx: (&Transaction{}).
+				SetType(DynamicFeeTxType).
+				SetFrom(MustAddressFromHex("0x1111111111111111111111111111111111111111")).
+				SetTo(MustAddressFromHex("0x2222222222222222222222222222222222222222")).
+				SetGasLimit(100000).
+				SetInput([]byte{1, 2, 3, 4}).
+				SetNonce(1).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")).
+				SetChainID(1).
+				SetMaxPriorityFeePerGas(big.NewInt(1000000000)).
+				SetMaxFeePerGas(big.NewInt(2000000000)).
+				SetAccessList(AccessList{
 					AccessTuple{
 						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 						StorageKeys: []Hash{
@@ -89,38 +85,36 @@ func TestTransaction_RLP(t1 *testing.T) {
 							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555"),
 						},
 					},
-				},
-			},
+				}),
 			want: hexutil.MustHexToBytes("02f8d30101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
 		},
 		// Dynamic fee transaction with no access list:
 		{
-			tx: &Transaction{
-				Type:                 DynamicFeeTxType,
-				From:                 AddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-				To:                   AddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-				Gas:                  func() *uint64 { v := uint64(100000); return &v }(),
-				Input:                []byte{1, 2, 3, 4},
-				Nonce:                new(big.Int).SetUint64(1),
-				Value:                new(big.Int).SetUint64(1000000000000000000),
-				Signature:            SignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-				ChainID:              new(big.Int).SetUint64(1),
-				MaxPriorityFeePerGas: new(big.Int).SetUint64(1000000000),
-				MaxFeePerGas:         new(big.Int).SetUint64(2000000000),
-			},
+			tx: (&Transaction{}).
+				SetType(DynamicFeeTxType).
+				SetFrom(MustAddressFromHex("0x1111111111111111111111111111111111111111")).
+				SetTo(MustAddressFromHex("0x2222222222222222222222222222222222222222")).
+				SetGasLimit(100000).
+				SetInput([]byte{1, 2, 3, 4}).
+				SetNonce(1).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")).
+				SetChainID(1).
+				SetMaxPriorityFeePerGas(big.NewInt(1000000000)).
+				SetMaxFeePerGas(big.NewInt(2000000000)),
 			want: hexutil.MustHexToBytes("02f8770101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304c06fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
 		},
 		// Example from EIP-155:
 		{
-			tx: &Transaction{
-				Type:     LegacyTxType,
-				ChainID:  big.NewInt(1),
-				To:       AddressFromHexPtr("0x3535353535353535353535353535353535353535"),
-				Gas:      func() *uint64 { v := uint64(21000); return &v }(),
-				GasPrice: func() *big.Int { v, _ := new(big.Int).SetString("20000000000", 10); return v }(),
-				Nonce:    func() *big.Int { v := big.NewInt(9); return v }(),
-				Value:    func() *big.Int { v, _ := new(big.Int).SetString("1000000000000000000", 10); return v }(),
-				Signature: MustSignatureFromBigIntPtr(
+			tx: (&Transaction{}).
+				SetType(LegacyTxType).
+				SetChainID(1).
+				SetTo(MustAddressFromHex("0x3535353535353535353535353535353535353535")).
+				SetGasLimit(21000).
+				SetGasPrice(big.NewInt(20000000000)).
+				SetNonce(9).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(SignatureFromVRS(
 					func() *big.Int {
 						v, _ := new(big.Int).SetString("37", 10)
 						return v
@@ -133,8 +127,7 @@ func TestTransaction_RLP(t1 *testing.T) {
 						v, _ := new(big.Int).SetString("46948507304638947509940763649030358759909902576025900602547168820602576006531", 10)
 						return v
 					}(),
-				),
-			},
+				)),
 			want: hexutil.MustHexToBytes("f86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"),
 		},
 	}
@@ -166,34 +159,33 @@ func TestTransaction_SingingHash(t1 *testing.T) {
 		},
 		// Legacy transaction:
 		{
-			tx: &Transaction{
-				Type:      LegacyTxType,
-				From:      AddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-				To:        AddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-				Gas:       func() *uint64 { v := uint64(100000); return &v }(),
-				GasPrice:  new(big.Int).SetUint64(1000000000),
-				Input:     []byte{1, 2, 3, 4},
-				Nonce:     new(big.Int).SetUint64(1),
-				Value:     new(big.Int).SetUint64(1000000000000000000),
-				Signature: SignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-				ChainID:   new(big.Int).SetUint64(1),
-			},
+			tx: (&Transaction{}).
+				SetType(LegacyTxType).
+				SetFrom(MustAddressFromHex("0x1111111111111111111111111111111111111111")).
+				SetTo(MustAddressFromHex("0x2222222222222222222222222222222222222222")).
+				SetGasLimit(100000).
+				SetGasPrice(big.NewInt(1000000000)).
+				SetInput([]byte{1, 2, 3, 4}).
+				SetNonce(1).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")).
+				SetChainID(1),
 			want: MustHashFromHex("1efbe489013ac8c0dad2202f68ac12657471df8d80f70e0683ec07b0564a32ca"),
 		},
 		// Access list transaction:
 		{
-			tx: &Transaction{
-				Type:      AccessListTxType,
-				From:      AddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-				To:        AddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-				Gas:       func() *uint64 { v := uint64(100000); return &v }(),
-				GasPrice:  new(big.Int).SetUint64(1000000000),
-				Input:     []byte{1, 2, 3, 4},
-				Nonce:     new(big.Int).SetUint64(1),
-				Value:     new(big.Int).SetUint64(1000000000000000000),
-				Signature: SignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-				ChainID:   new(big.Int).SetUint64(1),
-				AccessList: AccessList{
+			tx: (&Transaction{}).
+				SetType(AccessListTxType).
+				SetFrom(MustAddressFromHex("0x1111111111111111111111111111111111111111")).
+				SetTo(MustAddressFromHex("0x2222222222222222222222222222222222222222")).
+				SetGasLimit(100000).
+				SetGasPrice(big.NewInt(1000000000)).
+				SetInput([]byte{1, 2, 3, 4}).
+				SetNonce(1).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")).
+				SetChainID(1).
+				SetAccessList(AccessList{
 					AccessTuple{
 						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 						StorageKeys: []Hash{
@@ -201,25 +193,24 @@ func TestTransaction_SingingHash(t1 *testing.T) {
 							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555"),
 						},
 					},
-				},
-			},
+				}),
 			want: MustHashFromHex("71cba0039a020b7a524d7746b79bf6d1f8a521eb1a76715d00116ef1c0f56107"),
 		},
 		// Dynamic fee transaction with access list:
 		{
-			tx: &Transaction{
-				Type:                 DynamicFeeTxType,
-				From:                 AddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-				To:                   AddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-				Gas:                  func() *uint64 { v := uint64(100000); return &v }(),
-				Input:                []byte{1, 2, 3, 4},
-				Nonce:                new(big.Int).SetUint64(1),
-				Value:                new(big.Int).SetUint64(1000000000000000000),
-				Signature:            SignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-				ChainID:              new(big.Int).SetUint64(1),
-				MaxPriorityFeePerGas: new(big.Int).SetUint64(1000000000),
-				MaxFeePerGas:         new(big.Int).SetUint64(2000000000),
-				AccessList: AccessList{
+			tx: (&Transaction{}).
+				SetType(DynamicFeeTxType).
+				SetFrom(MustAddressFromHex("0x1111111111111111111111111111111111111111")).
+				SetTo(MustAddressFromHex("0x2222222222222222222222222222222222222222")).
+				SetGasLimit(100000).
+				SetInput([]byte{1, 2, 3, 4}).
+				SetNonce(1).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")).
+				SetChainID(1).
+				SetMaxPriorityFeePerGas(big.NewInt(1000000000)).
+				SetMaxFeePerGas(big.NewInt(2000000000)).
+				SetAccessList(AccessList{
 					AccessTuple{
 						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 						StorageKeys: []Hash{
@@ -227,38 +218,36 @@ func TestTransaction_SingingHash(t1 *testing.T) {
 							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555"),
 						},
 					},
-				},
-			},
+				}),
 			want: MustHashFromHex("a66ab756479bfd56f29658a8a199319094e84711e8a2de073ec136ef5179c4c9"),
 		},
 		// Dynamic fee transaction with no access list:
 		{
-			tx: &Transaction{
-				Type:                 DynamicFeeTxType,
-				From:                 AddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-				To:                   AddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-				Gas:                  func() *uint64 { v := uint64(100000); return &v }(),
-				Input:                []byte{1, 2, 3, 4},
-				Nonce:                new(big.Int).SetUint64(1),
-				Value:                new(big.Int).SetUint64(1000000000000000000),
-				Signature:            SignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
-				ChainID:              new(big.Int).SetUint64(1),
-				MaxPriorityFeePerGas: new(big.Int).SetUint64(1000000000),
-				MaxFeePerGas:         new(big.Int).SetUint64(2000000000),
-			},
+			tx: (&Transaction{}).
+				SetType(DynamicFeeTxType).
+				SetFrom(MustAddressFromHex("0x1111111111111111111111111111111111111111")).
+				SetTo(MustAddressFromHex("0x2222222222222222222222222222222222222222")).
+				SetGasLimit(100000).
+				SetInput([]byte{1, 2, 3, 4}).
+				SetNonce(1).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")).
+				SetChainID(1).
+				SetMaxPriorityFeePerGas(big.NewInt(1000000000)).
+				SetMaxFeePerGas(big.NewInt(2000000000)),
 			want: MustHashFromHex("c3266152306909bfe339f90fad4f73f958066860300b5a22b98ee6a1d629706c"),
 		},
 		// Example from EIP-155:
 		{
-			tx: &Transaction{
-				Type:     LegacyTxType,
-				ChainID:  big.NewInt(1),
-				To:       AddressFromHexPtr("0x3535353535353535353535353535353535353535"),
-				Gas:      func() *uint64 { v := uint64(21000); return &v }(),
-				GasPrice: func() *big.Int { v, _ := new(big.Int).SetString("20000000000", 10); return v }(),
-				Nonce:    func() *big.Int { v := big.NewInt(9); return v }(),
-				Value:    func() *big.Int { v, _ := new(big.Int).SetString("1000000000000000000", 10); return v }(),
-				Signature: MustSignatureFromBigIntPtr(
+			tx: (&Transaction{}).
+				SetType(LegacyTxType).
+				SetChainID(1).
+				SetTo(MustAddressFromHex("0x3535353535353535353535353535353535353535")).
+				SetGasLimit(21000).
+				SetGasPrice(big.NewInt(20000000000)).
+				SetNonce(9).
+				SetValue(big.NewInt(1000000000000000000)).
+				SetSignature(SignatureFromVRS(
 					func() *big.Int {
 						v, _ := new(big.Int).SetString("37", 10)
 						return v
@@ -271,8 +260,7 @@ func TestTransaction_SingingHash(t1 *testing.T) {
 						v, _ := new(big.Int).SetString("46948507304638947509940763649030358759909902576025900602547168820602576006531", 10)
 						return v
 					}(),
-				),
-			},
+				)),
 			want: MustHashFromHex("daf5a779ae972f972197303d7b574746c7ef83eadac0f2791ad23db92e4c8e53"),
 		},
 	}
@@ -288,7 +276,7 @@ func TestTransaction_SingingHash(t1 *testing.T) {
 func equalTx(t *testing.T, expected, got *Transaction) {
 	assert.Equal(t, expected.Type, got.Type)
 	assert.Equal(t, expected.To, got.To)
-	assert.Equal(t, expected.Gas, got.Gas)
+	assert.Equal(t, expected.GasLimit, got.GasLimit)
 	assert.Equal(t, expected.GasPrice, got.GasPrice)
 	assert.Equal(t, expected.Input, got.Input)
 	assert.Equal(t, expected.Nonce, got.Nonce)

@@ -2,7 +2,6 @@ package types
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -261,6 +260,56 @@ func MustHashFromBytesPtr(b []byte) *Hash {
 	return &h
 }
 
+// HashFromBigInt converts a big.Int to a Hash type.
+// Negative numbers are represented as two's complement.
+func HashFromBigInt(i *big.Int) (Hash, error) {
+	var b []byte
+	if i.Sign() >= 0 {
+		b = i.Bytes()
+	} else {
+		m := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), uint(HashLength*8)), big.NewInt(1))
+		x := new(big.Int).Set(i).And(i, m)
+		b = x.Bytes()
+		if len(b) != HashLength || b[0]&0x80 == 0 {
+			return Hash{}, fmt.Errorf("number too large to convert to hash")
+		}
+	}
+	if len(b) > HashLength {
+		return Hash{}, fmt.Errorf("number too large to convert to hash")
+	}
+	return HashFromBytes(b)
+}
+
+// HashFromBigIntPtr converts a big.Int to a *Hash type.
+// Negative numbers are represented as two's complement.
+// It returns nil if the hash is invalid.
+func HashFromBigIntPtr(i *big.Int) *Hash {
+	h, err := HashFromBigInt(i)
+	if err != nil {
+		return nil
+	}
+	return &h
+}
+
+// MustHashFromBigInt converts a big.Int to a Hash type.
+// Negative numbers are represented as two's complement.
+// It panics if the hash is invalid.
+func MustHashFromBigInt(i *big.Int) Hash {
+	h, err := HashFromBigInt(i)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+// MustHashFromBigIntPtr converts a big.Int to a *Hash type.
+// Negative numbers are represented as two's complement.
+// It panics if the hash is invalid.
+func MustHashFromBigIntPtr(i *big.Int) *Hash {
+	h := MustHashFromBigInt(i)
+	return &h
+}
+
 // Bytes returns hash as a byte slice.
 func (t Hash) Bytes() []byte {
 	return t[:]
@@ -491,60 +540,62 @@ func (t *BlockNumber) UnmarshalText(input []byte) error {
 // Signature type:
 //
 
-// SignatureLength is the expected length of the Signature.
-const SignatureLength = 65
-
-// Signature represents the 65 byte signature.
-type Signature [SignatureLength]byte
+// Signature represents the transaction signature.
+type Signature struct {
+	V *big.Int
+	R *big.Int
+	S *big.Int
+}
 
 // SignatureFromHex parses a hex string into a Signature.
 func SignatureFromHex(h string) (Signature, error) {
-	var s Signature
-	err := s.UnmarshalText([]byte(h))
+	b, err := hexutil.HexToBytes(h)
 	if err != nil {
-		return s, err
+		return Signature{}, err
 	}
-	return s, nil
+	return SignatureFromBytes(b)
 }
 
 // SignatureFromHexPtr parses a hex string into a *Signature.
 // It returns nil if the string is not a valid signature.
 func SignatureFromHexPtr(h string) *Signature {
-	s, err := SignatureFromHex(h)
+	sig, err := SignatureFromHex(h)
 	if err != nil {
 		return nil
 	}
-	return &s
+	return &sig
 }
 
 // MustSignatureFromHex parses a hex string into a Signature.
 // It panics if the string is not a valid signature.
 func MustSignatureFromHex(h string) Signature {
-	s, err := SignatureFromHex(h)
+	sig, err := SignatureFromHex(h)
 	if err != nil {
 		panic(err)
 	}
-	return s
+	return sig
 }
 
 // MustSignatureFromHexPtr parses a hex string into a *Signature.
 // It panics if the string is not a valid signature.
 func MustSignatureFromHexPtr(h string) *Signature {
-	s, err := SignatureFromHex(h)
+	sig, err := SignatureFromHex(h)
 	if err != nil {
 		panic(err)
 	}
-	return &s
+	return &sig
 }
 
 // SignatureFromBytes returns Signature from bytes.
 func SignatureFromBytes(b []byte) (Signature, error) {
-	var sig Signature
-	if len(b) != SignatureLength {
-		return sig, errors.New("invalid signature length")
+	if len(b) < 65 {
+		return Signature{}, fmt.Errorf("signature too short")
 	}
-	copy(sig[:], b)
-	return sig, nil
+	return Signature{
+		V: new(big.Int).SetBytes(b[64:]),
+		R: new(big.Int).SetBytes(b[:32]),
+		S: new(big.Int).SetBytes(b[32:64]),
+	}, nil
 }
 
 // SignatureFromBytesPtr returns *Signature from bytes.
@@ -577,124 +628,77 @@ func MustSignatureFromBytesPtr(b []byte) *Signature {
 	return &sig
 }
 
-// SignatureFromVRS returns Signature from VRS values.
-func SignatureFromVRS(v uint8, r [32]byte, s [32]byte) Signature {
-	sig, _ := SignatureFromBytes(append(append(append([]byte{}, r[:]...), s[:]...), v))
-	return sig
+// SignatureFromVRS returns Signature from V, R, S values.
+func SignatureFromVRS(v, r, s *big.Int) Signature {
+	return Signature{
+		V: v,
+		R: r,
+		S: s,
+	}
 }
 
-// SignatureFromVRSPtr returns *Signature from VRS values.
-func SignatureFromVRSPtr(v uint8, r [32]byte, s [32]byte) *Signature {
+// SignatureFromVRSPtr returns *Signature from V, R, S values.
+func SignatureFromVRSPtr(v, r, s *big.Int) *Signature {
 	sig := SignatureFromVRS(v, r, s)
 	return &sig
 }
 
-func SignatureFromBigInt(v, r, s *big.Int) (Signature, error) {
-	var sig Signature
-	vb := v.Bytes()
-	rb := r.Bytes()
-	sb := s.Bytes()
-	if len(vb) > 1 || len(rb) > 32 || len(sb) > 32 {
-		return sig, fmt.Errorf("invalid signature")
-	}
-	copy(sig[64:65], vb)
-	copy(sig[32-len(rb):32], rb)
-	copy(sig[64-len(sb):64], sb)
-	return sig, nil
-}
-
-// SignatureFromBigIntPtr returns *Signature from big.Int values.
-func SignatureFromBigIntPtr(v, r, s *big.Int) (*Signature, error) {
-	sig, err := SignatureFromBigInt(v, r, s)
-	return &sig, err
-}
-
-// MustBigIntToSignature returns Signature from big.Int values.
-// It panics if the values are invalid.
-func MustBigIntToSignature(v, r, s *big.Int) Signature {
-	sig, err := SignatureFromBigInt(v, r, s)
-	if err != nil {
-		panic(err)
-	}
-	return sig
-}
-
-// MustSignatureFromBigIntPtr returns *Signature from big.Int values.
-// It panics if the values are invalid.
-func MustSignatureFromBigIntPtr(v, r, s *big.Int) *Signature {
-	sig := MustBigIntToSignature(v, r, s)
-	return &sig
-}
-
-// VRS returns the V, R, S values of the signature.
-func (s Signature) VRS() (sv uint8, sr [32]byte, ss [32]byte) {
-	copy(sr[:], s[:32])
-	copy(ss[:], s[32:64])
-	sv = s[64]
-	return
-}
-
-// V returns the V value of the signature.
-func (s Signature) V() uint8 {
-	return s[64]
-}
-
-// R returns the R value of the signature.
-func (s Signature) R() (r [32]byte) {
-	copy(r[:], s[:32])
-	return r
-}
-
-// S returns the S value of the signature.
-func (s Signature) S() (s2 [32]byte) {
-	copy(s2[:], s[32:64])
-	return s2
-}
-
-// BigV returns the V value of the signature as a big.Int.
-func (s Signature) BigV() *big.Int {
-	return big.NewInt(int64(s[64]))
-}
-
-// BigR returns the R value of the signature as a big.Int.
-func (s Signature) BigR() *big.Int {
-	return new(big.Int).SetBytes(s[:32])
-}
-
-// BigS returns the S value of the signature as a big.Int.
-func (s Signature) BigS() *big.Int {
-	return new(big.Int).SetBytes(s[32:64])
-}
-
 // Bytes returns the byte representation of the signature. .
 func (s Signature) Bytes() []byte {
-	return s[:]
+	return append(append(s.R.Bytes(), s.S.Bytes()...), s.V.Bytes()...)
 }
 
 // String returns the hex representation of the signature.
 func (s Signature) String() string {
-	return hexutil.BytesToHex(s[:])
+	return hexutil.BytesToHex(s.Bytes())
 }
 
 // IsZero returns true if the signature is zero.
 func (s Signature) IsZero() bool {
-	return s == Signature{}
+	if s.V != nil && s.V.Sign() != 0 {
+		return false
+	}
+	if s.R != nil && s.R.Sign() != 0 {
+		return false
+	}
+	if s.S != nil && s.S.Sign() != 0 {
+		return false
+	}
+	return true
 }
 
 func (s Signature) MarshalJSON() ([]byte, error) {
-	return bytesMarshalJSON(s[:]), nil
+	return bytesMarshalJSON(s.Bytes()), nil
 }
 
 func (s *Signature) UnmarshalJSON(input []byte) error {
-	return fixedBytesUnmarshalJSON(input, s[:])
+	var b []byte
+	if err := bytesUnmarshalJSON(input, &b); err != nil {
+		return err
+	}
+	sig, err := SignatureFromBytes(b)
+	if err != nil {
+		return err
+	}
+	*s = sig
+	return nil
 }
 
 func (s Signature) MarshalText() ([]byte, error) {
-	return bytesMarshalText(s[:]), nil
+	return bytesMarshalText(s.Bytes()), nil
 }
 
 func (s *Signature) UnmarshalText(input []byte) error {
-	return fixedBytesUnmarshalText(input, s[:])
+	var b []byte
+	if err := bytesUnmarshalText(input, &b); err != nil {
+		return err
+	}
+	sig, err := SignatureFromBytes(b)
+	if err != nil {
+		return err
+	}
+	*s = sig
+	return nil
 }
 
 //

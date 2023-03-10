@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/defiweb/go-eth/types"
 )
@@ -22,19 +23,19 @@ type RPC interface {
 	// GasPrice performs eth_gasPrice RPC call.
 	//
 	// It returns the current price per gas in wei.
-	GasPrice(ctx context.Context) (uint64, error)
+	GasPrice(ctx context.Context) (*big.Int, error)
 
 	// TODO: eth_accounts
 
 	// BlockNumber performs eth_blockNumber RPC call.
 	//
 	// It returns the current block number.
-	BlockNumber(ctx context.Context) (uint64, error)
+	BlockNumber(ctx context.Context) (*big.Int, error)
 
 	// GetBalance performs eth_getBalance RPC call.
 	//
 	// It returns the balance of the account of given address in wei.
-	GetBalance(ctx context.Context, address types.Address, block types.BlockNumber) (uint64, error)
+	GetBalance(ctx context.Context, address types.Address, block types.BlockNumber) (*big.Int, error)
 
 	// GetStorageAt performs eth_getStorageAt RPC call.
 	//
@@ -117,17 +118,17 @@ type RPC interface {
 	// GetTransactionByHash performs eth_getTransactionByHash RPC call.
 	//
 	// It returns the information about a transaction requested by transaction.
-	GetTransactionByHash(ctx context.Context, hash types.Hash) (*types.Transaction, error)
+	GetTransactionByHash(ctx context.Context, hash types.Hash) (*types.OnChainTransaction, error)
 
 	// GetTransactionByBlockHashAndIndex performs eth_getTransactionByBlockHashAndIndex RPC call.
 	//
 	// It returns the information about a transaction requested by transaction.
-	GetTransactionByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.Transaction, error)
+	GetTransactionByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.OnChainTransaction, error)
 
 	// GetTransactionByBlockNumberAndIndex performs eth_getTransactionByBlockNumberAndIndex RPC call.
 	//
 	// It returns the information about a transaction requested by transaction.
-	GetTransactionByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.Transaction, error)
+	GetTransactionByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.OnChainTransaction, error)
 
 	// GetTransactionReceipt performs eth_getTransactionReceipt RPC call.
 	//

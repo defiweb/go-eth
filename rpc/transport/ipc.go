@@ -24,7 +24,7 @@ type IPCOptions struct {
 	// Path is the path to the IPC socket.
 	Path string
 
-	// Timeout is the timeout for the websocket requests. Default is 60s.
+	// Timeout is the timeout for the IPC requests. Default is 60s.
 	Timout time.Duration
 
 	// ErrorCh is an optional channel used to report errors.

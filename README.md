@@ -192,18 +192,17 @@ func main() {
 	}
 
 	// Prepare a transaction.
-	tx := types.Transaction{
-		Type:                 types.DynamicFeeTxType,
-		To:                   types.MustAddressFromHexPtr("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
-		Input:                calldata,
-		Nonce:                big.NewInt(0),
-		ChainID:              big.NewInt(1),
-		MaxPriorityFeePerGas: big.NewInt(1 * 1e9),
-		MaxFeePerGas:         big.NewInt(20 * 1e9),
-	}
+	tx := (&types.Transaction{}).
+		SetType(types.DynamicFeeTxType).
+		SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).
+		SetInput(calldata).
+		SetNonce(0).
+		SetChainID(1).
+		SetMaxPriorityFeePerGas(big.NewInt(1 * 1e9)).
+		SetMaxFeePerGas(big.NewInt(20 * 1e9))
 
-	// Sign the transaction.
-	err = key.SignTransaction(&tx)
+	// SignHash the transaction.
+	err = key.SignTransaction(tx)
 	if err != nil {
 		panic(err)
 	}

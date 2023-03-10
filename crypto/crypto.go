@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
+	"math/big"
 
 	"github.com/btcsuite/btcd/btcec"
 
@@ -21,13 +22,15 @@ func PublicKeyToAddress(pub *ecdsa.PublicKey) (addr types.Address) {
 
 // Ecrecover recovers the Ethereum address from a signed hash.
 func Ecrecover(hash types.Hash, sig types.Signature) (types.Address, error) {
-	v := sig[types.SignatureLength-1]
-	copy(sig[1:], sig[:types.SignatureLength-1])
-	sig[0] = v
-	if v < 27 {
-		sig[0] += 27
+	if sig.V.BitLen() > 8 {
+		return types.ZeroAddress, fmt.Errorf("invalid signature V: %d", sig.V)
 	}
-	pub, _, err := btcec.RecoverCompact(s256, sig.Bytes(), hash.Bytes())
+	v := byte(sig.V.Uint64())
+	if v < 27 {
+		v += 27
+	}
+	b := append([]byte{v}, append(sig.R.Bytes(), sig.S.Bytes()...)...)
+	pub, _, err := btcec.RecoverCompact(s256, b, hash.Bytes())
 	if err != nil {
 		return types.ZeroAddress, err
 	}
@@ -41,14 +44,31 @@ func EcrecoverMessage(data []byte, sig types.Signature) (types.Address, error) {
 
 // EcrecoverTransaction recovers the Ethereum address from a signed transaction.
 func EcrecoverTransaction(tx *types.Transaction) (types.Address, error) {
-	d, err := tx.SigningHash(Keccak256)
-	if err != nil {
-		return types.ZeroAddress, err
-	}
 	if tx.Signature == nil {
 		return types.ZeroAddress, fmt.Errorf("signature is missing")
 	}
-	addr, err := Ecrecover(d, *tx.Signature)
+	sig := *tx.Signature
+	if tx.Type == types.LegacyTxType && tx.Signature.V.Cmp(big.NewInt(35)) >= 0 {
+		x := new(big.Int).Sub(sig.V, big.NewInt(35))
+
+		// Derive the chain ID from the signature.
+		chainID := new(big.Int).Div(x, big.NewInt(2))
+		if tx.ChainID != nil && *tx.ChainID != chainID.Uint64() {
+			return types.ZeroAddress, fmt.Errorf("invalid chain ID: %d", chainID)
+		}
+
+		// For legacy transactions with specified CHAIN_ID, the signature V is recalculated as follows:
+		// V = CHAIN_ID * 2 + 35 + (V - 27)
+		//
+		// Because V is always 27 or 28, we can use following formula to derive the original V:
+		// V = (V - 35) % 2 + 27
+		sig.V = new(big.Int).Add(new(big.Int).Mod(x, big.NewInt(2)), big.NewInt(27))
+	}
+	hash, err := tx.SigningHash(Keccak256)
+	if err != nil {
+		return types.ZeroAddress, err
+	}
+	addr, err := Ecrecover(hash, sig)
 	if err != nil {
 		return types.ZeroAddress, err
 	}
@@ -61,7 +81,7 @@ func SignHash(key *ecdsa.PrivateKey, hash types.Hash) (types.Signature, error) {
 	if err != nil {
 		return types.Signature{}, err
 	}
-	v := sig[0] - 27
+	v := sig[0]
 	copy(sig, sig[1:])
 	sig[64] = v
 	return types.MustSignatureFromBytes(sig), nil
@@ -70,6 +90,35 @@ func SignHash(key *ecdsa.PrivateKey, hash types.Hash) (types.Signature, error) {
 // SignMessage signs the given message with the given key.
 func SignMessage(key *ecdsa.PrivateKey, data []byte) (types.Signature, error) {
 	return SignHash(key, Keccak256(FormatMessage(data)))
+}
+
+// SignTransaction signs the given transaction with the given key.
+func SignTransaction(key *ecdsa.PrivateKey, tx *types.Transaction) error {
+	from := PublicKeyToAddress(&key.PublicKey)
+	if tx.From != nil && *tx.From != from {
+		return fmt.Errorf("invalid signer address: %s", tx.From)
+	}
+	r, err := tx.SigningHash(Keccak256)
+	if err != nil {
+		return err
+	}
+	s, err := SignHash(key, r)
+	if err != nil {
+		return err
+	}
+	sv, sr, ss := s.V, s.R, s.S
+	if tx.Type == types.LegacyTxType {
+		if tx.ChainID != nil {
+			sv = new(big.Int).Sub(sv, big.NewInt(27))
+			sv = new(big.Int).Add(sv, big.NewInt(35))
+			sv = new(big.Int).Add(sv, new(big.Int).SetUint64(*tx.ChainID*2))
+		}
+	} else {
+		sv = new(big.Int).Sub(sv, big.NewInt(27))
+	}
+	tx.From = &from
+	tx.Signature = types.SignatureFromVRSPtr(sv, sr, ss)
+	return nil
 }
 
 // FormatMessage adds the Ethereum message prefix to the given data.
