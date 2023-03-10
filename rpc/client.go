@@ -199,3 +199,11 @@ func (c *Client) GetLogs(ctx context.Context, query types.FilterLogsQuery) ([]ty
 	}
 	return res, nil
 }
+
+func (c *Client) MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error) {
+	var res types.Number
+	if err := c.transport.Call(ctx, &res, "eth_maxPriorityFeePerGas"); err != nil {
+		return nil, err
+	}
+	return res.Big(), nil
+}

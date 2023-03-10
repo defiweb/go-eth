@@ -1160,6 +1160,38 @@ func TestClient_GetLogs(t *testing.T) {
 	assert.Equal(t, false, logs[0].Removed)
 }
 
+const mockMaxPriorityFeePerGasRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_maxPriorityFeePerGas",
+	  "params": []
+	}
+`
+
+const mockMaxPriorityFeePerGasResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1"
+	}
+`
+
+func TestClient_MaxPriorityFeePerGas(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := NewClient(httpMock)
+
+	httpMock.Response = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockMaxPriorityFeePerGasResponse)),
+	}
+
+	gasPrice, err := client.MaxPriorityFeePerGas(context.Background())
+	require.NoError(t, err)
+	assert.JSONEq(t, mockMaxPriorityFeePerGasRequest, readBody(httpMock.Request))
+	assert.Equal(t, hexToBigInt("0x1"), gasPrice)
+}
+
 func readBody(r *http.Request) string {
 	body, _ := io.ReadAll(r.Body)
 	return string(body)

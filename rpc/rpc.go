@@ -156,4 +156,6 @@ type RPC interface {
 	// TODO: eth_getWork
 	// TODO: eth_submitWork
 	// TODO: eth_submitHashrate
+
+	MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error)
 }
