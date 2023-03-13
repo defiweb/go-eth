@@ -138,7 +138,7 @@ type jsonCall struct {
 	AccessList           AccessList `json:"accessList,omitempty"`
 }
 
-// TransactionType is the type of a transaction.
+// TransactionType is the type of transaction.
 type TransactionType uint64
 
 // Transaction types.
@@ -205,6 +205,7 @@ func (t *Transaction) SetMaxFeePerGas(maxFeePerGas *big.Int) *Transaction {
 	t.MaxFeePerGas = maxFeePerGas
 	return t
 }
+
 func (t *Transaction) SetType(transactionType TransactionType) *Transaction {
 	t.Type = transactionType
 	return t

@@ -20,8 +20,8 @@ func ECPublicKeyToAddress(pub *ecdsa.PublicKey) (addr types.Address) {
 	return
 }
 
-// ECSignHash signs the given hash with the given private key.
-func ECSignHash(key *ecdsa.PrivateKey, hash types.Hash) (*types.Signature, error) {
+// ecSignHash signs the given hash with the given private key.
+func ecSignHash(key *ecdsa.PrivateKey, hash types.Hash) (*types.Signature, error) {
 	if key == nil {
 		return nil, fmt.Errorf("missing private key")
 	}
@@ -35,16 +35,16 @@ func ECSignHash(key *ecdsa.PrivateKey, hash types.Hash) (*types.Signature, error
 	return types.SignatureFromBytesPtr(sig), nil
 }
 
-// ECSignMessage signs the given message with the given private key.
-func ECSignMessage(key *ecdsa.PrivateKey, data []byte) (*types.Signature, error) {
+// ecSignMessage signs the given message with the given private key.
+func ecSignMessage(key *ecdsa.PrivateKey, data []byte) (*types.Signature, error) {
 	if key == nil {
 		return nil, fmt.Errorf("missing private key")
 	}
-	return ECSignHash(key, Keccak256(AddMessagePrefix(data)))
+	return ecSignHash(key, Keccak256(AddMessagePrefix(data)))
 }
 
-// ECSignTransaction signs the given transaction with the given private key.
-func ECSignTransaction(key *ecdsa.PrivateKey, tx *types.Transaction) error {
+// ecSignTransaction signs the given transaction with the given private key.
+func ecSignTransaction(key *ecdsa.PrivateKey, tx *types.Transaction) error {
 	if key == nil {
 		return fmt.Errorf("missing private key")
 	}
@@ -56,7 +56,7 @@ func ECSignTransaction(key *ecdsa.PrivateKey, tx *types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	sig, err := ECSignHash(key, hash)
+	sig, err := ecSignHash(key, hash)
 	if err != nil {
 		return err
 	}
@@ -80,8 +80,8 @@ func ECSignTransaction(key *ecdsa.PrivateKey, tx *types.Transaction) error {
 	return nil
 }
 
-// ECRecoverHash recovers the Ethereum address from the given hash and signature.
-func ECRecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error) {
+// ecRecoverHash recovers the Ethereum address from the given hash and signature.
+func ecRecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error) {
 	if sig.V.BitLen() > 8 {
 		return nil, fmt.Errorf("invalid signature V: %d", sig.V)
 	}
@@ -98,13 +98,13 @@ func ECRecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error)
 	return &addr, nil
 }
 
-// ECRecoverMessage recovers the Ethereum address from the given message and signature.
-func ECRecoverMessage(data []byte, sig types.Signature) (*types.Address, error) {
-	return ECRecoverHash(Keccak256(AddMessagePrefix(data)), sig)
+// ecRecoverMessage recovers the Ethereum address from the given message and signature.
+func ecRecoverMessage(data []byte, sig types.Signature) (*types.Address, error) {
+	return ecRecoverHash(Keccak256(AddMessagePrefix(data)), sig)
 }
 
-// ECRecoverTransaction recovers the Ethereum address from the given transaction.
-func ECRecoverTransaction(tx *types.Transaction) (*types.Address, error) {
+// ecRecoverTransaction recovers the Ethereum address from the given transaction.
+func ecRecoverTransaction(tx *types.Transaction) (*types.Address, error) {
 	if tx.Signature == nil {
 		return nil, fmt.Errorf("signature is missing")
 	}
@@ -120,7 +120,7 @@ func ECRecoverTransaction(tx *types.Transaction) (*types.Address, error) {
 				return nil, fmt.Errorf("invalid chain ID: %d", chainID)
 			}
 
-			// Derive the recovery ID from the signature.
+			// Derive the recovery byte from the signature.
 			sig.V = new(big.Int).Add(new(big.Int).Mod(x, big.NewInt(2)), big.NewInt(27))
 		}
 	case types.AccessListTxType:
@@ -134,5 +134,5 @@ func ECRecoverTransaction(tx *types.Transaction) (*types.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ECRecoverHash(hash, sig)
+	return ecRecoverHash(hash, sig)
 }

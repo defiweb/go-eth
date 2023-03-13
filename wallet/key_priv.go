@@ -17,6 +17,8 @@ type PrivateKey struct {
 	private *ecdsa.PrivateKey
 	public  *ecdsa.PublicKey
 	address types.Address
+	sign    crypto.Signer
+	recover crypto.Recoverer
 }
 
 // NewKeyFromECDSA creates a new private key from an ecdsa.PrivateKey.
@@ -25,6 +27,8 @@ func NewKeyFromECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
 		private: prv,
 		public:  &prv.PublicKey,
 		address: crypto.ECPublicKeyToAddress(&prv.PublicKey),
+		sign:    crypto.ECSigner(prv),
+		recover: crypto.ECRecoverer,
 	}
 }
 
@@ -69,22 +73,22 @@ func (k *PrivateKey) Address() types.Address {
 
 // SignHash implements the Key interface.
 func (k *PrivateKey) SignHash(hash types.Hash) (*types.Signature, error) {
-	return crypto.ECSignHash(k.private, hash)
+	return k.sign.SignHash(hash)
 }
 
 // SignMessage implements the Key interface.
 func (k *PrivateKey) SignMessage(data []byte) (*types.Signature, error) {
-	return crypto.ECSignMessage(k.private, data)
+	return k.sign.SignMessage(data)
 }
 
 // SignTransaction implements the Key interface.
 func (k *PrivateKey) SignTransaction(tx *types.Transaction) error {
-	return crypto.ECSignTransaction(k.private, tx)
+	return k.sign.SignTransaction(tx)
 }
 
 // VerifyHash implements the Key interface.
 func (k *PrivateKey) VerifyHash(hash types.Hash, sig types.Signature) bool {
-	addr, err := crypto.ECRecoverHash(hash, sig)
+	addr, err := k.recover.RecoverHash(hash, sig)
 	if err != nil {
 		return false
 	}
@@ -93,7 +97,7 @@ func (k *PrivateKey) VerifyHash(hash types.Hash, sig types.Signature) bool {
 
 // VerifyMessage implements the Key interface.
 func (k *PrivateKey) VerifyMessage(data []byte, sig types.Signature) bool {
-	addr, err := crypto.ECRecoverMessage(data, sig)
+	addr, err := k.recover.RecoverMessage(data, sig)
 	if err != nil {
 		return false
 	}
