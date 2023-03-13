@@ -548,6 +548,7 @@ type Signature struct {
 }
 
 // SignatureFromHex parses a hex string into a Signature.
+// Hex representation of the signature is hex([R || S || V]).
 func SignatureFromHex(h string) (Signature, error) {
 	b, err := hexutil.HexToBytes(h)
 	if err != nil {
@@ -557,6 +558,7 @@ func SignatureFromHex(h string) (Signature, error) {
 }
 
 // SignatureFromHexPtr parses a hex string into a *Signature.
+// Hex representation of the signature is hex([R || S || V]).
 // It returns nil if the string is not a valid signature.
 func SignatureFromHexPtr(h string) *Signature {
 	sig, err := SignatureFromHex(h)
@@ -567,6 +569,7 @@ func SignatureFromHexPtr(h string) *Signature {
 }
 
 // MustSignatureFromHex parses a hex string into a Signature.
+// Hex representation of the signature is hex([R || S || V]).
 // It panics if the string is not a valid signature.
 func MustSignatureFromHex(h string) Signature {
 	sig, err := SignatureFromHex(h)
@@ -577,6 +580,7 @@ func MustSignatureFromHex(h string) Signature {
 }
 
 // MustSignatureFromHexPtr parses a hex string into a *Signature.
+// Hex representation of the signature is hex([R || S || V]).
 // It panics if the string is not a valid signature.
 func MustSignatureFromHexPtr(h string) *Signature {
 	sig, err := SignatureFromHex(h)
@@ -587,6 +591,7 @@ func MustSignatureFromHexPtr(h string) *Signature {
 }
 
 // SignatureFromBytes returns Signature from bytes.
+// Byte representation of the signature is [R || S || V].
 func SignatureFromBytes(b []byte) (Signature, error) {
 	if len(b) < 65 {
 		return Signature{}, fmt.Errorf("signature too short")
@@ -599,6 +604,7 @@ func SignatureFromBytes(b []byte) (Signature, error) {
 }
 
 // SignatureFromBytesPtr returns *Signature from bytes.
+// Byte representation of the signature is [R || S || V].
 // It returns nil if the length of the bytes is not 65.
 func SignatureFromBytesPtr(b []byte) *Signature {
 	sig, err := SignatureFromBytes(b)
@@ -609,6 +615,7 @@ func SignatureFromBytesPtr(b []byte) *Signature {
 }
 
 // MustSignatureFromBytes returns Signature from bytes.
+// Byte representation of the signature is [R || S || V].
 // It panics if the length of the bytes is not 65.
 func MustSignatureFromBytes(b []byte) Signature {
 	sig, err := SignatureFromBytes(b)
@@ -619,6 +626,7 @@ func MustSignatureFromBytes(b []byte) Signature {
 }
 
 // MustSignatureFromBytesPtr returns *Signature from bytes.
+// Byte representation of the signature is [R || S || V].
 // It panics if the length of the bytes is not 65.
 func MustSignatureFromBytesPtr(b []byte) *Signature {
 	sig, err := SignatureFromBytes(b)
@@ -643,12 +651,32 @@ func SignatureFromVRSPtr(v, r, s *big.Int) *Signature {
 	return &sig
 }
 
-// Bytes returns the byte representation of the signature. .
+// Bytes returns the byte representation of the signature.
+// The byte representation is [R || S || V].
 func (s Signature) Bytes() []byte {
-	return append(append(s.R.Bytes(), s.S.Bytes()...), s.V.Bytes()...)
+	sv, sr, ss := s.V, s.R, s.S
+	if sv == nil {
+		sv = new(big.Int)
+	}
+	if sr == nil {
+		sr = new(big.Int)
+	}
+	if ss == nil {
+		ss = new(big.Int)
+	}
+	vb := sv.Bytes()
+	if len(vb) == 0 {
+		vb = []byte{0}
+	}
+	b := make([]byte, 64+len(vb))
+	sr.FillBytes(b[:32])
+	ss.FillBytes(b[32:64])
+	copy(b[64:], vb)
+	return b
 }
 
 // String returns the hex representation of the signature.
+// The hex representation is hex([R || S || V]).
 func (s Signature) String() string {
 	return hexutil.BytesToHex(s.Bytes())
 }
