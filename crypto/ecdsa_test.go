@@ -16,7 +16,7 @@ import (
 
 func TestEthereumSigner_SignHash(t *testing.T) {
 	key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
-	signature, err := ecSignHash((*ecdsa.PrivateKey)(key), types.MustHashFromBytes(bytes.Repeat([]byte{0x02}, 32)))
+	signature, err := ecSignHash((*ecdsa.PrivateKey)(key), types.MustHashFromBytes(bytes.Repeat([]byte{0x02}, 32), types.PadNone))
 
 	require.NoError(t, err)
 	require.NotNil(t, signature)
@@ -107,7 +107,7 @@ func TestEthereumSigner_SignTransaction(t *testing.T) {
 
 func TestEthereumSigner_RecoverHash(t *testing.T) {
 	addr, err := ecRecoverHash(
-		types.MustHashFromBytes(bytes.Repeat([]byte{0x02}, 32)),
+		types.MustHashFromBytes(bytes.Repeat([]byte{0x02}, 32), types.PadNone),
 		types.SignatureFromVRS(
 			hexutil.MustHexToBigInt("1b"),
 			hexutil.MustHexToBigInt("97ef30233ead25d10f7bb2bf9eaf571a16f2deb33a75f20819284f0cb8ff3cc1"),

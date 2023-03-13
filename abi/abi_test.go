@@ -1127,8 +1127,8 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Hash<=>bytes",
 			goTyp:   new(types.Hash),
 			solTyp:  "bytes",
-			src:     types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
-			wantDst: types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			src:     types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234", types.PadNone),
+			wantDst: types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234", types.PadNone),
 		},
 
 		// types.Hash <=> bytesX
@@ -1136,14 +1136,14 @@ func Test_mappingRules(t *testing.T) {
 			name:    "types.Hash<=>bytesX",
 			goTyp:   new(types.Hash),
 			solTyp:  "bytes32",
-			src:     types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
-			wantDst: types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			src:     types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234", types.PadNone),
+			wantDst: types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234", types.PadNone),
 		},
 		{
 			name:       "types.Hash<=>bytesX#too-short",
 			goTyp:      new(types.Hash),
 			solTyp:     "bytes20",
-			src:        types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234"),
+			src:        types.MustHashFromHex("0x1234567890123456789012345678901234567890123456789012345678901234", types.PadNone),
 			wantEncErr: true,
 		},
 

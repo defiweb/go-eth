@@ -757,7 +757,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Hash->string",
 			val:     new(StringValue),
-			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00", types.PadNone),
 			wantErr: true,
 		},
 		{
@@ -890,7 +890,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name: "types.Hash->bytes32",
 			val:  make(FixedBytesValue, 32),
-			data: types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data: types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00", types.PadNone),
 			want: Words{
 				padR("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
 			},
@@ -1023,7 +1023,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Hash->uint256",
 			val:     &UintValue{Size: 256},
-			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00", types.PadNone),
 			wantErr: true,
 		},
 		{
@@ -1154,7 +1154,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Hash->int256",
 			val:     &IntValue{Size: 256},
-			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00", types.PadNone),
 			wantErr: true,
 		},
 		{
@@ -1264,7 +1264,7 @@ func TestMapFrom(t *testing.T) {
 		{
 			name:    "types.Hash->address",
 			val:     new(AddressValue),
-			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00"),
+			data:    types.MustHashFromHex("0102030405060708090a0b0c0d0e0f10111213145566778899aabbccddeeff00", types.PadNone),
 			wantErr: true,
 		},
 		{
@@ -1492,7 +1492,7 @@ func TestMapTo(t *testing.T) {
 				v := FixedBytesValue(hexutil.MustHexToBytes("0x0102030405060708090a0b0c0d0e0f1011121314112233445566778899aabbcc"))
 				return &v
 			}(),
-			want: types.MustHashFromHexPtr("0x0102030405060708090a0b0c0d0e0f1011121314112233445566778899aabbcc"),
+			want: types.MustHashFromHexPtr("0x0102030405060708090a0b0c0d0e0f1011121314112233445566778899aabbcc", types.PadNone),
 		},
 		{
 			name: "bytes32->types.Number",

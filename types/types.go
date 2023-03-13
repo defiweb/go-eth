@@ -15,6 +15,15 @@ import (
 // HashFunc returns the hash for the given input.
 type HashFunc func(data ...[]byte) Hash
 
+// Pad is a padding type.
+type Pad uint8
+
+const (
+	PadLeft  Pad = 0 // PadLeft pads the input with zeros on the left.
+	PadRight Pad = 1 // PadRight pads the input with zeros on the right.
+	PadNone  Pad = 2 // PadNone does not allow padding.
+)
+
 //
 // Address type:
 //
@@ -182,16 +191,20 @@ type Hash [HashLength]byte
 var ZeroHash = Hash{}
 
 // HashFromHex parses a hash in hex format and returns a Hash type.
-func HashFromHex(h string) (Hash, error) {
-	var hash Hash
-	err := hash.UnmarshalText([]byte(h))
-	return hash, err
+// If hash is longer than 32 bytes, it returns an error.
+func HashFromHex(h string, pad Pad) (Hash, error) {
+	b, err := hexutil.HexToBytes(h)
+	if err != nil {
+		return ZeroHash, err
+	}
+	return HashFromBytes(b, pad)
 }
 
 // HashFromHexPtr parses a hash in hex format and returns a *Hash type.
+// If hash is longer than 32 bytes, it returns an error.
 // It returns nil if the hash is invalid.
-func HashFromHexPtr(h string) *Hash {
-	hash, err := HashFromHex(h)
+func HashFromHexPtr(h string, pad Pad) *Hash {
+	hash, err := HashFromHex(h, pad)
 	if err != nil {
 		return nil
 	}
@@ -199,9 +212,10 @@ func HashFromHexPtr(h string) *Hash {
 }
 
 // MustHashFromHex parses a hash in hex format and returns a Hash type.
+// If hash is longer than 32 bytes, it returns an error.
 // It panics if the hash is invalid.
-func MustHashFromHex(h string) Hash {
-	hash, err := HashFromHex(h)
+func MustHashFromHex(h string, pad Pad) Hash {
+	hash, err := HashFromHex(h, pad)
 	if err != nil {
 		panic(err)
 	}
@@ -209,30 +223,39 @@ func MustHashFromHex(h string) Hash {
 }
 
 // MustHashFromHexPtr parses a hash in hex format and returns a *Hash type.
+// If hash is longer than 32 bytes, it returns an error.
 // It panics if the hash is invalid.
-func MustHashFromHexPtr(h string) *Hash {
-	hash := MustHashFromHex(h)
+func MustHashFromHexPtr(h string, pad Pad) *Hash {
+	hash := MustHashFromHex(h, pad)
 	return &hash
 }
 
 // HashFromBytes converts a byte slice to a Hash type.
-// If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
 // If bytes is longer than 32 bytes, it returns an error.
-func HashFromBytes(b []byte) (Hash, error) {
+func HashFromBytes(b []byte, pad Pad) (Hash, error) {
 	var h Hash
-	if len(b) > len(h) {
-		return h, fmt.Errorf("invalid hash length %d", len(b))
+	if len(b) > HashLength {
+		return ZeroHash, fmt.Errorf("hash too long %d", len(b))
 	}
-	copy(h[HashLength-len(b):], b)
+	switch pad {
+	case PadLeft:
+		copy(h[HashLength-len(b):], b)
+	case PadRight:
+		copy(h[:], b)
+	case PadNone:
+		if len(b) != HashLength {
+			return ZeroHash, fmt.Errorf("invalid hash length %d", len(b))
+		}
+		copy(h[:], b)
+	}
 	return h, nil
 }
 
 // HashFromBytesPtr converts a byte slice to a *Hash type.
+// If bytes is longer than 32 bytes, it returns an error.
 // It returns nil if the hash is invalid.
-// If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
-// If bytes is longer than 32 bytes, it returns nil.
-func HashFromBytesPtr(b []byte) *Hash {
-	h, err := HashFromBytes(b)
+func HashFromBytesPtr(b []byte, pad Pad) *Hash {
+	h, err := HashFromBytes(b, pad)
 	if err != nil {
 		return nil
 	}
@@ -240,11 +263,10 @@ func HashFromBytesPtr(b []byte) *Hash {
 }
 
 // MustHashFromBytes converts a byte slice to a Hash type.
+// If bytes is longer than 32 bytes, it returns an error.
 // It panics if the hash is invalid.
-// If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
-// If bytes is longer than 32 bytes, it panics.
-func MustHashFromBytes(b []byte) Hash {
-	h, err := HashFromBytes(b)
+func MustHashFromBytes(b []byte, pad Pad) Hash {
+	h, err := HashFromBytes(b, pad)
 	if err != nil {
 		panic(err)
 	}
@@ -252,11 +274,10 @@ func MustHashFromBytes(b []byte) Hash {
 }
 
 // MustHashFromBytesPtr converts a byte slice to a *Hash type.
+// If bytes is longer than 32 bytes, it returns an error.
 // It panics if the hash is invalid.
-// If bytes is shorter than 32 bytes, it left-pads Hash with zeros.
-// If bytes is longer than 32 bytes, it panics.
-func MustHashFromBytesPtr(b []byte) *Hash {
-	h := MustHashFromBytes(b)
+func MustHashFromBytesPtr(b []byte, pad Pad) *Hash {
+	h := MustHashFromBytes(b, pad)
 	return &h
 }
 
@@ -277,7 +298,7 @@ func HashFromBigInt(i *big.Int) (Hash, error) {
 	if len(b) > HashLength {
 		return Hash{}, fmt.Errorf("number too large to convert to hash")
 	}
-	return HashFromBytes(b)
+	return HashFromBytes(b, PadLeft)
 }
 
 // HashFromBigIntPtr converts a big.Int to a *Hash type.

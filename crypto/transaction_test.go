@@ -18,7 +18,7 @@ func Test_singingHash(t1 *testing.T) {
 		// Empty transaction:
 		{
 			tx:   &types.Transaction{},
-			want: types.MustHashFromHex("5460be86ce1e4ca0564b5761c6e7070d9f054b671f5404268335000806423d75"),
+			want: types.MustHashFromHex("5460be86ce1e4ca0564b5761c6e7070d9f054b671f5404268335000806423d75", types.PadNone),
 		},
 		// Legacy transaction:
 		{
@@ -33,7 +33,7 @@ func Test_singingHash(t1 *testing.T) {
 				SetValue(big.NewInt(1000000000000000000)).
 				SetSignature(types.MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f")).
 				SetChainID(1),
-			want: types.MustHashFromHex("1efbe489013ac8c0dad2202f68ac12657471df8d80f70e0683ec07b0564a32ca"),
+			want: types.MustHashFromHex("1efbe489013ac8c0dad2202f68ac12657471df8d80f70e0683ec07b0564a32ca", types.PadNone),
 		},
 		// Access list transaction:
 		{
@@ -52,12 +52,12 @@ func Test_singingHash(t1 *testing.T) {
 					types.AccessTuple{
 						Address: types.MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 						StorageKeys: []types.Hash{
-							types.MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444"),
-							types.MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555"),
+							types.MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", types.PadNone),
+							types.MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", types.PadNone),
 						},
 					},
 				}),
-			want: types.MustHashFromHex("71cba0039a020b7a524d7746b79bf6d1f8a521eb1a76715d00116ef1c0f56107"),
+			want: types.MustHashFromHex("71cba0039a020b7a524d7746b79bf6d1f8a521eb1a76715d00116ef1c0f56107", types.PadNone),
 		},
 		// Dynamic fee transaction with access list:
 		{
@@ -77,12 +77,12 @@ func Test_singingHash(t1 *testing.T) {
 					types.AccessTuple{
 						Address: types.MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 						StorageKeys: []types.Hash{
-							types.MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444"),
-							types.MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555"),
+							types.MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", types.PadNone),
+							types.MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", types.PadNone),
 						},
 					},
 				}),
-			want: types.MustHashFromHex("a66ab756479bfd56f29658a8a199319094e84711e8a2de073ec136ef5179c4c9"),
+			want: types.MustHashFromHex("a66ab756479bfd56f29658a8a199319094e84711e8a2de073ec136ef5179c4c9", types.PadNone),
 		},
 		// Dynamic fee transaction with no access list:
 		{
@@ -98,7 +98,7 @@ func Test_singingHash(t1 *testing.T) {
 				SetChainID(1).
 				SetMaxPriorityFeePerGas(big.NewInt(1000000000)).
 				SetMaxFeePerGas(big.NewInt(2000000000)),
-			want: types.MustHashFromHex("c3266152306909bfe339f90fad4f73f958066860300b5a22b98ee6a1d629706c"),
+			want: types.MustHashFromHex("c3266152306909bfe339f90fad4f73f958066860300b5a22b98ee6a1d629706c", types.PadNone),
 		},
 		// Example from EIP-155:
 		{
@@ -124,7 +124,7 @@ func Test_singingHash(t1 *testing.T) {
 						return v
 					}(),
 				)),
-			want: types.MustHashFromHex("daf5a779ae972f972197303d7b574746c7ef83eadac0f2791ad23db92e4c8e53"),
+			want: types.MustHashFromHex("daf5a779ae972f972197303d7b574746c7ef83eadac0f2791ad23db92e4c8e53", types.PadNone),
 		},
 	}
 	for n, tt := range tests {
