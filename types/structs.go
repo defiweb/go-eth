@@ -3,7 +3,6 @@ package types
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -110,8 +109,6 @@ func (c *Call) UnmarshalJSON(data []byte) error {
 		gas := call.GasLimit.Big().Uint64()
 		c.GasLimit = &gas
 	}
-	c.Input = call.Data
-	c.AccessList = call.AccessList
 	if call.GasPrice != nil {
 		c.GasPrice = call.GasPrice.Big()
 	}
@@ -124,6 +121,8 @@ func (c *Call) UnmarshalJSON(data []byte) error {
 	if call.Value != nil {
 		c.Value = call.Value.Big()
 	}
+	c.Input = call.Data
+	c.AccessList = call.AccessList
 	return nil
 }
 
@@ -233,21 +232,28 @@ func (t Transaction) Raw() ([]byte, error) {
 
 func (t Transaction) MarshalJSON() ([]byte, error) {
 	transaction := &jsonTransaction{}
-	transaction.From = t.From
 	transaction.To = t.To
-	transaction.Input = t.Input
+	transaction.From = t.From
 	if t.GasLimit != nil {
 		transaction.GasLimit = NumberFromUint64Ptr(*t.GasLimit)
 	}
 	if t.GasPrice != nil {
 		transaction.GasPrice = NumberFromBigIntPtr(t.GasPrice)
 	}
+	if t.MaxFeePerGas != nil {
+		transaction.MaxFeePerGas = NumberFromBigIntPtr(t.MaxFeePerGas)
+	}
+	if t.MaxPriorityFeePerGas != nil {
+		transaction.MaxPriorityFeePerGas = NumberFromBigIntPtr(t.MaxPriorityFeePerGas)
+	}
+	transaction.Input = t.Input
 	if t.Nonce != nil {
 		transaction.Nonce = NumberFromUint64Ptr(*t.Nonce)
 	}
 	if t.Value != nil {
 		transaction.Value = NumberFromBigIntPtr(t.Value)
 	}
+	transaction.AccessList = t.AccessList
 	if t.Signature != nil {
 		transaction.V = NumberFromBigIntPtr(t.Signature.V)
 		transaction.R = NumberFromBigIntPtr(t.Signature.R)
@@ -261,14 +267,20 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, transaction); err != nil {
 		return err
 	}
-	t.From = transaction.From
 	t.To = transaction.To
+	t.From = transaction.From
 	if transaction.GasLimit != nil {
 		gas := transaction.GasLimit.Big().Uint64()
 		t.GasLimit = &gas
 	}
 	if transaction.GasPrice != nil {
 		t.GasPrice = transaction.GasPrice.Big()
+	}
+	if transaction.MaxFeePerGas != nil {
+		t.MaxFeePerGas = transaction.MaxFeePerGas.Big()
+	}
+	if transaction.MaxPriorityFeePerGas != nil {
+		t.MaxPriorityFeePerGas = transaction.MaxPriorityFeePerGas.Big()
 	}
 	t.Input = transaction.Input
 	if transaction.Nonce != nil {
@@ -278,6 +290,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	if transaction.Value != nil {
 		t.Value = transaction.Value.Big()
 	}
+	t.AccessList = transaction.AccessList
 	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
 		t.Signature = SignatureFromVRSPtr(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
 	}
@@ -285,168 +298,202 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 }
 
 func (t Transaction) EncodeRLP() ([]byte, error) {
-	l := rlp.NewList()
-	if t.Type != LegacyTxType {
-		if t.ChainID != nil {
-			l.Append(rlp.NewUint(*t.ChainID))
-		} else {
-			l.Append(rlp.NewUint(1))
-		}
+	var (
+		chainID              = uint64(1)
+		nonce                = uint64(0)
+		gasPrice             = big.NewInt(0)
+		gasLimit             = uint64(0)
+		maxPriorityFeePerGas = big.NewInt(0)
+		maxFeePerGas         = big.NewInt(0)
+		to                   = ([]byte)(nil)
+		value                = big.NewInt(0)
+		accessList           = (AccessList)(nil)
+		v                    = big.NewInt(0)
+		r                    = big.NewInt(0)
+		s                    = big.NewInt(0)
+	)
+	if t.ChainID != nil {
+		chainID = *t.ChainID
 	}
 	if t.Nonce != nil {
-		l.Append(rlp.NewUint(*t.Nonce))
-	} else {
-		l.Append(rlp.NewUint(0))
+		nonce = *t.Nonce
 	}
-	if t.Type == DynamicFeeTxType {
-		l.Append(rlp.NewBigInt(t.MaxPriorityFeePerGas))
-		l.Append(rlp.NewBigInt(t.MaxFeePerGas))
-	} else {
-		l.Append(rlp.NewBigInt(t.GasPrice))
+	if t.GasPrice != nil {
+		gasPrice = t.GasPrice
 	}
 	if t.GasLimit != nil {
-		l.Append(rlp.NewUint(*t.GasLimit))
-	} else {
-		l.Append(rlp.NewUint(0))
+		gasLimit = *t.GasLimit
+	}
+	if t.MaxPriorityFeePerGas != nil {
+		maxPriorityFeePerGas = t.MaxPriorityFeePerGas
+	}
+	if t.MaxFeePerGas != nil {
+		maxFeePerGas = t.MaxFeePerGas
 	}
 	if t.To != nil {
-		l.Append(t.To)
-	} else {
-		l.Append(rlp.NewBytes(nil))
+		to = t.To[:]
 	}
-	l.Append(rlp.NewBigInt(t.Value))
-	l.Append(rlp.NewBytes(t.Input))
-	if t.Type != LegacyTxType {
-		l.Append(&t.AccessList)
+	if t.Value != nil {
+		value = t.Value
+	}
+	if t.AccessList != nil {
+		accessList = t.AccessList
 	}
 	if t.Signature != nil {
-		l.Append(rlp.NewBigInt(t.Signature.V))
-		l.Append(rlp.NewBigInt(t.Signature.R))
-		l.Append(rlp.NewBigInt(t.Signature.S))
-	} else {
-		l.Append(rlp.NewBigInt(big.NewInt(0)))
-		l.Append(rlp.NewBigInt(big.NewInt(0)))
-		l.Append(rlp.NewBigInt(big.NewInt(0)))
+		v = t.Signature.V
+		r = t.Signature.R
+		s = t.Signature.S
 	}
-	b, err := rlp.Encode(l)
-	if err != nil {
-		return nil, err
+	switch t.Type {
+	case LegacyTxType:
+		return rlp.NewList(
+			rlp.NewUint(nonce),
+			rlp.NewBigInt(gasPrice),
+			rlp.NewUint(gasLimit),
+			rlp.NewBytes(to),
+			rlp.NewBigInt(value),
+			rlp.NewBytes(t.Input),
+			rlp.NewBigInt(v),
+			rlp.NewBigInt(r),
+			rlp.NewBigInt(s),
+		).EncodeRLP()
+	case AccessListTxType:
+		bin, err := rlp.NewList(
+			rlp.NewUint(chainID),
+			rlp.NewUint(nonce),
+			rlp.NewBigInt(gasPrice),
+			rlp.NewUint(gasLimit),
+			rlp.NewBytes(to),
+			rlp.NewBigInt(value),
+			rlp.NewBytes(t.Input),
+			&t.AccessList,
+			rlp.NewBigInt(v),
+			rlp.NewBigInt(r),
+			rlp.NewBigInt(s),
+		).EncodeRLP()
+		if err != nil {
+			return nil, err
+		}
+		return append([]byte{byte(t.Type)}, bin...), nil
+	case DynamicFeeTxType:
+		bin, err := rlp.NewList(
+			rlp.NewUint(chainID),
+			rlp.NewUint(nonce),
+			rlp.NewBigInt(maxPriorityFeePerGas),
+			rlp.NewBigInt(maxFeePerGas),
+			rlp.NewUint(gasLimit),
+			rlp.NewBytes(to),
+			rlp.NewBigInt(value),
+			rlp.NewBytes(t.Input),
+			&accessList,
+			rlp.NewBigInt(v),
+			rlp.NewBigInt(r),
+			rlp.NewBigInt(s),
+		).EncodeRLP()
+		if err != nil {
+			return nil, err
+		}
+		return append([]byte{byte(t.Type)}, bin...), nil
+	default:
+		return nil, fmt.Errorf("unknown transaction type: %d", t.Type)
 	}
-	if t.Type == AccessListTxType {
-		b = append([]byte{byte(AccessListTxType)}, b...)
-	}
-	if t.Type == DynamicFeeTxType {
-		b = append([]byte{byte(DynamicFeeTxType)}, b...)
-	}
-	return b, nil
 }
 
 func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 	if len(data) == 0 {
-		return 0, nil
+		return 0, fmt.Errorf("empty data")
 	}
-	typ := TransactionType(data[0])
 	var (
-		elemNum int
-		elemIdx int
+		list                 = (*rlp.ListItem)(nil)
+		chainID              = &rlp.UintItem{}
+		nonce                = &rlp.UintItem{}
+		gasPrice             = &rlp.BigIntItem{}
+		gasLimit             = &rlp.UintItem{}
+		maxPriorityFeePerGas = &rlp.BigIntItem{}
+		maxFeePerGas         = &rlp.BigIntItem{}
+		to                   = &rlp.StringItem{}
+		value                = &rlp.BigIntItem{}
+		input                = &rlp.StringItem{}
+		accessList           = &AccessList{}
+		v                    = &rlp.BigIntItem{}
+		r                    = &rlp.BigIntItem{}
+		s                    = &rlp.BigIntItem{}
 	)
-	switch typ {
-	default:
+	switch {
+	case data[0] >= 0x80: // LegacyTxType
 		t.Type = LegacyTxType
-		elemNum = 9
-	case AccessListTxType:
+		list = rlp.NewList(
+			nonce,
+			gasPrice,
+			gasLimit,
+			to,
+			value,
+			input,
+			v,
+			r,
+			s,
+		)
+	case data[0] == byte(AccessListTxType):
 		t.Type = AccessListTxType
-		elemNum = 11
 		data = data[1:]
-	case DynamicFeeTxType:
+		list = rlp.NewList(
+			chainID,
+			nonce,
+			gasPrice,
+			gasLimit,
+			to,
+			value,
+			input,
+			accessList,
+			v,
+			r,
+			s,
+		)
+	case data[0] == byte(DynamicFeeTxType):
 		t.Type = DynamicFeeTxType
-		elemNum = 12
 		data = data[1:]
+		list = rlp.NewList(
+			chainID,
+			nonce,
+			maxPriorityFeePerGas,
+			maxFeePerGas,
+			gasLimit,
+			to,
+			value,
+			input,
+			accessList,
+			v,
+			r,
+			s,
+		)
+	default:
+		return 0, fmt.Errorf("invalid transaction type: %d", data[0])
 	}
-	d, n, err := rlp.Decode(data)
-	if err != nil {
+	if _, err := rlp.DecodeInto(data, list); err != nil {
 		return 0, err
 	}
-	l, err := d.GetList()
-	if err != nil {
-		return 0, err
+	t.ChainID = &chainID.X
+	t.Nonce = &nonce.X
+	t.GasPrice = gasPrice.X
+	t.GasLimit = &gasLimit.X
+	t.MaxPriorityFeePerGas = maxPriorityFeePerGas.X
+	t.MaxFeePerGas = maxFeePerGas.X
+	t.To = AddressFromBytesPtr(to.Bytes())
+	t.Value = value.X
+	if len(input.Bytes()) > 0 {
+		t.Input = input.Bytes()
 	}
-	if len(l) != elemNum {
-		return 0, errors.New("invalid transaction RLP")
+	if len(*accessList) > 0 {
+		t.AccessList = *accessList
 	}
-	if t.Type != LegacyTxType {
-		if err := l[elemIdx].Get(&rlp.UintItem{}, func(i rlp.Item) { chainID := i.(*rlp.UintItem).X; t.ChainID = &chainID }); err != nil {
-			return 0, err
-		}
-		elemIdx++
-	}
-	if err := l[elemIdx].Get(&rlp.UintItem{}, func(i rlp.Item) { nonce := i.(*rlp.UintItem).X; t.Nonce = &nonce }); err != nil {
-		return 0, err
-	}
-	elemIdx++
-	if t.Type == DynamicFeeTxType {
-		if t.MaxPriorityFeePerGas, err = l[elemIdx].GetBigInt(); err != nil {
-			return 0, err
-		}
-		elemIdx++
-		if t.MaxFeePerGas, err = l[elemIdx].GetBigInt(); err != nil {
-			return 0, err
-		}
-		elemIdx++
-	} else {
-		if t.GasPrice, err = l[elemIdx].GetBigInt(); err != nil {
-			return 0, err
-		}
-		elemIdx++
-	}
-	if err := l[elemIdx].Get(&rlp.UintItem{}, func(i rlp.Item) { gas := i.(*rlp.UintItem).X; t.GasLimit = &gas }); err != nil {
-		return 0, err
-	}
-	elemIdx++
-	if l[elemIdx].Length() > 0 {
-		if err := l[elemIdx].Get(&Address{}, func(i rlp.Item) { t.To = i.(*Address) }); err != nil {
-			return 0, err
+	if v.X.Sign() != 0 || r.X.Sign() != 0 || s.X.Sign() != 0 {
+		t.Signature = &Signature{
+			V: v.X,
+			R: r.X,
+			S: s.X,
 		}
 	}
-	elemIdx++
-	if t.Value, err = l[elemIdx].GetBigInt(); err != nil {
-		return 0, err
-	}
-	elemIdx++
-	if l[elemIdx].Length() > 0 {
-		if t.Input, err = l[elemIdx].GetBytes(); err != nil {
-			return 0, err
-		}
-	}
-	elemIdx++
-	if t.Type != LegacyTxType {
-		if l[elemIdx].Length() > 0 {
-			if err := l[elemIdx].Get(&AccessList{}, func(i rlp.Item) { t.AccessList = *i.(*AccessList) }); err != nil {
-				return 0, err
-			}
-		}
-		elemIdx++
-	}
-	var v, r, s *big.Int
-	if v, err = l[elemIdx].GetBigInt(); err != nil {
-		return 0, err
-	}
-	elemIdx++
-	if r, err = l[elemIdx].GetBigInt(); err != nil {
-		return 0, err
-	}
-	elemIdx++
-	if s, err = l[elemIdx].GetBigInt(); err != nil {
-		return 0, err
-	}
-	sig := SignatureFromVRS(v, r, s)
-	if !sig.IsZero() {
-		t.Signature = &sig
-	}
-	if t.Type == LegacyTxType {
-		return n, nil
-	}
-	return n + 1, nil
+	return len(data), nil
 }
 
 // Hash returns the hash of the transaction (transaction ID).
@@ -458,72 +505,20 @@ func (t Transaction) Hash(h HashFunc) (Hash, error) {
 	return h(raw), nil
 }
 
-// SigningHash returns the signing hash for the transaction.
-func (t Transaction) SigningHash(h HashFunc) (Hash, error) {
-	l := rlp.NewList()
-	if t.Type != LegacyTxType {
-		if t.ChainID != nil {
-			l.Append(rlp.NewUint(*t.ChainID))
-		} else {
-			l.Append(rlp.NewUint(1))
-		}
-	}
-	if t.Nonce != nil {
-		l.Append(rlp.NewUint(*t.Nonce))
-	} else {
-		l.Append(rlp.NewUint(0))
-	}
-	if t.Type == DynamicFeeTxType {
-		l.Append(rlp.NewBigInt(t.MaxPriorityFeePerGas))
-		l.Append(rlp.NewBigInt(t.MaxFeePerGas))
-	} else {
-		l.Append(rlp.NewBigInt(t.GasPrice))
-	}
-	if t.GasLimit != nil {
-		l.Append(rlp.NewUint(*t.GasLimit))
-	} else {
-		l.Append(rlp.NewUint(0))
-	}
-	if t.To != nil {
-		l.Append(t.To)
-	} else {
-		l.Append(rlp.NewBytes(nil))
-	}
-	l.Append(rlp.NewBigInt(t.Value))
-	l.Append(rlp.NewBytes(t.Input))
-	if t.Type != LegacyTxType {
-		l.Append(&t.AccessList)
-	}
-	// EIP-155 replay-protection:
-	if t.ChainID != nil && *t.ChainID != 0 && t.Type == LegacyTxType {
-		l.Append(rlp.NewUint(*t.ChainID))
-		l.Append(rlp.NewUint(0))
-		l.Append(rlp.NewUint(0))
-	}
-	b, err := rlp.Encode(l)
-	if err != nil {
-		return ZeroHash, err
-	}
-	if t.Type == AccessListTxType {
-		b = append([]byte{byte(AccessListTxType)}, b...)
-	}
-	if t.Type == DynamicFeeTxType {
-		b = append([]byte{byte(DynamicFeeTxType)}, b...)
-	}
-	return h(b), nil
-}
-
 type jsonTransaction struct {
-	From     *Address `json:"from,omitempty,omitempty"`
-	To       *Address `json:"to,omitempty,omitempty"`
-	GasLimit *Number  `json:"gas,omitempty"`
-	GasPrice *Number  `json:"gasPrice,omitempty"`
-	Input    Bytes    `json:"input,omitempty"`
-	Nonce    *Number  `json:"nonce,omitempty"`
-	Value    *Number  `json:"value,omitempty"`
-	V        *Number  `json:"v,omitempty"`
-	R        *Number  `json:"r,omitempty"`
-	S        *Number  `json:"s,omitempty"`
+	From                 *Address   `json:"from,omitempty,omitempty"`
+	To                   *Address   `json:"to,omitempty,omitempty"`
+	GasLimit             *Number    `json:"gas,omitempty"`
+	GasPrice             *Number    `json:"gasPrice,omitempty"`
+	MaxFeePerGas         *Number    `json:"maxFeePerGas,omitempty"`
+	MaxPriorityFeePerGas *Number    `json:"maxPriorityFeePerGas,omitempty"`
+	Input                Bytes      `json:"input,omitempty"`
+	Nonce                *Number    `json:"nonce,omitempty"`
+	Value                *Number    `json:"value,omitempty"`
+	AccessList           AccessList `json:"accessList,omitempty"`
+	V                    *Number    `json:"v,omitempty"`
+	R                    *Number    `json:"r,omitempty"`
+	S                    *Number    `json:"s,omitempty"`
 }
 
 // OnChainTransaction represents a transaction that is included in a block.
@@ -547,21 +542,28 @@ type jsonOnChainTransaction struct {
 
 func (t OnChainTransaction) MarshalJSON() ([]byte, error) {
 	transaction := &jsonOnChainTransaction{}
-	transaction.From = t.From
 	transaction.To = t.To
-	transaction.Input = t.Input
+	transaction.From = t.From
 	if t.GasLimit != nil {
 		transaction.GasLimit = NumberFromUint64Ptr(*t.GasLimit)
 	}
 	if t.GasPrice != nil {
 		transaction.GasPrice = NumberFromBigIntPtr(t.GasPrice)
 	}
+	if t.MaxFeePerGas != nil {
+		transaction.MaxFeePerGas = NumberFromBigIntPtr(t.MaxFeePerGas)
+	}
+	if t.MaxPriorityFeePerGas != nil {
+		transaction.MaxPriorityFeePerGas = NumberFromBigIntPtr(t.MaxPriorityFeePerGas)
+	}
+	transaction.Input = t.Input
 	if t.Nonce != nil {
 		transaction.Nonce = NumberFromUint64Ptr(*t.Nonce)
 	}
 	if t.Value != nil {
 		transaction.Value = NumberFromBigIntPtr(t.Value)
 	}
+	transaction.AccessList = t.AccessList
 	if t.Signature != nil {
 		transaction.V = NumberFromBigIntPtr(t.Signature.V)
 		transaction.R = NumberFromBigIntPtr(t.Signature.R)
@@ -583,14 +585,20 @@ func (t *OnChainTransaction) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, transaction); err != nil {
 		return err
 	}
-	t.From = transaction.From
 	t.To = transaction.To
+	t.From = transaction.From
 	if transaction.GasLimit != nil {
 		gas := transaction.GasLimit.Big().Uint64()
 		t.GasLimit = &gas
 	}
 	if transaction.GasPrice != nil {
 		t.GasPrice = transaction.GasPrice.Big()
+	}
+	if transaction.MaxFeePerGas != nil {
+		t.MaxFeePerGas = transaction.MaxFeePerGas.Big()
+	}
+	if transaction.MaxPriorityFeePerGas != nil {
+		t.MaxPriorityFeePerGas = transaction.MaxPriorityFeePerGas.Big()
 	}
 	t.Input = transaction.Input
 	if transaction.Nonce != nil {
@@ -600,6 +608,7 @@ func (t *OnChainTransaction) UnmarshalJSON(data []byte) error {
 	if transaction.Value != nil {
 		t.Value = transaction.Value.Big()
 	}
+	t.AccessList = transaction.AccessList
 	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
 		t.Signature = SignatureFromVRSPtr(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
 	}

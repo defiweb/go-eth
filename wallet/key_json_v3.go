@@ -69,7 +69,7 @@ func encryptV3Key(key *ecdsa.PrivateKey, passphrase string, scryptN, scryptP int
 	return &jsonKey{
 		Version: 3,
 		ID:      id.String(),
-		Address: crypto.PublicKeyToAddress(&key.PublicKey),
+		Address: crypto.ECPublicKeyToAddress(&key.PublicKey),
 		Crypto: jsonKeyCrypto{
 			Cipher: "aes-128-ctr",
 			CipherParams: jsonKeyCipherParams{

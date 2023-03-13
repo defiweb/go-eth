@@ -20,27 +20,27 @@ type PrivateKey struct {
 }
 
 // NewKeyFromECDSA creates a new private key from an ecdsa.PrivateKey.
-func NewKeyFromECDSA(priv *ecdsa.PrivateKey) *PrivateKey {
+func NewKeyFromECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
 	return &PrivateKey{
-		private: priv,
-		public:  &priv.PublicKey,
-		address: crypto.PublicKeyToAddress(&priv.PublicKey),
+		private: prv,
+		public:  &prv.PublicKey,
+		address: crypto.ECPublicKeyToAddress(&prv.PublicKey),
 	}
 }
 
 // NewKeyFromBytes creates a new private key from private key bytes.
-func NewKeyFromBytes(b []byte) *PrivateKey {
-	priv, _ := btcec.PrivKeyFromBytes(s256, b)
-	return NewKeyFromECDSA((*ecdsa.PrivateKey)(priv))
+func NewKeyFromBytes(prv []byte) *PrivateKey {
+	key, _ := btcec.PrivKeyFromBytes(s256, prv)
+	return NewKeyFromECDSA((*ecdsa.PrivateKey)(key))
 }
 
 // NewRandomKey creates a random private key.
 func NewRandomKey() *PrivateKey {
-	priv, err := ecdsa.GenerateKey(s256, rand.Reader)
+	key, err := ecdsa.GenerateKey(s256, rand.Reader)
 	if err != nil {
 		panic(err)
 	}
-	return NewKeyFromECDSA(priv)
+	return NewKeyFromECDSA(key)
 }
 
 // PublicKey returns the ECDSA public key.
@@ -68,34 +68,34 @@ func (k *PrivateKey) Address() types.Address {
 }
 
 // SignHash implements the Key interface.
-func (k *PrivateKey) SignHash(hash types.Hash) (types.Signature, error) {
-	return crypto.SignHash(k.private, hash)
+func (k *PrivateKey) SignHash(hash types.Hash) (*types.Signature, error) {
+	return crypto.ECSignHash(k.private, hash)
 }
 
 // SignMessage implements the Key interface.
-func (k *PrivateKey) SignMessage(data []byte) (types.Signature, error) {
-	return crypto.SignMessage(k.private, data)
+func (k *PrivateKey) SignMessage(data []byte) (*types.Signature, error) {
+	return crypto.ECSignMessage(k.private, data)
 }
 
 // SignTransaction implements the Key interface.
 func (k *PrivateKey) SignTransaction(tx *types.Transaction) error {
-	return crypto.SignTransaction(k.private, tx)
+	return crypto.ECSignTransaction(k.private, tx)
 }
 
 // VerifyHash implements the Key interface.
 func (k *PrivateKey) VerifyHash(hash types.Hash, sig types.Signature) bool {
-	addr, err := crypto.Ecrecover(hash, sig)
+	addr, err := crypto.ECRecoverHash(hash, sig)
 	if err != nil {
 		return false
 	}
-	return addr == k.address
+	return *addr == k.address
 }
 
 // VerifyMessage implements the Key interface.
 func (k *PrivateKey) VerifyMessage(data []byte, sig types.Signature) bool {
-	addr, err := crypto.EcrecoverMessage(data, sig)
+	addr, err := crypto.ECRecoverMessage(data, sig)
 	if err != nil {
 		return false
 	}
-	return addr == k.address
+	return *addr == k.address
 }

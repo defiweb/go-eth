@@ -1,16 +1,18 @@
 package wallet
 
-import "github.com/defiweb/go-eth/types"
+import (
+	"github.com/defiweb/go-eth/types"
+)
 
 type Key interface {
 	// Address returns the address of the key.
 	Address() types.Address
 
 	// SignHash signs the given hash.
-	SignHash(hash types.Hash) (types.Signature, error)
+	SignHash(hash types.Hash) (*types.Signature, error)
 
 	// SignMessage signs the given message.
-	SignMessage(data []byte) (types.Signature, error)
+	SignMessage(data []byte) (*types.Signature, error)
 
 	// SignTransaction signs the given transaction.
 	SignTransaction(tx *types.Transaction) error

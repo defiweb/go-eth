@@ -285,6 +285,7 @@ func main() {
 
 	// Print the address of the derived private key.
 	println(key.Address().String())
+
 }
 ```
 
