@@ -33,9 +33,9 @@ func NewMethod(name string, inputs, outputs *TupleType) *Method {
 //
 // The following examples are valid signatures:
 //
-//   foo((uint256,bytes32)[])(uint256)
-//   foo((uint256 a, bytes32 b)[] c)(uint256 d)
-//   function foo(tuple(uint256 a, bytes32 b)[] memory c) pure returns (uint256 d)
+//	foo((uint256,bytes32)[])(uint256)
+//	foo((uint256 a, bytes32 b)[] c)(uint256 d)
+//	function foo(tuple(uint256 a, bytes32 b)[] memory c) pure returns (uint256 d)
 //
 // This function is equivalent to calling Parser.ParseMethod with the default
 // configuration.
@@ -117,6 +117,10 @@ func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
 		return nil, err
 	}
 	return append(m.fourBytes.Bytes(), encoded...), nil
+}
+
+func (m *Method) DecodeArgs(data []byte, vals ...any) error {
+	return m.config.DecodeValues(m.inputs, data, vals...)
 }
 
 // DecodeValue decodes the values returned by a method call into a map or
