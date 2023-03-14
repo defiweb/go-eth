@@ -1614,6 +1614,63 @@ func Test_mappingRules(t *testing.T) {
 			src:        "0x1234567890123456789012345678901234567890",
 			wantDecErr: true,
 		},
+
+		// any <=> intX
+		{
+			name:    "any<=>intX",
+			goTyp:   new(any),
+			solTyp:  "int32",
+			src:     int32(1),
+			wantDst: big.NewInt(1),
+		},
+		// any <=> uintX
+		{
+			name:    "any<=>uintX",
+			goTyp:   new(any),
+			solTyp:  "uint32",
+			src:     uint32(1),
+			wantDst: big.NewInt(1),
+		},
+		// any <=> bool
+		{
+			name:    "any<=>bool",
+			goTyp:   new(any),
+			solTyp:  "bool",
+			src:     true,
+			wantDst: true,
+		},
+		// any <=> string
+		{
+			name:    "any<=>string",
+			goTyp:   new(any),
+			solTyp:  "string",
+			src:     "hello",
+			wantDst: "hello",
+		},
+		// any <=> bytes
+		{
+			name:    "any<=>bytes",
+			goTyp:   new(any),
+			solTyp:  "bytes",
+			src:     []byte{0x1},
+			wantDst: []byte{0x1},
+		},
+		// any <=> bytesX
+		{
+			name:    "any<=>bytesX",
+			goTyp:   new(any),
+			solTyp:  "bytes8",
+			src:     [8]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+			wantDst: [8]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+		},
+		// any <=> address
+		{
+			name:    "any<=>address",
+			goTyp:   new(any),
+			solTyp:  "address",
+			src:     "0x1234567890123456789012345678901234567890",
+			wantDst: types.MustAddressFromHex("0x1234567890123456789012345678901234567890"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1624,7 +1681,7 @@ func Test_mappingRules(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			err = DecodeValue(typ, cd, &tt.goTyp)
+			err = DecodeValue(typ, cd, tt.goTyp)
 			if tt.wantDecErr {
 				require.Error(t, err)
 				return

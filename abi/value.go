@@ -550,7 +550,7 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 		for i := 0; i < len(b); i++ {
 			v.Elem().Index(i).SetUint(uint64(b[i]))
 		}
-		dstRef.Set(v)
+		dstRef.Set(v.Elem())
 	default:
 		switch dstRef.Interface().(type) {
 		case big.Int:
