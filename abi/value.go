@@ -267,6 +267,8 @@ func (b *BytesValue) MapTo(m Mapper, dst any) error {
 		}
 	case reflect.String:
 		dstRef.SetString(hexutil.BytesToHex(*b))
+	case reflect.Interface:
+		dstRef.Set(reflect.ValueOf([]byte(*b)))
 	default:
 		return fmt.Errorf("abi: cannot map bytes to %s", dstRef.Type())
 	}
@@ -341,6 +343,8 @@ func (s *StringValue) MapTo(m Mapper, dst any) error {
 		}
 	case reflect.String:
 		dstRef.SetString(string(*s))
+	case reflect.Interface:
+		dstRef.Set(reflect.ValueOf(string(*s)))
 	default:
 		return fmt.Errorf("abi: cannot map string to %s", dstRef.Type())
 	}
@@ -541,6 +545,12 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 			return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 		}
 		dstRef.SetInt(i64)
+	case reflect.Interface:
+		v := reflect.New(reflect.ArrayOf(len(b), reflect.TypeOf(byte(0))))
+		for i := 0; i < len(b); i++ {
+			v.Elem().Index(i).SetUint(uint64(b[i]))
+		}
+		dstRef.Set(v)
 	default:
 		switch dstRef.Interface().(type) {
 		case big.Int:
@@ -691,6 +701,8 @@ func (u *UintValue) MapTo(m Mapper, dst any) error {
 			return fmt.Errorf("abi: cannot map uint%d to %s: value too large", u.Size, dstRef.Type())
 		}
 		dstRef.SetUint(u.Uint64())
+	case reflect.Interface:
+		dstRef.Set(reflect.ValueOf(&u.Int))
 	default:
 		switch dstRef.Interface().(type) {
 		case big.Int:
@@ -814,6 +826,8 @@ func (i *IntValue) MapTo(m Mapper, dst any) error {
 			return fmt.Errorf("abi: cannot map int%d to %s: value is negative", i.Size, dstRef.Type())
 		}
 		dstRef.SetUint(i.Uint64())
+	case reflect.Interface:
+		dstRef.Set(reflect.ValueOf(&i.Int))
 	default:
 		switch dstRef.Interface().(type) {
 		case big.Int:
@@ -876,6 +890,8 @@ func (b *BoolValue) MapTo(m Mapper, dst any) error {
 	switch dstRef.Type().Kind() {
 	case reflect.Bool:
 		dstRef.SetBool(bool(*b))
+	case reflect.Interface:
+		dstRef.Set(reflect.ValueOf(bool(*b)))
 	default:
 		return fmt.Errorf("abi: cannot map bool to %s", dstRef.Type())
 	}
@@ -966,6 +982,8 @@ func (a *AddressValue) MapTo(m Mapper, dst any) error {
 		for i := 0; i < types.AddressLength; i++ {
 			dstRef.Index(dstRef.Len() - types.AddressLength + i).SetUint(uint64((*a)[i]))
 		}
+	case reflect.Interface:
+		dstRef.Set(reflect.ValueOf(types.Address(*a)))
 	default:
 		return fmt.Errorf("abi: cannot map address to %s", dstRef.Type())
 	}

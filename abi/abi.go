@@ -78,12 +78,12 @@ func NewABI() *ABI {
 				}
 				if dst.Implements(valueTy) {
 					return func(m *anymapper.Mapper, src, dst reflect.Value) error {
-						return src.Interface().(MapTo).MapTo(m, dst.Addr().Interface())
+						return src.Interface().(MapTo).MapTo(m, addr(dst).Interface())
 					}
 				}
 			case srcImplMapTo:
 				return func(m *anymapper.Mapper, src, dst reflect.Value) error {
-					return src.Interface().(MapTo).MapTo(m, dst.Addr().Interface())
+					return src.Interface().(MapTo).MapTo(m, addr(dst).Interface())
 				}
 			case dstImplMapFrom:
 				return func(m *anymapper.Mapper, src, dst reflect.Value) error {
@@ -109,19 +109,29 @@ func NewABI() *ABI {
 		},
 		DestinationValueHook: func(v reflect.Value) reflect.Value {
 			for {
+				// If the destination is a nil interface, then return it.
+				if v.Kind() == reflect.Interface && v.IsNil() {
+					return v
+				}
+				// If the destination is a nil pointer, then initialize it.
 				if v.Kind() == reflect.Ptr && v.IsNil() {
 					if !v.CanSet() {
 						return reflect.Value{}
 					}
-					// Pointers must be initialized before they can be used.
 					v.Set(reflect.New(v.Type().Elem()))
 				}
+				// If the destination implements MapFrom, then return it but
+				// first dereference it if it is an interface.
 				if _, ok := v.Interface().(MapFrom); ok {
 					for v.Kind() == reflect.Interface {
 						v = v.Elem()
 					}
 					return v
 				}
+				// If the destination is not a pointer or interface, then
+				// break the loop and return an empty value. Returning an
+				// empty value will cause the anymapper package to ignore
+				// this hook.
 				if v.Kind() != reflect.Interface && v.Kind() != reflect.Ptr {
 					break
 				}
@@ -171,6 +181,16 @@ var fieldMapper = func(field string) string {
 		}
 	}
 	return string(runes)
+}
+
+func addr(v reflect.Value) reflect.Value {
+	if v.Kind() == reflect.Ptr {
+		return v
+	}
+	if v.CanAddr() {
+		return v.Addr()
+	}
+	return v
 }
 
 var (
