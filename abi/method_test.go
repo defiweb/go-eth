@@ -1,11 +1,15 @@
 package abi
 
 import (
+	"encoding/hex"
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 func TestParseMethod(t *testing.T) {
@@ -29,6 +33,52 @@ func TestParseMethod(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expected, m.String())
+			}
+		})
+	}
+}
+
+func TestMethod_EncodeArgs(t *testing.T) {
+	tests := []struct {
+		signature string
+		arg       []any
+		expected  string
+	}{
+		{signature: "foo()", arg: nil, expected: "c2985578"},
+		{signature: "foo(uint256)", arg: []any{1}, expected: "2fbebd380000000000000000000000000000000000000000000000000000000000000001"},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			c, err := ParseMethod(tt.signature)
+			require.NoError(t, err)
+			enc, err := c.EncodeArgs(tt.arg...)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, hex.EncodeToString(enc))
+		})
+	}
+}
+
+func TestMethod_DecodeArg(t *testing.T) {
+	tests := []struct {
+		signature string
+		arg       any
+		data      string
+		expected  any
+		wantErr   bool
+	}{
+		{signature: "foo(uint256)", arg: map[string]any{}, data: "2fbebd380000000000000000000000000000000000000000000000000000000000000001", expected: map[string]any{"arg0": big.NewInt(1)}},
+		{signature: "foo(uint256)", arg: map[string]any{}, data: "aabbccdd0000000000000000000000000000000000000000000000000000000000000001", wantErr: true},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			c, err := ParseMethod(tt.signature)
+			require.NoError(t, err)
+			err = c.DecodeArg(hexutil.MustHexToBytes(tt.data), &tt.arg)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, tt.arg)
 			}
 		})
 	}

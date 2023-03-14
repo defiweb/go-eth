@@ -1,6 +1,7 @@
 package abi
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/defiweb/go-eth/crypto"
@@ -117,6 +118,32 @@ func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
 		return nil, err
 	}
 	return append(m.fourBytes.Bytes(), encoded...), nil
+}
+
+// DecodeArg decodes ABI-encoded arguments a method call.
+func (m *Method) DecodeArg(data []byte, arg any) error {
+	if !m.fourBytes.Match(data[:4]) {
+		return fmt.Errorf(
+			"abi: method %s: four bytes 0x%x do not match method signature %s",
+			m.name,
+			data[:4],
+			m.fourBytes,
+		)
+	}
+	return m.config.DecodeValue(m.inputs, data[4:], arg)
+}
+
+// DecodeArgs decodes ABI-encoded arguments a method call.
+func (m *Method) DecodeArgs(data []byte, args ...any) error {
+	if !m.fourBytes.Match(data[:4]) {
+		return fmt.Errorf(
+			"abi: method %s: four bytes 0x%x do not match method signature %s",
+			m.name,
+			data[:4],
+			m.fourBytes,
+		)
+	}
+	return m.config.DecodeValues(m.inputs, data[4:], args...)
 }
 
 // DecodeValue decodes the values returned by a method call into a map or
