@@ -181,7 +181,18 @@ func main() {
 	}
 
 	// Create a JSON-RPC client.
-	c := rpc.NewClient(t)
+	c, err := rpc.NewClient(
+		// Transport is always required.
+		rpc.WithTransport(t),
+
+		// You can specify a key to sign transactions. If provided, the client will
+		// use it with SignTransaction, SendTransaction, and Sign methods instead
+		// of making RPC calls.
+		rpc.WithKey(key, 1),
+	)
+	if err != nil {
+		panic(err)
+	}
 
 	transfer := abi.MustParseMethod("transfer(address, uint256)(bool)")
 
@@ -197,22 +208,10 @@ func main() {
 		SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).
 		SetInput(calldata).
 		SetNonce(0).
-		SetChainID(1).
 		SetMaxPriorityFeePerGas(big.NewInt(1 * 1e9)).
 		SetMaxFeePerGas(big.NewInt(20 * 1e9))
-
-	// SignHash the transaction.
-	err = key.SignTransaction(tx)
-	if err != nil {
-		panic(err)
-	}
-
-	// Send the transaction.
-	rawTx, err := tx.Raw()
-	if err != nil {
-		panic(err)
-	}
-	txHash, err := c.SendRawTransaction(context.Background(), rawTx)
+	
+	txHash, err := c.SendTransaction(context.Background(), *tx)
 	if err != nil {
 		panic(err)
 	}

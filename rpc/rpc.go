@@ -81,7 +81,7 @@ type RPC interface {
 	// Sign performs eth_sign RPC call.
 	//
 	// It signs the given data with the given address.
-	Sign(ctx context.Context, account types.Address, data []byte) (types.Signature, error)
+	Sign(ctx context.Context, account types.Address, data []byte) (*types.Signature, error)
 
 	// SignTransaction performs eth_signTransaction RPC call.
 	//

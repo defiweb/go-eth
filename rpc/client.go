@@ -7,14 +7,55 @@ import (
 
 	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
+	"github.com/defiweb/go-eth/wallet"
 )
 
 type Client struct {
 	transport transport.Transport
+
+	key     wallet.Key
+	chainID uint64
 }
 
-func NewClient(transport transport.Transport) *Client {
-	return &Client{transport: transport}
+type ClientOptions func(c *Client) error
+
+// WithTransport sets the transport for the client.
+func WithTransport(transport transport.Transport) ClientOptions {
+	return func(c *Client) error {
+		c.transport = transport
+		return nil
+	}
+}
+
+// WithKey sets the key and chain ID for the client. If the key provided, all
+// methods that require signing will sign the data locally.
+//
+// The following methods are affected:
+// - Sign - signs the data with the provided key
+// - SignTransaction - signs transaction with the provided key
+// - SendTransaction - signs transaction with the provided key and sends it
+//   using SendRawTransaction
+func WithKey(key wallet.Key, chainID uint64) ClientOptions {
+	return func(c *Client) error {
+		c.key = key
+		c.chainID = chainID
+		return nil
+	}
+}
+
+// NewClient creates a new RPC client.
+// The WithTransport option is required.
+func NewClient(opts ...ClientOptions) (*Client, error) {
+	c := &Client{}
+	for _, opt := range opts {
+		if err := opt(c); err != nil {
+			return nil, err
+		}
+	}
+	if c.transport == nil {
+		return nil, fmt.Errorf("rpc client: transport is required")
+	}
+	return c, nil
 }
 
 func (c *Client) ChainID(ctx context.Context) (uint64, error) {
@@ -108,15 +149,37 @@ func (c *Client) GetCode(ctx context.Context, account types.Address, block types
 	return res.Bytes(), nil
 }
 
-func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (types.Signature, error) {
+func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (*types.Signature, error) {
+	if c.key != nil {
+		sig, err := c.key.SignMessage(data)
+		if err != nil {
+			return nil, err
+		}
+		return sig, nil
+	}
 	var res types.Signature
 	if err := c.transport.Call(ctx, &res, "eth_sign", account, types.Bytes(data)); err != nil {
-		return types.Signature{}, err
+		return nil, err
 	}
-	return res, nil
+	return &res, nil
 }
 
 func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error) {
+	if c.key != nil {
+		tx := &tx
+		if tx.ChainID != nil && *tx.ChainID != 0 && *tx.ChainID != c.chainID {
+			return nil, nil, fmt.Errorf("chain id mismatch")
+		}
+		tx.ChainID = &c.chainID
+		if err := c.key.SignTransaction(tx); err != nil {
+			return nil, nil, err
+		}
+		raw, err := tx.Raw()
+		if err != nil {
+			return nil, nil, err
+		}
+		return raw, tx, nil
+	}
 	var res signTransactionResult
 	if err := c.transport.Call(ctx, &res, "eth_signTransaction", tx); err != nil {
 		return nil, nil, err
@@ -125,6 +188,21 @@ func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]b
 }
 
 func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
+	if c.key != nil {
+		tx := &tx
+		if tx.ChainID != nil && *tx.ChainID != 0 && *tx.ChainID != c.chainID {
+			return nil, fmt.Errorf("chain id mismatch")
+		}
+		tx.ChainID = &c.chainID
+		if err := c.key.SignTransaction(tx); err != nil {
+			return nil, err
+		}
+		raw, err := tx.Raw()
+		if err != nil {
+			return nil, err
+		}
+		return c.SendRawTransaction(ctx, raw)
+	}
 	var res types.Hash
 	if err := c.transport.Call(ctx, &res, "eth_sendTransaction", tx); err != nil {
 		return nil, err

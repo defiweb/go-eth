@@ -19,9 +19,9 @@ type HashFunc func(data ...[]byte) Hash
 type Pad uint8
 
 const (
-	PadLeft  Pad = 0 // PadLeft pads the input with zeros on the left.
-	PadRight Pad = 1 // PadRight pads the input with zeros on the right.
-	PadNone  Pad = 2 // PadNone does not allow padding.
+	PadNone  Pad = 0 // PadNone does not allow padding.
+	PadLeft  Pad = 1 // PadLeft pads the input with zeros on the left.
+	PadRight Pad = 2 // PadRight pads the input with zeros on the right.
 )
 
 //

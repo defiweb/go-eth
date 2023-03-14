@@ -42,6 +42,37 @@ func newHTTPMock() *httpMock {
 	return h
 }
 
+type keyMock struct {
+	addressCallback         func() types.Address
+	signHashCallback        func(hash types.Hash) (*types.Signature, error)
+	signMessageCallback     func(data []byte) (*types.Signature, error)
+	signTransactionCallback func(tx *types.Transaction) error
+}
+
+func (k *keyMock) Address() types.Address {
+	return k.addressCallback()
+}
+
+func (k *keyMock) SignHash(hash types.Hash) (*types.Signature, error) {
+	return k.signHashCallback(hash)
+}
+
+func (k *keyMock) SignMessage(data []byte) (*types.Signature, error) {
+	return k.signMessageCallback(data)
+}
+
+func (k *keyMock) SignTransaction(tx *types.Transaction) error {
+	return k.signTransactionCallback(tx)
+}
+
+func (k *keyMock) VerifyHash(hash types.Hash, sig types.Signature) bool {
+	return false
+}
+
+func (k keyMock) VerifyMessage(data []byte, sig types.Signature) bool {
+	return false
+}
+
 const mockChanIDRequest = `
 	{
 	  "jsonrpc": "2.0",
@@ -61,7 +92,7 @@ const mockChanIDResponse = `
 
 func TestClient_ChainID(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -93,7 +124,7 @@ const mockGasPriceResponse = `
 
 func TestClient_GasPrice(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -125,7 +156,7 @@ const mockBlockNumberResponse = `
 
 func TestClient_BlockNumber(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -161,7 +192,7 @@ const mockGetBalanceResponse = `
 
 func TestClient_GetBalance(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -202,7 +233,7 @@ const mockGetStorageAtResponse = `
 
 func TestClient_GetStorageAt(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -243,7 +274,7 @@ const mockGetTransactionCountResponse = `
 
 func TestClient_GetTransactionCount(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -282,7 +313,7 @@ const mockGetBlockTransactionCountByHashResponse = `
 
 func TestClient_GetBlockTransactionCountByHash(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -319,7 +350,7 @@ const mockGetBlockTransactionCountByNumberResponse = `
 
 func TestClient_GetBlockTransactionCountByNumber(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -356,7 +387,7 @@ const mockGetUncleCountByBlockHashResponse = `
 
 func TestClient_GetUncleCountByBlockHash(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -393,7 +424,7 @@ const mockGetUncleCountByBlockNumberResponse = `
 
 func TestClient_GetUncleCountByBlockNumber(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -431,7 +462,7 @@ const mockGetCodeResponse = `
 
 func TestClient_GetCode(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -470,7 +501,7 @@ const mockSignResponse = `
 
 func TestClient_Sign(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -484,7 +515,25 @@ func TestClient_Sign(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockSignRequest, readBody(httpMock.Request))
-	assert.Equal(t, types.MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"), signature)
+	assert.Equal(t, types.MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"), *signature)
+}
+
+func TestClient_Sign_WithKey(t *testing.T) {
+	httpMock := newHTTPMock()
+	keyMock := &keyMock{}
+	client, _ := NewClient(WithTransport(httpMock), WithKey(keyMock, 1))
+
+	keyMock.signMessageCallback = func(message []byte) (*types.Signature, error) {
+		return types.MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"), nil
+	}
+
+	signature, err := client.Sign(
+		context.Background(),
+		types.MustAddressFromHex("0x1111111111111111111111111111111111111111"),
+		[]byte("All your base are belong to us"),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, types.MustSignatureFromHex("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"), *signature)
 }
 
 const mockSignTransactionRequest = `
@@ -510,7 +559,7 @@ const mockSignTransactionResponse = `
 	  "jsonrpc": "2.0",
 	  "id": 1,
 	  "result": {
-		"raw": "0x0f86c808509184e72a00008276c094d46e8dd67c5d32be8058bb8eb970870f072445678080b844d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675",
+		"raw": "0xf893808609184e72a0008276c094d46e8dd67c5d32be8058bb8eb970870f072445678502540be400a9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f07244567511a02222222222222222222222222222222222222222222222222222222222222222a03333333333333333333333333333333333333333333333333333333333333333",
 		"tx": {
 		  "nonce": "0x0",
 		  "gasPrice": "0x09184e72a000",
@@ -528,7 +577,7 @@ const mockSignTransactionResponse = `
 
 func TestClient_SignTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -553,7 +602,46 @@ func TestClient_SignTransaction(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockSignTransactionRequest, readBody(httpMock.Request))
-	assert.Equal(t, hexToBytes("0x0f86c808509184e72a00008276c094d46e8dd67c5d32be8058bb8eb970870f072445678080b844d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"), raw)
+	assert.Equal(t, hexToBytes("0xf893808609184e72a0008276c094d46e8dd67c5d32be8058bb8eb970870f072445678502540be400a9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f07244567511a02222222222222222222222222222222222222222222222222222222222222222a03333333333333333333333333333333333333333333333333333333333333333"), raw)
+	assert.Equal(t, &to, tx.To)
+	assert.Equal(t, uint64(30400), *tx.GasLimit)
+	assert.Equal(t, big.NewInt(10000000000000), tx.GasPrice)
+	assert.Equal(t, big.NewInt(10000000000), tx.Value)
+	assert.Equal(t, hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"), tx.Input)
+	assert.Equal(t, uint8(0x11), tx.Signature.Bytes()[64])
+	assert.Equal(t, hexToBytes("0x2222222222222222222222222222222222222222222222222222222222222222"), tx.Signature.Bytes()[:32])
+	assert.Equal(t, hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333"), tx.Signature.Bytes()[32:64])
+}
+
+func TestClient_SignTransaction_WithKey(t *testing.T) {
+	httpMock := newHTTPMock()
+	keyMock := &keyMock{}
+	client, _ := NewClient(WithTransport(httpMock), WithKey(keyMock, 1))
+
+	keyMock.signTransactionCallback = func(tx *types.Transaction) error {
+		tx.Signature = types.MustSignatureFromHexPtr("0x2222222222222222222222222222222222222222222222222222222222222222333333333333333333333333333333333333333333333333333333333333333311")
+		return nil
+	}
+
+	from := types.MustAddressFromHex("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
+	to := types.MustAddressFromHex("0xd46e8dd67c5d32be8058bb8eb970870f07244567")
+	gasLimit := uint64(30400)
+	raw, tx, err := client.SignTransaction(
+		context.Background(),
+		types.Transaction{
+			Call: types.Call{
+				From:     &from,
+				To:       &to,
+				GasLimit: &gasLimit,
+				GasPrice: big.NewInt(10000000000000),
+				Value:    big.NewInt(10000000000),
+				Input:    hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"),
+			},
+		},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, hexToBytes("0xf893808609184e72a0008276c094d46e8dd67c5d32be8058bb8eb970870f072445678502540be400a9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f07244567511a02222222222222222222222222222222222222222222222222222222222222222a03333333333333333333333333333333333333333333333333333333333333333"), raw)
 	assert.Equal(t, &to, tx.To)
 	assert.Equal(t, uint64(30400), *tx.GasLimit)
 	assert.Equal(t, big.NewInt(10000000000000), tx.GasPrice)
@@ -592,7 +680,7 @@ const mockSendTransactionResponse = `
 
 func TestClient_SendTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -620,13 +708,49 @@ func TestClient_SendTransaction(t *testing.T) {
 	assert.Equal(t, types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), *txHash)
 }
 
+func TestClient_SendTransaction_WithKey(t *testing.T) {
+	httpMock := newHTTPMock()
+	keyMock := &keyMock{}
+	client, _ := NewClient(WithTransport(httpMock), WithKey(keyMock, 1))
+
+	keyMock.signTransactionCallback = func(tx *types.Transaction) error {
+		tx.Signature = types.MustSignatureFromHexPtr("0x2222222222222222222222222222222222222222222222222222222222222222333333333333333333333333333333333333333333333333333333333333333311")
+		return nil
+	}
+
+	httpMock.Response = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockSendRawTransactionResponse)),
+	}
+
+	from := types.MustAddressFromHex("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
+	to := types.MustAddressFromHex("0xd46e8dd67c5d32be8058bb8eb970870f07244567")
+	gasLimit := uint64(30400)
+	txHash, err := client.SendTransaction(
+		context.Background(),
+		types.Transaction{
+			Call: types.Call{
+				From:     &from,
+				To:       &to,
+				GasLimit: &gasLimit,
+				GasPrice: big.NewInt(10000000000000),
+				Value:    big.NewInt(10000000000),
+				Input:    hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"),
+			},
+		},
+	)
+	require.NoError(t, err)
+	assert.JSONEq(t, mockSendRawTransactionRequest, readBody(httpMock.Request))
+	assert.Equal(t, types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), *txHash)
+}
+
 const mockSendRawTransactionRequest = `
 	{
 	  "jsonrpc": "2.0",
 	  "id": 1,
 	  "method": "eth_sendRawTransaction",
 	  "params": [
-		"0x0f86d8085174876e800830186a094295a70b2de5e3953354a6a8344e616ed314d7251948c7a3f9c9a9f00000801ba0b7e3d1e0c5f7e8d8e0e7d0f2e9b9a8c8a1f0d3e3f3b0e8c2d2e3f9d9c9c9f8a0a05d7e5b5e5f5d5e5d5d5e5d5e5d5e5d5e5d5e5d5e5d5e5d5e5d5e5d5e5d5a"
+		"0xf893808609184e72a0008276c094d46e8dd67c5d32be8058bb8eb970870f072445678502540be400a9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f07244567511a02222222222222222222222222222222222222222222222222222222222222222a03333333333333333333333333333333333333333333333333333333333333333"
 	  ]
 	}
 `
@@ -641,7 +765,7 @@ const mockSendRawTransactionResponse = `
 
 func TestClient_SendRawTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -650,7 +774,7 @@ func TestClient_SendRawTransaction(t *testing.T) {
 
 	txHash, err := client.SendRawTransaction(
 		context.Background(),
-		hexToBytes("0x0f86d8085174876e800830186a094295a70b2de5e3953354a6a8344e616ed314d7251948c7a3f9c9a9f00000801ba0b7e3d1e0c5f7e8d8e0e7d0f2e9b9a8c8a1f0d3e3f3b0e8c2d2e3f9d9c9c9f8a0a05d7e5b5e5f5d5e5d5d5e5d5e5d5e5d5e5d5e5d5e5d5e5d5e5d5e5d5e5d5a"),
+		hexToBytes("0xf893808609184e72a0008276c094d46e8dd67c5d32be8058bb8eb970870f072445678502540be400a9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f07244567511a02222222222222222222222222222222222222222222222222222222222222222a03333333333333333333333333333333333333333333333333333333333333333"),
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockSendRawTransactionRequest, readBody(httpMock.Request))
@@ -686,7 +810,7 @@ const mockCallResponse = `
 
 func TestClient_Call(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -740,7 +864,7 @@ const mockEstimateGasResponse = `
 
 func TestClient_EstimateGas(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -823,7 +947,7 @@ const mockBlockByNumberResponse = `
 
 func TestClient_BlockByNumber(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -881,7 +1005,7 @@ const mockBlockByHashRequest = `
 
 func TestClient_BlockByHash(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -935,7 +1059,7 @@ const mockGetTransactionByHashResponse = `
 
 func TestClient_GetTransactionByHash(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -980,7 +1104,7 @@ const mockGetTransactionByBlockHashAndIndexRequest = `
 
 func TestClient_GetTransactionByBlockHashAndIndex(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -1012,7 +1136,7 @@ const mockGetTransactionByBlockNumberAndIndexRequest = `
 
 func TestClient_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -1080,7 +1204,7 @@ const mockGetTransactionReceiptResponse = `
 
 func TestClient_GetTransactionReceipt(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -1161,7 +1285,7 @@ const mockGetLogsResponse = `
 
 func TestClient_GetLogs(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
@@ -1211,7 +1335,7 @@ const mockMaxPriorityFeePerGasResponse = `
 
 func TestClient_MaxPriorityFeePerGas(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := NewClient(httpMock)
+	client, _ := NewClient(WithTransport(httpMock))
 
 	httpMock.Response = &http.Response{
 		StatusCode: 200,
