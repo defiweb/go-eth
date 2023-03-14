@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"strings"
 )
 
 // BigIntToHex returns the hex representation of the given big integer.
@@ -84,12 +83,7 @@ func HexToBytes(h string) ([]byte, error) {
 	if len(h)%2 != 0 {
 		return nil, fmt.Errorf("invalid hex string, length must be even")
 	}
-	l := len(h) / 2
-	b := make([]byte, l)
-	if _, err := hex.NewDecoder(strings.NewReader(h)).Read(b[len(b)-l:]); err != nil {
-		return nil, err
-	}
-	return b, nil
+	return hex.DecodeString(h)
 }
 
 func MustHexToBytes(h string) []byte {
