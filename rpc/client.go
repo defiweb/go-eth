@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"math/big"
 
 	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
@@ -11,10 +10,11 @@ import (
 )
 
 type Client struct {
-	transport transport.Transport
+	baseClient
 
-	key     wallet.Key
-	chainID uint64
+	keys        []wallet.Key
+	defaultAddr *types.Address
+	chainID     *uint64
 }
 
 type ClientOptions func(c *Client) error
@@ -27,18 +27,37 @@ func WithTransport(transport transport.Transport) ClientOptions {
 	}
 }
 
-// WithKey sets the key and chain ID for the client. If the key provided, all
-// methods that require signing will sign the data locally.
+// WithKeys allows to set keys that will be used to sign data.
+// It allows to emulate the behavior of the RPC methods that require a key
+// to be available in the node.
 //
 // The following methods are affected:
+// - Accounts - returns the addresses of the provided keys
 // - Sign - signs the data with the provided key
 // - SignTransaction - signs transaction with the provided key
 // - SendTransaction - signs transaction with the provided key and sends it
 //   using SendRawTransaction
-func WithKey(key wallet.Key, chainID uint64) ClientOptions {
+func WithKeys(keys ...wallet.Key) ClientOptions {
 	return func(c *Client) error {
-		c.key = key
-		c.chainID = chainID
+		c.keys = keys
+		return nil
+	}
+}
+
+// WithDefaultAddress sets the transaction.From address if it is not set.
+func WithDefaultAddress(addr types.Address) ClientOptions {
+	return func(c *Client) error {
+		c.defaultAddr = &addr
+		return nil
+	}
+}
+
+// WithChainID sets the transaction.ChainID if it is not set. If the transaction
+// has a ChainID set, it will return an error if it does not match the provided
+// chain ID.
+func WithChainID(chainID uint64) ClientOptions {
+	return func(c *Client) error {
+		c.chainID = &chainID
 		return nil
 	}
 }
@@ -58,143 +77,55 @@ func NewClient(opts ...ClientOptions) (*Client, error) {
 	return c, nil
 }
 
-func (c *Client) ChainID(ctx context.Context) (uint64, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_chainId"); err != nil {
-		return 0, err
+// Accounts implements the RPC interface.
+func (c *Client) Accounts(ctx context.Context) ([]types.Address, error) {
+	if len(c.keys) > 0 {
+		var res []types.Address
+		for _, key := range c.keys {
+			res = append(res, key.Address())
+		}
+		return res, nil
 	}
-	if !res.Big().IsUint64() {
-		return 0, fmt.Errorf("chain id is too big")
-	}
-	return res.Big().Uint64(), nil
+	return c.baseClient.Accounts(ctx)
 }
 
-func (c *Client) GasPrice(ctx context.Context) (*big.Int, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_gasPrice"); err != nil {
-		return nil, err
-	}
-	return res.Big(), nil
-}
-
-func (c *Client) BlockNumber(ctx context.Context) (*big.Int, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_blockNumber"); err != nil {
-		return nil, err
-	}
-	return res.Big(), nil
-}
-
-func (c *Client) GetBalance(ctx context.Context, address types.Address, block types.BlockNumber) (*big.Int, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_getBalance", address, block); err != nil {
-		return nil, err
-	}
-	return res.Big(), nil
-}
-
-func (c *Client) GetStorageAt(ctx context.Context, account types.Address, key types.Hash, block types.BlockNumber) (*types.Hash, error) {
-	var res types.Hash
-	if err := c.transport.Call(ctx, &res, "eth_getStorageAt", account, key, block); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *Client) GetTransactionCount(ctx context.Context, account types.Address, block types.BlockNumber) (uint64, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_getTransactionCount", account, block); err != nil {
-		return 0, err
-	}
-	return res.Big().Uint64(), nil
-}
-
-func (c *Client) GetBlockTransactionCountByHash(ctx context.Context, hash types.Hash) (uint64, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_getBlockTransactionCountByHash", hash); err != nil {
-		return 0, err
-	}
-	return res.Big().Uint64(), nil
-}
-
-func (c *Client) GetBlockTransactionCountByNumber(ctx context.Context, number types.BlockNumber) (uint64, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_getBlockTransactionCountByNumber", number); err != nil {
-		return 0, err
-	}
-	return res.Big().Uint64(), nil
-}
-
-func (c *Client) GetUncleCountByBlockHash(ctx context.Context, hash types.Hash) (uint64, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_getUncleCountByBlockHash", hash); err != nil {
-		return 0, err
-	}
-	return res.Big().Uint64(), nil
-}
-
-func (c *Client) GetUncleCountByBlockNumber(ctx context.Context, number types.BlockNumber) (uint64, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_getUncleCountByBlockNumber", number); err != nil {
-		return 0, err
-	}
-	return res.Big().Uint64(), nil
-}
-
-func (c *Client) GetCode(ctx context.Context, account types.Address, block types.BlockNumber) ([]byte, error) {
-	var res types.Bytes
-	if err := c.transport.Call(ctx, &res, "eth_getCode", account, block); err != nil {
-		return nil, err
-	}
-	return res.Bytes(), nil
-}
-
+// Sign implements the RPC interface.
 func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (*types.Signature, error) {
-	if c.key != nil {
-		sig, err := c.key.SignMessage(data)
-		if err != nil {
-			return nil, err
-		}
-		return sig, nil
+	if key := c.findKey(&account); key != nil {
+		return key.SignMessage(data)
 	}
-	var res types.Signature
-	if err := c.transport.Call(ctx, &res, "eth_sign", account, types.Bytes(data)); err != nil {
-		return nil, err
-	}
-	return &res, nil
+	return c.baseClient.Sign(ctx, account, data)
 }
 
+// SignTransaction implements the RPC interface.
 func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error) {
-	if c.key != nil {
-		tx := &tx
-		if tx.ChainID != nil && *tx.ChainID != 0 && *tx.ChainID != c.chainID {
-			return nil, nil, fmt.Errorf("chain id mismatch")
-		}
-		tx.ChainID = &c.chainID
-		if err := c.key.SignTransaction(tx); err != nil {
+	txPtr := &tx
+	c.setTXChainID(txPtr)
+	if err := c.verifyTXChainID(txPtr); err != nil {
+		return nil, nil, err
+	}
+	if key := c.findKey(tx.Call.From); key != nil {
+		if err := key.SignTransaction(txPtr); err != nil {
 			return nil, nil, err
 		}
 		raw, err := tx.Raw()
 		if err != nil {
 			return nil, nil, err
 		}
-		return raw, tx, nil
+		return raw, txPtr, nil
 	}
-	var res signTransactionResult
-	if err := c.transport.Call(ctx, &res, "eth_signTransaction", tx); err != nil {
-		return nil, nil, err
-	}
-	return res.Raw, res.Tx, nil
+	return c.baseClient.SignTransaction(ctx, tx)
 }
 
+// SendTransaction implements the RPC interface.
 func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
-	if c.key != nil {
-		tx := &tx
-		if tx.ChainID != nil && *tx.ChainID != 0 && *tx.ChainID != c.chainID {
-			return nil, fmt.Errorf("chain id mismatch")
-		}
-		tx.ChainID = &c.chainID
-		if err := c.key.SignTransaction(tx); err != nil {
+	txPtr := &tx
+	c.setTXChainID(txPtr)
+	if err := c.verifyTXChainID(txPtr); err != nil {
+		return nil, err
+	}
+	if key := c.findKey(tx.Call.From); key != nil {
+		if err := key.SignTransaction(txPtr); err != nil {
 			return nil, err
 		}
 		raw, err := tx.Raw()
@@ -203,97 +134,46 @@ func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*ty
 		}
 		return c.SendRawTransaction(ctx, raw)
 	}
-	var res types.Hash
-	if err := c.transport.Call(ctx, &res, "eth_sendTransaction", tx); err != nil {
-		return nil, err
-	}
-	return &res, nil
+	return c.baseClient.SendTransaction(ctx, tx)
 }
 
-func (c *Client) SendRawTransaction(ctx context.Context, data []byte) (*types.Hash, error) {
-	var res types.Hash
-	if err := c.transport.Call(ctx, &res, "eth_sendRawTransaction", types.Bytes(data)); err != nil {
-		return nil, err
+// setTXChainID sets the transaction chain ID if it is not set and the client
+// has a chain ID set.
+func (c *Client) setTXChainID(tx *types.Transaction) {
+	if c.chainID == nil {
+		return
 	}
-	return &res, nil
+	if tx.ChainID == nil {
+		id := *c.chainID
+		tx.ChainID = &id
+	}
 }
 
-func (c *Client) Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, error) {
-	var res types.Bytes
-	if err := c.transport.Call(ctx, &res, "eth_call", call, block); err != nil {
-		return nil, err
+// verifyTXChainID verifies that the transaction chain ID is set. If the client
+// has a chain ID set, it will also verify that the transaction chain ID matches
+// the client chain ID.
+func (c *Client) verifyTXChainID(tx *types.Transaction) error {
+	if tx.ChainID == nil {
+		return fmt.Errorf("transaction chain ID is not set")
 	}
-	return res, nil
+	if c.chainID != nil && *tx.ChainID != *c.chainID {
+		return fmt.Errorf("transaction chain ID does not match")
+	}
+	return nil
 }
 
-func (c *Client) EstimateGas(ctx context.Context, call types.Call, block types.BlockNumber) (uint64, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_estimateGas", call, block); err != nil {
-		return 0, err
+// findKey finds a key by address. If the address is nil, it will return the
+// default key.
+func (c *Client) findKey(addr *types.Address) wallet.Key {
+	if addr == nil {
+		addr = c.defaultAddr
 	}
-	return res.Big().Uint64(), nil
-}
-
-func (c *Client) BlockByHash(ctx context.Context, hash types.Hash, full bool) (*types.Block, error) {
-	var res types.Block
-	if err := c.transport.Call(ctx, &res, "eth_getBlockByHash", hash, full); err != nil {
-		return nil, err
+	if addr != nil {
+		for _, key := range c.keys {
+			if key.Address() == *addr {
+				return key
+			}
+		}
 	}
-	return &res, nil
-}
-
-func (c *Client) BlockByNumber(ctx context.Context, number types.BlockNumber, full bool) (*types.Block, error) {
-	var res types.Block
-	if err := c.transport.Call(ctx, &res, "eth_getBlockByNumber", number, full); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *Client) GetTransactionByHash(ctx context.Context, hash types.Hash) (*types.OnChainTransaction, error) {
-	var res types.OnChainTransaction
-	if err := c.transport.Call(ctx, &res, "eth_getTransactionByHash", hash); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *Client) GetTransactionByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.OnChainTransaction, error) {
-	var res types.OnChainTransaction
-	if err := c.transport.Call(ctx, &res, "eth_getTransactionByBlockHashAndIndex", hash, types.NumberFromUint64(index)); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *Client) GetTransactionByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.OnChainTransaction, error) {
-	var res types.OnChainTransaction
-	if err := c.transport.Call(ctx, &res, "eth_getTransactionByBlockNumberAndIndex", number, types.NumberFromUint64(index)); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *Client) GetTransactionReceipt(ctx context.Context, hash types.Hash) (*types.TransactionReceipt, error) {
-	var res types.TransactionReceipt
-	if err := c.transport.Call(ctx, &res, "eth_getTransactionReceipt", hash); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *Client) GetLogs(ctx context.Context, query types.FilterLogsQuery) ([]types.Log, error) {
-	var res []types.Log
-	if err := c.transport.Call(ctx, &res, "eth_getLogs", query); err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-func (c *Client) MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error) {
-	var res types.Number
-	if err := c.transport.Call(ctx, &res, "eth_maxPriorityFeePerGas"); err != nil {
-		return nil, err
-	}
-	return res.Big(), nil
+	return nil
 }

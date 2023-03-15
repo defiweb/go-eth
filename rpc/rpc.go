@@ -30,7 +30,10 @@ type RPC interface {
 	// It returns the current price per gas in wei.
 	GasPrice(ctx context.Context) (*big.Int, error)
 
-	// TODO: eth_accounts
+	// Accounts performs eth_accounts RPC call.
+	//
+	// It returns the list of addresses owned by the client.
+	Accounts(ctx context.Context) ([]types.Address, error)
 
 	// BlockNumber performs eth_blockNumber RPC call.
 	//

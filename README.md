@@ -186,9 +186,17 @@ func main() {
 		rpc.WithTransport(t),
 
 		// You can specify a key to sign transactions. If provided, the client will
-		// use it with SignTransaction, SendTransaction, and Sign methods instead
+		// use it to with SignTransaction, SendTransaction, and Sign methods instead
 		// of making RPC calls.
-		rpc.WithKey(key, 1),
+		rpc.WithKeys(key),
+
+		// You can specify a default address to use with SendTransaction if the
+		// transaction doesn't have a "from" field set.
+		rpc.WithDefaultAddress(key.Address()),
+
+		// You can specify a chain ID to use with SendTransaction if the transaction
+		// doesn't have a "chainID" field set.
+		rpc.WithChainID(1),
 	)
 	if err != nil {
 		panic(err)
@@ -210,7 +218,7 @@ func main() {
 		SetNonce(0).
 		SetMaxPriorityFeePerGas(big.NewInt(1 * 1e9)).
 		SetMaxFeePerGas(big.NewInt(20 * 1e9))
-	
+
 	txHash, err := c.SendTransaction(context.Background(), *tx)
 	if err != nil {
 		panic(err)
