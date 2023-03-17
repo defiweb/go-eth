@@ -124,8 +124,7 @@ func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
 func (m *Method) DecodeArg(data []byte, arg any) error {
 	if !m.fourBytes.Match(data[:4]) {
 		return fmt.Errorf(
-			"abi: method %s: four bytes 0x%x do not match method signature %s",
-			m.name,
+			"abi: calldata signature 0x%x do not match method signature %s",
 			data[:4],
 			m.fourBytes,
 		)
@@ -137,8 +136,7 @@ func (m *Method) DecodeArg(data []byte, arg any) error {
 func (m *Method) DecodeArgs(data []byte, args ...any) error {
 	if !m.fourBytes.Match(data[:4]) {
 		return fmt.Errorf(
-			"abi: method %s: four bytes 0x%x do not match method signature %s",
-			m.name,
+			"abi: calldata signature 0x%x do not match method signature %s",
 			data[:4],
 			m.fourBytes,
 		)
