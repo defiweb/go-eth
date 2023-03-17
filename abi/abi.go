@@ -94,12 +94,19 @@ func NewABI() *ABI {
 		},
 		SourceValueHook: func(v reflect.Value) reflect.Value {
 			for {
+				// If the source implements MapTo, then return it but
+				// first dereference it if it is an interface.
 				if _, ok := v.Interface().(MapTo); ok {
 					for v.Kind() == reflect.Interface {
 						v = v.Elem()
 					}
 					return v
 				}
+				// If the source is not a pointer or interface, then
+				// break the loop and return an empty value. Returning an
+				// empty value will cause the default mapping function to
+				// be used. Otherwise, dereference the source and continue
+				// the loop.
 				if v.Kind() != reflect.Interface && v.Kind() != reflect.Ptr {
 					break
 				}
@@ -131,7 +138,8 @@ func NewABI() *ABI {
 				// If the destination is not a pointer or interface, then
 				// break the loop and return an empty value. Returning an
 				// empty value will cause the anymapper package to ignore
-				// this hook.
+				// this hook. Otherwise, dereference the destination and
+				// continue the loop.
 				if v.Kind() != reflect.Interface && v.Kind() != reflect.Ptr {
 					break
 				}
