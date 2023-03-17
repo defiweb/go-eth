@@ -81,7 +81,7 @@ func main() {
 	}
 
 	// Create a JSON-RPC client.
-	c := rpc.NewClient(t)
+	c := rpc.NewClient(rpc.WithTransport(t))
 
 	// Get the latest block number.
 	b, err := c.BlockNumber(context.Background())
@@ -117,7 +117,7 @@ func main() {
 	}
 
 	// Create a JSON-RPC client.
-	c := rpc.NewClient(t)
+	c := rpc.NewClient(rpc.WithTransport(t))
 
 	// Parse method signature.
 	balanceOf := abi.MustParseMethod("balanceOf(address)(uint256)")
@@ -187,15 +187,15 @@ func main() {
 
 		// You can specify a key to sign transactions. If provided, the client will
 		// use it to with SignTransaction, SendTransaction, and Sign methods instead
-		// of making RPC calls.
+		// of delegating the signing to the node.
 		rpc.WithKeys(key),
 
 		// You can specify a default address to use with SendTransaction if the
-		// transaction doesn't have a "from" field set.
+		// transaction doesn't have a "From" field set.
 		rpc.WithDefaultAddress(key.Address()),
 
 		// You can specify a chain ID to use with SendTransaction if the transaction
-		// doesn't have a "chainID" field set.
+		// doesn't have a "ChainID" field set.
 		rpc.WithChainID(1),
 	)
 	if err != nil {

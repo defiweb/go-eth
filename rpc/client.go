@@ -44,7 +44,10 @@ func WithKeys(keys ...wallet.Key) ClientOptions {
 	}
 }
 
-// WithDefaultAddress sets the transaction.From address if it is not set.
+// WithDefaultAddress sets the transaction.From address if it is not set
+// in the following methods:
+// - SignTransaction
+// - SendTransaction
 func WithDefaultAddress(addr types.Address) ClientOptions {
 	return func(c *Client) error {
 		c.defaultAddr = &addr
@@ -52,9 +55,13 @@ func WithDefaultAddress(addr types.Address) ClientOptions {
 	}
 }
 
-// WithChainID sets the transaction.ChainID if it is not set. If the transaction
-// has a ChainID set, it will return an error if it does not match the provided
-// chain ID.
+// WithChainID sets the transaction.ChainID if it is not set in the following
+// methods:
+// - SignTransaction
+// - SendTransaction
+//
+// If the transaction has a ChainID set, it will return an error if it does not
+// match the provided chain ID.
 func WithChainID(chainID uint64) ClientOptions {
 	return func(c *Client) error {
 		c.chainID = &chainID
@@ -91,18 +98,29 @@ func (c *Client) Accounts(ctx context.Context) ([]types.Address, error) {
 
 // Sign implements the RPC interface.
 func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (*types.Signature, error) {
+	if len(c.keys) == 0 {
+		return c.baseClient.Sign(ctx, account, data)
+	}
 	if key := c.findKey(&account); key != nil {
 		return key.SignMessage(data)
 	}
-	return c.baseClient.Sign(ctx, account, data)
+	return nil, fmt.Errorf("rpc client: no key found for address %s", account)
 }
 
 // SignTransaction implements the RPC interface.
 func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error) {
 	txPtr := &tx
-	c.setTXChainID(txPtr)
+	if tx.ChainID == nil && c.chainID != nil {
+		txPtr.ChainID = c.chainID
+	}
+	if tx.Call.From == nil && c.defaultAddr != nil {
+		txPtr.Call.From = c.defaultAddr
+	}
 	if err := c.verifyTXChainID(txPtr); err != nil {
 		return nil, nil, err
+	}
+	if len(c.keys) == 0 {
+		return c.baseClient.SignTransaction(ctx, tx)
 	}
 	if key := c.findKey(tx.Call.From); key != nil {
 		if err := key.SignTransaction(txPtr); err != nil {
@@ -114,15 +132,23 @@ func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]b
 		}
 		return raw, txPtr, nil
 	}
-	return c.baseClient.SignTransaction(ctx, tx)
+	return nil, nil, fmt.Errorf("rpc client: no key found for address %s", tx.Call.From)
 }
 
 // SendTransaction implements the RPC interface.
 func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
 	txPtr := &tx
-	c.setTXChainID(txPtr)
+	if tx.ChainID == nil && c.chainID != nil {
+		txPtr.ChainID = c.chainID
+	}
+	if tx.Call.From == nil && c.defaultAddr != nil {
+		txPtr.Call.From = c.defaultAddr
+	}
 	if err := c.verifyTXChainID(txPtr); err != nil {
 		return nil, err
+	}
+	if len(c.keys) == 0 {
+		return c.baseClient.SendTransaction(ctx, tx)
 	}
 	if key := c.findKey(tx.Call.From); key != nil {
 		if err := key.SignTransaction(txPtr); err != nil {
@@ -134,19 +160,7 @@ func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*ty
 		}
 		return c.SendRawTransaction(ctx, raw)
 	}
-	return c.baseClient.SendTransaction(ctx, tx)
-}
-
-// setTXChainID sets the transaction chain ID if it is not set and the client
-// has a chain ID set.
-func (c *Client) setTXChainID(tx *types.Transaction) {
-	if c.chainID == nil {
-		return
-	}
-	if tx.ChainID == nil {
-		id := *c.chainID
-		tx.ChainID = &id
-	}
+	return nil, fmt.Errorf("rpc client: no key found for address %s", tx.Call.From)
 }
 
 // verifyTXChainID verifies that the transaction chain ID is set. If the client
@@ -154,25 +168,22 @@ func (c *Client) setTXChainID(tx *types.Transaction) {
 // the client chain ID.
 func (c *Client) verifyTXChainID(tx *types.Transaction) error {
 	if tx.ChainID == nil {
-		return fmt.Errorf("transaction chain ID is not set")
+		return fmt.Errorf("rpc client: transaction chain ID is not set")
 	}
 	if c.chainID != nil && *tx.ChainID != *c.chainID {
-		return fmt.Errorf("transaction chain ID does not match")
+		return fmt.Errorf("rpc client: transaction chain ID does not match")
 	}
 	return nil
 }
 
-// findKey finds a key by address. If the address is nil, it will return the
-// default key.
+// findKey finds a key by address.
 func (c *Client) findKey(addr *types.Address) wallet.Key {
 	if addr == nil {
-		addr = c.defaultAddr
+		return nil
 	}
-	if addr != nil {
-		for _, key := range c.keys {
-			if key.Address() == *addr {
-				return key
-			}
+	for _, key := range c.keys {
+		if key.Address() == *addr {
+			return key
 		}
 	}
 	return nil
