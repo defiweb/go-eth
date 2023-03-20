@@ -43,6 +43,9 @@ func (a *ABI) DecodeValues(t Type, abi []byte, vals ...any) error {
 		return err
 	}
 	for i, elem := range *v {
+		if vals[i] == nil {
+			continue // Nil values are ignored.
+		}
 		if err := a.Mapper.Map(elem.Value, vals[i]); err != nil {
 			return err
 		}

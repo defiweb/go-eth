@@ -1723,6 +1723,19 @@ func TestABI_decodeToMap(t *testing.T) {
 	assert.Equal(t, int64(1), dst["bigInt"].(*big.Int).Int64())
 }
 
+func TestABI_decodeToNil(t *testing.T) {
+	type str struct {
+		BigInt *big.Int `abi:"bigInt"`
+	}
+
+	typ := MustParseType("(uint256 bigInt)")
+	abi := Words{padL("0x01")}
+
+	err := DecodeValues(typ, abi.Bytes(), nil)
+
+	require.NoError(t, err)
+}
+
 func Test_fieldMapper(t *testing.T) {
 	tests := []struct {
 		name string
