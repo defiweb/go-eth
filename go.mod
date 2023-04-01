@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/btcsuite/btcd v0.22.1
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
-	github.com/defiweb/go-anymapper v0.0.0-20230314210910-241886f5c16d
+	github.com/defiweb/go-anymapper v0.0.0-20230401113130-7639d2c14959
 	github.com/defiweb/go-rlp v0.0.0-20221110234728-569c5d013937
 	github.com/defiweb/go-sigparser v0.0.0-20221125211146-2e4b90d8e269
 	github.com/google/uuid v1.3.0
