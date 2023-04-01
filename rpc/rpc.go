@@ -169,4 +169,28 @@ type RPC interface {
 	//
 	// It returns the estimated maximum priority fee per gas.
 	MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error)
+
+	// SubscribeLogs performs eth_subscribe RPC call with "logs" subscription
+	// type.
+	//
+	// It creates a subscription that will send logs that match the given query.
+	//
+	// Subscription channel will be closed when the context is canceled.
+	SubscribeLogs(ctx context.Context, query types.FilterLogsQuery) (chan types.Log, error)
+
+	// SubscribeNewHeads performs eth_subscribe RPC call with "newHeads"
+	// subscription type.
+	//
+	// It creates a subscription that will send new block headers.
+	//
+	// Subscription channel will be closed when the context is canceled.
+	SubscribeNewHeads(ctx context.Context) (chan types.Block, error)
+
+	// SubscribeNewPendingTransactions performs eth_subscribe RPC call with
+	// "newPendingTransactions" subscription type.
+	//
+	// It creates a subscription that will send new pending transactions.
+	//
+	// Subscription channel will be closed when the context is canceled.
+	SubscribeNewPendingTransactions(ctx context.Context) (chan types.Hash, error)
 }

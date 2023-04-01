@@ -78,6 +78,7 @@ func TestClient_SignTransaction(t *testing.T) {
 	assert.Equal(t, hexToBytes("0x2222222222222222222222222222222222222222222222222222222222222222"), tx.Signature.Bytes()[:32])
 	assert.Equal(t, hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333"), tx.Signature.Bytes()[32:64])
 }
+
 func TestClient_SendTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
 	keyMock := &keyMock{}
@@ -91,7 +92,7 @@ func TestClient_SendTransaction(t *testing.T) {
 		return nil
 	}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockSendRawTransactionResponse)),
 	}

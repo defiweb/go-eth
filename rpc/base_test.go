@@ -3,75 +3,19 @@ package rpc
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"math/big"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
-	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
 )
-
-type roundTripFunc func(req *http.Request) (*http.Response, error)
-
-func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return f(req)
-}
-
-type httpMock struct {
-	*transport.HTTP
-	Request  *http.Request
-	Response *http.Response
-}
-
-func newHTTPMock() *httpMock {
-	h := &httpMock{}
-	h.HTTP, _ = transport.NewHTTP(transport.HTTPOptions{
-		URL: "http://localhost",
-		HTTPClient: &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				h.Request = req
-				return h.Response, nil
-			}),
-		},
-	})
-	return h
-}
-
-type keyMock struct {
-	addressCallback         func() types.Address
-	signHashCallback        func(hash types.Hash) (*types.Signature, error)
-	signMessageCallback     func(data []byte) (*types.Signature, error)
-	signTransactionCallback func(tx *types.Transaction) error
-}
-
-func (k *keyMock) Address() types.Address {
-	return k.addressCallback()
-}
-
-func (k *keyMock) SignHash(hash types.Hash) (*types.Signature, error) {
-	return k.signHashCallback(hash)
-}
-
-func (k *keyMock) SignMessage(data []byte) (*types.Signature, error) {
-	return k.signMessageCallback(data)
-}
-
-func (k *keyMock) SignTransaction(tx *types.Transaction) error {
-	return k.signTransactionCallback(tx)
-}
-
-func (k *keyMock) VerifyHash(hash types.Hash, sig types.Signature) bool {
-	return false
-}
-
-func (k keyMock) VerifyMessage(data []byte, sig types.Signature) bool {
-	return false
-}
 
 const mockChanIDRequest = `
 	{
@@ -94,7 +38,7 @@ func TestBaseClient_ChainID(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockChanIDResponse)),
 	}
@@ -126,7 +70,7 @@ func TestBaseClient_GasPrice(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGasPriceResponse)),
 	}
@@ -158,7 +102,7 @@ func TestBaseClient_BlockNumber(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockBlockNumberResponse)),
 	}
@@ -194,7 +138,7 @@ func TestBaseClient_GetBalance(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetBalanceResponse)),
 	}
@@ -235,7 +179,7 @@ func TestBaseClient_GetStorageAt(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetStorageAtResponse)),
 	}
@@ -276,7 +220,7 @@ func TestBaseClient_GetTransactionCount(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionCountResponse)),
 	}
@@ -315,7 +259,7 @@ func TestBaseClient_GetBlockTransactionCountByHash(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByHashResponse)),
 	}
@@ -352,7 +296,7 @@ func TestBaseClient_GetBlockTransactionCountByNumber(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetBlockTransactionCountByNumberResponse)),
 	}
@@ -389,7 +333,7 @@ func TestBaseClient_GetUncleCountByBlockHash(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockHashResponse)),
 	}
@@ -426,7 +370,7 @@ func TestBaseClient_GetUncleCountByBlockNumber(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetUncleCountByBlockNumberResponse)),
 	}
@@ -464,7 +408,7 @@ func TestBaseClient_GetCode(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetCodeResponse)),
 	}
@@ -503,7 +447,7 @@ func TestBaseClient_Sign(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockSignResponse)),
 	}
@@ -561,7 +505,7 @@ func TestBaseClient_SignTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockSignTransactionResponse)),
 	}
@@ -627,7 +571,7 @@ func TestBaseClient_SendTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockSendTransactionResponse)),
 	}
@@ -678,7 +622,7 @@ func TestBaseClient_SendRawTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockSendRawTransactionResponse)),
 	}
@@ -723,7 +667,7 @@ func TestBaseClient_Call(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockCallResponse)),
 	}
@@ -777,7 +721,7 @@ func TestBaseClient_EstimateGas(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockEstimateGasResponse)),
 	}
@@ -860,7 +804,7 @@ func TestBaseClient_BlockByNumber(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
 	}
@@ -918,7 +862,7 @@ func TestBaseClient_BlockByHash(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
 	}
@@ -972,7 +916,7 @@ func TestBaseClient_GetTransactionByHash(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
@@ -1017,7 +961,7 @@ func TestBaseClient_GetTransactionByBlockHashAndIndex(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
@@ -1049,7 +993,7 @@ func TestBaseClient_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionByHashResponse)),
 	}
@@ -1117,7 +1061,7 @@ func TestBaseClient_GetTransactionReceipt(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetTransactionReceiptResponse)),
 	}
@@ -1198,7 +1142,7 @@ func TestBaseClient_GetLogs(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockGetLogsResponse)),
 	}
@@ -1248,7 +1192,7 @@ func TestBaseClient_MaxPriorityFeePerGas(t *testing.T) {
 	httpMock := newHTTPMock()
 	client := &baseClient{transport: httpMock}
 
-	httpMock.Response = &http.Response{
+	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString(mockMaxPriorityFeePerGasResponse)),
 	}
@@ -1257,6 +1201,226 @@ func TestBaseClient_MaxPriorityFeePerGas(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, mockMaxPriorityFeePerGasRequest, readBody(httpMock.Request))
 	assert.Equal(t, hexToBigInt("0x1"), gasPrice)
+}
+
+const mockSubscribeLogsResponse = `
+	{
+	  "address": "0x3333333333333333333333333333333333333333",
+	  "topics": [
+	    "0x4444444444444444444444444444444444444444444444444444444444444444"
+	  ],
+	  "data": "0x68656c6c6f21",
+	  "blockNumber": "0x1",
+	  "transactionHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+	  "transactionIndex": "0x0",
+	  "blockHash": "0x4444444444444444444444444444444444444444444444444444444444444444",
+	  "logIndex": "0x0",
+	  "removed": false
+	}
+`
+
+func TestBaseClient_SubscribeLogs(t *testing.T) {
+	streamMock := newStreamMock(t)
+	client := &baseClient{transport: streamMock}
+
+	// Mock subscribe response
+	rawCh := make(chan json.RawMessage)
+	query := types.FilterLogsQuery{
+		FromBlock: types.BlockNumberFromUint64Ptr(1),
+		ToBlock:   types.BlockNumberFromUint64Ptr(2),
+		Address:   []types.Address{types.MustAddressFromHex("0x3333333333333333333333333333333333333333")},
+		Topics: [][]types.Hash{
+			{types.MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", types.PadNone)},
+		},
+	}
+	streamMock.SubscribeMocks = append(streamMock.SubscribeMocks, subscribeMock{
+		ArgMethod: "logs",
+		ArgParams: []any{query},
+		RetCh:     rawCh,
+		RetID:     "1",
+		RetErr:    nil,
+	})
+	streamMock.UnsubscribeMocks = append(streamMock.UnsubscribeMocks, unsubscribeMock{
+		ArgID: "1",
+	})
+
+	// Subscribe
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
+	logsCh, err := client.SubscribeLogs(ctx, query)
+
+	// Assert subscribe response
+	require.NotNil(t, logsCh)
+	require.NoError(t, err)
+
+	// Mock response
+	rawCh <- json.RawMessage(mockSubscribeLogsResponse)
+
+	// Assert received log
+	logs := <-logsCh
+	require.NotNil(t, logs)
+	assert.Equal(t, "0x3333333333333333333333333333333333333333", logs.Address.String())
+	assert.Equal(t, "0x4444444444444444444444444444444444444444444444444444444444444444", logs.Topics[0].String())
+	assert.Equal(t, "0x68656c6c6f21", hexutil.BytesToHex(logs.Data))
+	assert.Equal(t, "1", logs.BlockNumber.String())
+	assert.Equal(t, "0x4444444444444444444444444444444444444444444444444444444444444444", logs.TransactionHash.String())
+	assert.Equal(t, uint64(0), *logs.TransactionIndex)
+	assert.Equal(t, "0x4444444444444444444444444444444444444444444444444444444444444444", logs.BlockHash.String())
+	assert.Equal(t, uint64(0), *logs.LogIndex)
+	assert.Equal(t, false, logs.Removed)
+
+	ctxCancel()
+	assert.Eventually(t, func() bool {
+		return len(streamMock.UnsubscribeMocks) == 0
+	}, time.Second, 10*time.Millisecond)
+}
+
+const mockSubscribeNewHeadsResponse = `
+	{
+	  "number": "0x11",
+	  "hash": "0x2222222222222222222222222222222222222222222222222222222222222222",
+	  "parentHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
+	  "nonce": "0x4444444444444444",
+	  "sha3Uncles": "0x5555555555555555555555555555555555555555555555555555555555555555",
+	  "logsBloom": "0x66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666",
+	  "transactionsRoot": "0x7777777777777777777777777777777777777777777777777777777777777777",
+	  "stateRoot": "0x8888888888888888888888888888888888888888888888888888888888888888",
+	  "receiptsRoot": "0x9999999999999999999999999999999999999999999999999999999999999999",
+	  "miner": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	  "difficulty": "0xbbbbbb",
+	  "totalDifficulty": "0xcccccc",
+	  "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	  "size": "0xdddddd",
+	  "gasLimit": "0xeeeeee",
+	  "gasUsed": "0xffffff",
+	  "timestamp": "0x54e34e8e",
+	  "transactions": [
+	    {
+	  	"hash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+	  	"nonce": "0x22",
+	  	"blockHash": "0x3333333333333333333333333333333333333333333333333333333333333333",
+	  	"blockNumber": "0x4444",
+	  	"transactionIndex": "0x01",
+	  	"from": "0x5555555555555555555555555555555555555555",
+	  	"to": "0x6666666666666666666666666666666666666666",
+	  	"value": "0x2540be400",
+	  	"gas": "0x76c0",
+	  	"gasPrice": "0x9184e72a000",
+	  	"input": "0x777777777777"
+	    }
+	  ],
+	  "uncles": [
+	  	"0x8888888888888888888888888888888888888888888888888888888888888888"
+	  ]
+	}
+`
+
+func TestBaseClient_SubscribeNewHeads(t *testing.T) {
+	streamMock := newStreamMock(t)
+	client := &baseClient{transport: streamMock}
+
+	// Mock subscribe response
+	rawCh := make(chan json.RawMessage)
+	streamMock.SubscribeMocks = append(streamMock.SubscribeMocks, subscribeMock{
+		ArgMethod: "newHeads",
+		ArgParams: []any{},
+		RetCh:     rawCh,
+		RetID:     "1",
+		RetErr:    nil,
+	})
+	streamMock.UnsubscribeMocks = append(streamMock.UnsubscribeMocks, unsubscribeMock{
+		ArgID: "1",
+	})
+
+	// Subscribe
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
+	headsCh, err := client.SubscribeNewHeads(ctx)
+
+	// Assert subscribe response
+	require.NotNil(t, headsCh)
+	require.NoError(t, err)
+
+	// Mock response
+	rawCh <- json.RawMessage(mockSubscribeNewHeadsResponse)
+
+	// Assert received block
+	block := <-headsCh
+	require.NotNil(t, block)
+	assert.Equal(t, big.NewInt(0x11), block.Number)
+	assert.Equal(t, types.MustHashFromHex("0x2222222222222222222222222222222222222222222222222222222222222222", types.PadNone), block.Hash)
+	assert.Equal(t, types.MustHashFromHex("0x3333333333333333333333333333333333333333333333333333333333333333", types.PadNone), block.ParentHash)
+	assert.Equal(t, hexToBigInt("0x4444444444444444"), block.Nonce)
+	assert.Equal(t, types.MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", types.PadNone), block.Sha3Uncles)
+	assert.Equal(t, hexToBytes("0x66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666"), block.LogsBloom)
+	assert.Equal(t, types.MustHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777", types.PadNone), block.TransactionsRoot)
+	assert.Equal(t, types.MustHashFromHex("0x8888888888888888888888888888888888888888888888888888888888888888", types.PadNone), block.StateRoot)
+	assert.Equal(t, types.MustHashFromHex("0x9999999999999999999999999999999999999999999999999999999999999999", types.PadNone), block.ReceiptsRoot)
+	assert.Equal(t, types.MustAddressFromHex("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), block.Miner)
+	assert.Equal(t, hexToBigInt("0xbbbbbb"), block.Difficulty)
+	assert.Equal(t, hexToBigInt("0xcccccc"), block.TotalDifficulty)
+	assert.Equal(t, hexToBytes("0x0000000000000000000000000000000000000000000000000000000000000000"), block.ExtraData)
+	assert.Equal(t, hexToBigInt("0xdddddd").Uint64(), block.Size)
+	assert.Equal(t, hexToBigInt("0xeeeeee").Uint64(), block.GasLimit)
+	assert.Equal(t, hexToBigInt("0xffffff").Uint64(), block.GasUsed)
+	assert.Equal(t, int64(1424182926), block.Timestamp.Unix())
+	require.Len(t, block.Transactions, 1)
+	require.Len(t, block.Uncles, 1)
+	assert.Equal(t, types.MustHashFromHexPtr("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), block.Transactions[0].Hash)
+	assert.Equal(t, uint64(0x22), *block.Transactions[0].Nonce)
+	assert.Equal(t, types.MustAddressFromHexPtr("0x5555555555555555555555555555555555555555"), block.Transactions[0].From)
+	assert.Equal(t, types.MustAddressFromHexPtr("0x6666666666666666666666666666666666666666"), block.Transactions[0].To)
+	assert.Equal(t, big.NewInt(10000000000), block.Transactions[0].Value)
+	assert.Equal(t, uint64(30400), *block.Transactions[0].GasLimit)
+	assert.Equal(t, big.NewInt(10000000000000), block.Transactions[0].GasPrice)
+	assert.Equal(t, hexToBytes("0x777777777777"), block.Transactions[0].Input)
+	assert.Equal(t, types.MustHashFromHex("0x8888888888888888888888888888888888888888888888888888888888888888", types.PadNone), block.Uncles[0])
+
+	ctxCancel()
+	assert.Eventually(t, func() bool {
+		return len(streamMock.UnsubscribeMocks) == 0
+	}, time.Second, 10*time.Millisecond)
+}
+
+const mockSubscribeNewPendingTransactions = `"0x1111111111111111111111111111111111111111111111111111111111111111"`
+
+func TestClient_SubscribeNewPendingTransactions(t *testing.T) {
+	streamMock := newStreamMock(t)
+	client := &baseClient{transport: streamMock}
+
+	// Mock subscribe response
+	rawCh := make(chan json.RawMessage)
+	streamMock.SubscribeMocks = append(streamMock.SubscribeMocks, subscribeMock{
+		ArgMethod: "newPendingTransactions",
+		ArgParams: []any{},
+		RetCh:     rawCh,
+		RetID:     "1",
+		RetErr:    nil,
+	})
+	streamMock.UnsubscribeMocks = append(streamMock.UnsubscribeMocks, unsubscribeMock{
+		ArgID: "1",
+	})
+
+	// Subscribe to logs
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
+	txCh, err := client.SubscribeNewPendingTransactions(ctx)
+
+	// Assert subscribe request
+	require.NotNil(t, txCh)
+	require.NoError(t, err)
+
+	// Mock response
+	rawCh <- json.RawMessage(mockSubscribeNewPendingTransactions)
+
+	// Assert response
+	tx := <-txCh
+	assert.Equal(t, types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), tx)
+
+	ctxCancel()
+	assert.Eventually(t, func() bool {
+		return len(streamMock.UnsubscribeMocks) == 0
+	}, time.Second, 10*time.Millisecond)
 }
 
 func readBody(r *http.Request) string {

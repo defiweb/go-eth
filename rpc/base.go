@@ -2,6 +2,8 @@ package rpc
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -9,6 +11,8 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+// baseClient is a base implementation of the RPC interface. It implements
+// RPC methods supported by Ethereum nodes.
 type baseClient struct {
 	transport transport.Transport
 }
@@ -76,6 +80,9 @@ func (c *baseClient) GetTransactionCount(ctx context.Context, account types.Addr
 	if err := c.transport.Call(ctx, &res, "eth_getTransactionCount", account, block); err != nil {
 		return 0, err
 	}
+	if !res.Big().IsUint64() {
+		return 0, errors.New("transaction count is too big")
+	}
 	return res.Big().Uint64(), nil
 }
 
@@ -84,6 +91,9 @@ func (c *baseClient) GetBlockTransactionCountByHash(ctx context.Context, hash ty
 	var res types.Number
 	if err := c.transport.Call(ctx, &res, "eth_getBlockTransactionCountByHash", hash); err != nil {
 		return 0, err
+	}
+	if !res.Big().IsUint64() {
+		return 0, errors.New("transaction count is too big")
 	}
 	return res.Big().Uint64(), nil
 }
@@ -94,6 +104,9 @@ func (c *baseClient) GetBlockTransactionCountByNumber(ctx context.Context, numbe
 	if err := c.transport.Call(ctx, &res, "eth_getBlockTransactionCountByNumber", number); err != nil {
 		return 0, err
 	}
+	if !res.Big().IsUint64() {
+		return 0, errors.New("transaction count is too big")
+	}
 	return res.Big().Uint64(), nil
 }
 
@@ -103,6 +116,9 @@ func (c *baseClient) GetUncleCountByBlockHash(ctx context.Context, hash types.Ha
 	if err := c.transport.Call(ctx, &res, "eth_getUncleCountByBlockHash", hash); err != nil {
 		return 0, err
 	}
+	if !res.Big().IsUint64() {
+		return 0, errors.New("uncle count is too big")
+	}
 	return res.Big().Uint64(), nil
 }
 
@@ -111,6 +127,9 @@ func (c *baseClient) GetUncleCountByBlockNumber(ctx context.Context, number type
 	var res types.Number
 	if err := c.transport.Call(ctx, &res, "eth_getUncleCountByBlockNumber", number); err != nil {
 		return 0, err
+	}
+	if !res.Big().IsUint64() {
+		return 0, errors.New("uncle count is too big")
 	}
 	return res.Big().Uint64(), nil
 }
@@ -174,6 +193,9 @@ func (c *baseClient) EstimateGas(ctx context.Context, call types.Call, block typ
 	var res types.Number
 	if err := c.transport.Call(ctx, &res, "eth_estimateGas", call, block); err != nil {
 		return 0, err
+	}
+	if !res.Big().IsUint64() {
+		return 0, errors.New("gas estimate is too big")
 	}
 	return res.Big().Uint64(), nil
 }
@@ -248,4 +270,57 @@ func (c *baseClient) MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error)
 		return nil, err
 	}
 	return res.Big(), nil
+}
+
+// SubscribeLogs implements the RPC interface.
+func (c *baseClient) SubscribeLogs(ctx context.Context, query types.FilterLogsQuery) (chan types.Log, error) {
+	return subscribe[types.Log](ctx, c.transport, "logs", query)
+}
+
+// SubscribeNewHeads implements the RPC interface.
+func (c *baseClient) SubscribeNewHeads(ctx context.Context) (chan types.Block, error) {
+	return subscribe[types.Block](ctx, c.transport, "newHeads")
+}
+
+// SubscribeNewPendingTransactions implements the RPC interface.
+func (c *baseClient) SubscribeNewPendingTransactions(ctx context.Context) (chan types.Hash, error) {
+	return subscribe[types.Hash](ctx, c.transport, "newPendingTransactions")
+}
+
+// subscribe creates a subscription to the given method and returns a channel
+// that will receive the subscription messages. The messages are unmarshalled
+// to the T type. The subscription is unsubscribed and channel closed when the
+// context is cancelled.
+func subscribe[T any](ctx context.Context, t transport.Transport, method string, params ...any) (chan T, error) {
+	st, ok := t.(transport.SubscriptionTransport)
+	if !ok {
+		return nil, errors.New("transport does not support subscriptions")
+	}
+	rawCh, subID, err := st.Subscribe(ctx, method, params...)
+	if err != nil {
+		return nil, err
+	}
+	msgCh := make(chan T)
+	go subscriptionRoutine(ctx, st, subID, rawCh, msgCh)
+	return msgCh, nil
+}
+
+func subscriptionRoutine[T any](ctx context.Context, t transport.SubscriptionTransport, subID string, rawCh chan json.RawMessage, msgCh chan T) {
+	defer close(msgCh)
+	defer t.Unsubscribe(ctx, subID)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case raw, ok := <-rawCh:
+			if !ok {
+				return
+			}
+			var msg T
+			if err := json.Unmarshal(raw, &msg); err != nil {
+				continue
+			}
+			msgCh <- msg
+		}
+	}
 }

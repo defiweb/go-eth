@@ -32,11 +32,11 @@ func WithTransport(transport transport.Transport) ClientOptions {
 // to be available in the node.
 //
 // The following methods are affected:
-// - Accounts - returns the addresses of the provided keys
-// - Sign - signs the data with the provided key
-// - SignTransaction - signs transaction with the provided key
-// - SendTransaction - signs transaction with the provided key and sends it
-//   using SendRawTransaction
+//   - Accounts - returns the addresses of the provided keys
+//   - Sign - signs the data with the provided key
+//   - SignTransaction - signs transaction with the provided key
+//   - SendTransaction - signs transaction with the provided key and sends it
+//     using SendRawTransaction
 func WithKeys(keys ...wallet.Key) ClientOptions {
 	return func(c *Client) error {
 		c.keys = keys
@@ -111,10 +111,12 @@ func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (
 func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error) {
 	txPtr := &tx
 	if tx.ChainID == nil && c.chainID != nil {
-		txPtr.ChainID = c.chainID
+		chainID := *c.chainID
+		txPtr.ChainID = &chainID
 	}
 	if tx.Call.From == nil && c.defaultAddr != nil {
-		txPtr.Call.From = c.defaultAddr
+		defaultAddr := *c.defaultAddr
+		txPtr.Call.From = &defaultAddr
 	}
 	if err := c.verifyTXChainID(txPtr); err != nil {
 		return nil, nil, err
@@ -139,10 +141,12 @@ func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]b
 func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
 	txPtr := &tx
 	if tx.ChainID == nil && c.chainID != nil {
-		txPtr.ChainID = c.chainID
+		chainID := *c.chainID
+		txPtr.ChainID = &chainID
 	}
 	if tx.Call.From == nil && c.defaultAddr != nil {
-		txPtr.Call.From = c.defaultAddr
+		defaultAddr := *c.defaultAddr
+		txPtr.Call.From = &defaultAddr
 	}
 	if err := c.verifyTXChainID(txPtr); err != nil {
 		return nil, err
