@@ -1,7 +1,6 @@
 package abi
 
 import (
-	"fmt"
 	"math/big"
 )
 
@@ -19,16 +18,17 @@ func IsPanic(data []byte) bool {
 }
 
 // DecodePanic decodes the panic data returned by contract calls.
-func DecodePanic(data []byte) (*big.Int, error) {
+// If the data is not a valid panic message, it returns nil.
+func DecodePanic(data []byte) *big.Int {
 	// The code below is a slightly optimized version of
 	// Panic.DecodeValues(data).
 	if !panicPrefix.Match(data) {
-		return nil, fmt.Errorf("abi: invalid panic prefix")
+		return nil
 	}
 	s := &UintValue{Size: 256}
 	t := TupleValue{TupleValueElem{Value: s}}
 	if _, err := t.DecodeABI(BytesToWords(data[4:])); err != nil {
-		return nil, err
+		return nil
 	}
-	return &s.Int, nil
+	return &s.Int
 }

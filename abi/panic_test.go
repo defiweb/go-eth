@@ -17,7 +17,7 @@ func TestDecodePanic(t *testing.T) {
 	tests := []struct {
 		data    []byte
 		want    uint64
-		wantErr bool
+		wantNil bool
 	}{
 		{
 			data: hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000000"),
@@ -30,21 +30,20 @@ func TestDecodePanic(t *testing.T) {
 		{
 			// Invalid panic prefix.
 			data:    hexutil.MustHexToBytes("0xaaaaaaaa00000000000000000000000000000000000000000000000000000000000000"),
-			wantErr: true,
+			wantNil: true,
 		},
 		{
 			// Empty panic data.
 			data:    hexutil.MustHexToBytes("0x4e487b71"),
-			wantErr: true,
+			wantNil: true,
 		},
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			got, err := DecodePanic(tt.data)
-			if tt.wantErr {
-				assert.Error(t, err)
+			got := DecodePanic(tt.data)
+			if tt.wantNil {
+				assert.Nil(t, got)
 			} else {
-				assert.NoError(t, err)
 				assert.Equal(t, tt.want, got.Uint64())
 			}
 		})

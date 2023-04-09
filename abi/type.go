@@ -36,9 +36,9 @@ type Type interface {
 //
 // The following examples are valid type signatures:
 //
-//   uint256
-//   (uint256 a,bytes32 b)
-//   tuple(uint256 a, bytes32 b)[]
+//	uint256
+//	(uint256 a,bytes32 b)
+//	tuple(uint256 a, bytes32 b)[]
 //
 // This function is equivalent to calling Parser.ParseType with the default
 // configuration.

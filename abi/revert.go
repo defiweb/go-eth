@@ -1,9 +1,5 @@
 package abi
 
-import (
-	"fmt"
-)
-
 // Revert is the Error instance for revert responses.
 var Revert = NewError("Error", NewTupleType(TupleTypeElem{Name: "error", Type: NewStringType()}))
 
@@ -18,16 +14,17 @@ func IsRevert(data []byte) bool {
 }
 
 // DecodeRevert decodes the revert data returned by contract calls.
-func DecodeRevert(data []byte) (string, error) {
+// If the data is not a valid revert message, it returns an empty string.
+func DecodeRevert(data []byte) string {
 	// The code below is a slightly optimized version of
 	// Revert.DecodeValues(data).
 	if !revertPrefix.Match(data) {
-		return "", fmt.Errorf("abi: invalid revert prefix")
+		return ""
 	}
 	s := new(StringValue)
 	t := TupleValue{TupleValueElem{Value: s}}
 	if _, err := t.DecodeABI(BytesToWords(data[4:])); err != nil {
-		return "", err
+		return ""
 	}
-	return string(*s), nil
+	return string(*s)
 }
