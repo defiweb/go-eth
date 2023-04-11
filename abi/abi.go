@@ -54,8 +54,8 @@ type MapTo interface {
 // creating a new one.
 func NewABI() *ABI {
 	mapper := anymapper.New()
-	mapper.Tag = "abi"
-	mapper.FieldMapper = fieldMapper
+	mapper.Context.Tag = "abi"
+	mapper.Context.FieldMapper = fieldMapper
 
 	// Those hooks add support for MapTo and MapFrom interfaces.
 	//
@@ -72,21 +72,21 @@ func NewABI() *ABI {
 			switch {
 			case srcImplMapTo && dstImplMapFrom:
 				if src.Implements(valueTy) {
-					return func(m *anymapper.Mapper, src, dst reflect.Value) error {
+					return func(m *anymapper.Mapper, _ *anymapper.Context, src, dst reflect.Value) error {
 						return dst.Interface().(MapFrom).MapFrom(m, src.Interface())
 					}
 				}
 				if dst.Implements(valueTy) {
-					return func(m *anymapper.Mapper, src, dst reflect.Value) error {
+					return func(m *anymapper.Mapper, _ *anymapper.Context, src, dst reflect.Value) error {
 						return src.Interface().(MapTo).MapTo(m, addr(dst).Interface())
 					}
 				}
 			case srcImplMapTo:
-				return func(m *anymapper.Mapper, src, dst reflect.Value) error {
+				return func(m *anymapper.Mapper, _ *anymapper.Context, src, dst reflect.Value) error {
 					return src.Interface().(MapTo).MapTo(m, addr(dst).Interface())
 				}
 			case dstImplMapFrom:
-				return func(m *anymapper.Mapper, src, dst reflect.Value) error {
+				return func(m *anymapper.Mapper, _ *anymapper.Context, src, dst reflect.Value) error {
 					return dst.Interface().(MapFrom).MapFrom(m, src.Interface())
 				}
 			}
@@ -170,9 +170,10 @@ func NewABI() *ABI {
 
 // fieldMapper lowercase the first letter of the field name. If the field name
 // starts with an acronym, it will lowercase the whole acronym. For example:
-//  - "User" will be mapped to "user"
-// 	- "ID" will be mapped to "id"
-// 	- "DAPPName" will be mapped to "dappName"
+//   - "User" will be mapped to "user"
+//   - "ID" will be mapped to "id"
+//   - "DAPPName" will be mapped to "dappName"
+//
 // Unfortunately, it does not work with field names that contain two acronyms
 // next to each other. For example, "DAPPID" will be mapped to "dappid".
 var fieldMapper = func(field string) string {
