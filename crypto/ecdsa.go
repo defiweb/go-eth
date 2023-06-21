@@ -30,6 +30,10 @@ func ecSignHash(key *ecdsa.PrivateKey, hash types.Hash) (*types.Signature, error
 		return nil, err
 	}
 	v := sig[0]
+	switch v {
+	case 27, 28:
+		v -= 27
+	}
 	copy(sig, sig[1:])
 	sig[64] = v
 	return types.SignatureFromBytesPtr(sig), nil
@@ -40,7 +44,12 @@ func ecSignMessage(key *ecdsa.PrivateKey, data []byte) (*types.Signature, error)
 	if key == nil {
 		return nil, fmt.Errorf("missing private key")
 	}
-	return ecSignHash(key, Keccak256(AddMessagePrefix(data)))
+	sig, err := ecSignHash(key, Keccak256(AddMessagePrefix(data)))
+	if err != nil {
+		return nil, err
+	}
+	sig.V = new(big.Int).Add(sig.V, big.NewInt(27))
+	return sig, nil
 }
 
 // ecSignTransaction signs the given transaction with the given private key.
@@ -64,14 +73,13 @@ func ecSignTransaction(key *ecdsa.PrivateKey, tx *types.Transaction) error {
 	switch tx.Type {
 	case types.LegacyTxType:
 		if tx.ChainID != nil {
-			sv = new(big.Int).Sub(sv, big.NewInt(27))
 			sv = new(big.Int).Add(sv, new(big.Int).SetUint64(*tx.ChainID*2))
 			sv = new(big.Int).Add(sv, big.NewInt(35))
+		} else {
+			sv = new(big.Int).Add(sv, big.NewInt(27))
 		}
 	case types.AccessListTxType:
-		sv = new(big.Int).Sub(sv, big.NewInt(27))
 	case types.DynamicFeeTxType:
-		sv = new(big.Int).Sub(sv, big.NewInt(27))
 	default:
 		return fmt.Errorf("unsupported transaction type: %d", tx.Type)
 	}
@@ -86,10 +94,16 @@ func ecRecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error)
 		return nil, fmt.Errorf("invalid signature V: %d", sig.V)
 	}
 	v := byte(sig.V.Uint64())
+	switch v {
+	case 0, 1:
+		v += 27
+	}
+	rb := sig.R.Bytes()
+	sb := sig.S.Bytes()
 	bin := make([]byte, 65)
 	bin[0] = v
-	copy(bin[1:], sig.R.Bytes())
-	copy(bin[33:], sig.S.Bytes())
+	copy(bin[1+(32-len(rb)):], rb)
+	copy(bin[33+(32-len(sb)):], sb)
 	pub, _, err := btcec.RecoverCompact(s256, bin, hash.Bytes())
 	if err != nil {
 		return nil, err
@@ -100,6 +114,7 @@ func ecRecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error)
 
 // ecRecoverMessage recovers the Ethereum address from the given message and signature.
 func ecRecoverMessage(data []byte, sig types.Signature) (*types.Address, error) {
+	sig.V = new(big.Int).Sub(sig.V, big.NewInt(27))
 	return ecRecoverHash(Keccak256(AddMessagePrefix(data)), sig)
 }
 
@@ -122,11 +137,11 @@ func ecRecoverTransaction(tx *types.Transaction) (*types.Address, error) {
 
 			// Derive the recovery byte from the signature.
 			sig.V = new(big.Int).Add(new(big.Int).Mod(x, big.NewInt(2)), big.NewInt(27))
+		} else {
+			sig.V = new(big.Int).Sub(sig.V, big.NewInt(27))
 		}
 	case types.AccessListTxType:
-		sig.V = new(big.Int).Add(sig.V, big.NewInt(27))
 	case types.DynamicFeeTxType:
-		sig.V = new(big.Int).Add(sig.V, big.NewInt(27))
 	default:
 		return nil, fmt.Errorf("unsupported transaction type: %d", tx.Type)
 	}

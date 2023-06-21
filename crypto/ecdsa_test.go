@@ -14,18 +14,18 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-func TestEthereumSigner_SignHash(t *testing.T) {
+func Test_ecSignHash(t *testing.T) {
 	key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
 	signature, err := ecSignHash((*ecdsa.PrivateKey)(key), types.MustHashFromBytes(bytes.Repeat([]byte{0x02}, 32), types.PadNone))
 
 	require.NoError(t, err)
 	require.NotNil(t, signature)
-	assert.Equal(t, "1b", signature.V.Text(16))
+	assert.Equal(t, "0", signature.V.Text(16))
 	assert.Equal(t, "97ef30233ead25d10f7bb2bf9eaf571a16f2deb33a75f20819284f0cb8ff3cc1", signature.R.Text(16))
 	assert.Equal(t, "4870ca05940199c113b4dc77866f001702691cde269f6835581e7aea1ead2660", signature.S.Text(16))
 }
 
-func TestEthereumSigner_SignMessage(t *testing.T) {
+func Test_ecSignMessage(t *testing.T) {
 	key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
 	signature, err := ecSignMessage((*ecdsa.PrivateKey)(key), []byte("hello world"))
 
@@ -36,7 +36,7 @@ func TestEthereumSigner_SignMessage(t *testing.T) {
 	assert.Equal(t, "51601fe3219055482c45a14bf616c3e2bc7914c953f438627de2aa541eef61b5", signature.S.Text(16))
 }
 
-func TestEthereumSigner_SignTransaction(t *testing.T) {
+func Test_ecSignTransaction(t *testing.T) {
 	t.Run("legacy", func(t *testing.T) {
 		key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
 		tx := (&types.Transaction{}).
@@ -105,7 +105,7 @@ func TestEthereumSigner_SignTransaction(t *testing.T) {
 	})
 }
 
-func TestEthereumSigner_RecoverHash(t *testing.T) {
+func Test_ecRecoverHash(t *testing.T) {
 	addr, err := ecRecoverHash(
 		types.MustHashFromBytes(bytes.Repeat([]byte{0x02}, 32), types.PadNone),
 		types.SignatureFromVRS(
@@ -119,7 +119,7 @@ func TestEthereumSigner_RecoverHash(t *testing.T) {
 	assert.Equal(t, "0x1a642f0e3c3af545e7acbd38b07251b3990914f1", addr.String())
 }
 
-func TestEthereumSigner_RecoverMessage(t *testing.T) {
+func Test_ecRecoverMessage(t *testing.T) {
 	addr, err := ecRecoverMessage(
 		[]byte("hello world"),
 		types.SignatureFromVRS(
@@ -133,7 +133,7 @@ func TestEthereumSigner_RecoverMessage(t *testing.T) {
 	assert.Equal(t, "0x1a642f0e3c3af545e7acbd38b07251b3990914f1", addr.String())
 }
 
-func TestEthereumSigner_RecoverTransaction(t *testing.T) {
+func Test_ecRecoverTransaction(t *testing.T) {
 	t.Run("legacy", func(t *testing.T) {
 		tx := (&types.Transaction{}).
 			SetType(types.LegacyTxType).
@@ -208,4 +208,52 @@ func TestEthereumSigner_RecoverTransaction(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "0x1a642f0e3c3af545e7acbd38b07251b3990914f1", addr.String())
 	})
+}
+
+func Test_fuzzECSignHash(t *testing.T) {
+	for i := int64(0); i < 1000; i++ {
+		// Generate a random key.
+		prv := make([]byte, 32)
+		new(big.Int).SetInt64(i + 1).FillBytes(prv)
+		key, _ := btcec.PrivKeyFromBytes(s256, prv)
+
+		// Generate a random hash.
+		msg := make([]byte, 32)
+		new(big.Int).SetInt64(i + 1).FillBytes(msg)
+
+		// Sign the hash.
+		s, err := ecSignHash((*ecdsa.PrivateKey)(key), types.MustHashFromBytes(msg, types.PadNone))
+		require.NoError(t, err)
+
+		// Recover the address.
+		addr, err := ecRecoverHash(types.MustHashFromBytes(msg, types.PadNone), *s)
+		require.NoError(t, err)
+
+		// Check that the address is correct.
+		require.Equal(t, ECPublicKeyToAddress((*ecdsa.PublicKey)(key.PubKey())), *addr)
+	}
+}
+
+func Test_fuzzECSignMessage(t *testing.T) {
+	for i := int64(0); i < 1000; i++ {
+		// Generate a random key.
+		prv := make([]byte, 32)
+		new(big.Int).SetInt64(i + 1).FillBytes(prv)
+		key, _ := btcec.PrivKeyFromBytes(s256, prv)
+
+		// Generate a random hash.
+		msg := make([]byte, 32)
+		new(big.Int).SetInt64(i + 1).FillBytes(msg)
+
+		// Sign the hash.
+		s, err := ecSignMessage((*ecdsa.PrivateKey)(key), msg)
+		require.NoError(t, err)
+
+		// Recover the address.
+		addr, err := ecRecoverMessage(msg, *s)
+		require.NoError(t, err)
+
+		// Check that the address is correct.
+		require.Equal(t, ECPublicKeyToAddress((*ecdsa.PublicKey)(key.PubKey())), *addr)
+	}
 }
