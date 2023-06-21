@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -91,7 +92,13 @@ func ecSignTransaction(key *ecdsa.PrivateKey, tx *types.Transaction) error {
 // ecRecoverHash recovers the Ethereum address from the given hash and signature.
 func ecRecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error) {
 	if sig.V.BitLen() > 8 {
-		return nil, fmt.Errorf("invalid signature V: %d", sig.V)
+		return nil, errors.New("invalid signature: V has more than 8 bits")
+	}
+	if sig.R.BitLen() > 256 {
+		return nil, errors.New("invalid signature: R has more than 256 bits")
+	}
+	if sig.S.BitLen() > 256 {
+		return nil, errors.New("invalid signature: S has more than 256 bits")
 	}
 	v := byte(sig.V.Uint64())
 	switch v {
