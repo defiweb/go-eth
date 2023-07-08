@@ -15,6 +15,15 @@ func parseType(abi *ABI, signature string) (Type, error) {
 	return newTypeFromSig(abi, p)
 }
 
+// parseStruct parses a structure definition and returns a Type.
+func parseStruct(abi *ABI, signature string) (Type, error) {
+	p, err := sigparser.ParseStruct(signature)
+	if err != nil {
+		return nil, err
+	}
+	return newTypeFromSig(abi, p)
+}
+
 // parseConstructor parses a constructor signature and returns a Constructor.
 func parseConstructor(abi *ABI, signature string) (*Constructor, error) {
 	s, err := sigparser.ParseSignatureAs(sigparser.ConstructorKind, signature)

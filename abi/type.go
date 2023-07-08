@@ -46,9 +46,31 @@ func ParseType(signature string) (Type, error) {
 	return Default.ParseType(signature)
 }
 
+// ParseStruct parses a struct definition and returns a new Type.
+//
+// It is similar to ParseType, but accepts a struct definition instead of a
+// type signature.
+//
+// For example, the following two calls are equivalent:
+//
+//	ParseType("(uint256 a, bytes32 b)")
+//	ParseStruct("struct { uint256 a; bytes32 b; }")
+func ParseStruct(definition string) (Type, error) {
+	return Default.ParseStruct(definition)
+}
+
 // MustParseType is like ParseType but panics on error.
 func MustParseType(signature string) Type {
 	t, err := ParseType(signature)
+	if err != nil {
+		panic(err)
+	}
+	return t
+}
+
+// MustParseStruct is like ParseStruct but panics on error.
+func MustParseStruct(definition string) Type {
+	t, err := ParseStruct(definition)
 	if err != nil {
 		panic(err)
 	}
@@ -60,6 +82,13 @@ func MustParseType(signature string) Type {
 // See ParseType for more information.
 func (a *ABI) ParseType(signature string) (Type, error) {
 	return parseType(a, signature)
+}
+
+// ParseStruct parses a struct definition and returns a new Type.
+//
+// See ParseStruct for more information.
+func (a *ABI) ParseStruct(definition string) (Type, error) {
+	return parseStruct(a, definition)
 }
 
 // AliasType wraps another type and gives it a different type name. The canonical
