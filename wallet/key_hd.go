@@ -30,24 +30,24 @@ type Mnemonic struct {
 //
 // The path is defined as:
 //
-//  m / purpose' / coin_type' / account' / change / address_index
+//	m / purpose' / coin_type' / account' / change / address_index
 //
 // Where:
 //
-// - purpose is a constant set to 44' (or 0x8000002C) following the BIP43
-//   recommendation.
+//   - purpose is a constant set to 44' (or 0x8000002C) following the BIP43
+//     recommendation.
 //
-// - coin_type indicates the coin type, as defined in SLIP-0044. For Ethereum,
-//   it is 60' (or 0x8000003C).
+//   - coin_type indicates the coin type, as defined in SLIP-0044. For Ethereum,
+//     it is 60' (or 0x8000003C).
 //
-// - account is an index that allows users to create multiple identities from a
-//  single seed.
+//   - account is an index that allows users to create multiple identities from a
+//     single seed.
 //
-// - change is a constant, set to 0 (or 0x80000000) for external chain and 1
-//   (or 0x80000001) for internal chain.
+//   - change is a constant, set to 0 (or 0x80000000) for external chain and 1
+//     (or 0x80000001) for internal chain.
 //
-// - address_index is an address index that is incremented for each new
-//   address.
+//   - address_index is an address index that is incremented for each new
+//     address.
 //
 // Reference:
 // BIP-32: https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki

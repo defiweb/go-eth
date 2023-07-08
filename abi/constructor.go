@@ -20,9 +20,9 @@ func NewConstructor(inputs *TupleType) *Constructor {
 //
 // The following examples are valid signatures:
 //
-//   ((uint256,bytes32)[])
-//   ((uint256 a, bytes32 b)[] c)
-//   constructor(tuple(uint256 a, bytes32 b)[] memory c)
+//	((uint256,bytes32)[])
+//	((uint256 a, bytes32 b)[] c)
+//	constructor(tuple(uint256 a, bytes32 b)[] memory c)
 //
 // This function is equivalent to calling Parser.ParseConstructor with the
 // default configuration.

@@ -6,12 +6,17 @@ contract Test {
         bytes32 B;
     }
     
-    constructor(uint256 a) { }
+    constructor(uint256 a) {}
     event EventA(uint256 indexed a, uint256 b);
     event EventB(uint256 indexed a, uint256 b) anonymous;
+    
     error ErrorA(uint256 a, uint256 b);
-    function Foo(uint256 a) public returns (uint256) { return 0; }
-    function Bar(Struct[2][2] memory a) public returns (uint256[2][2] memory) { return [[0, 0], [0, 0]]; }
-    fallback() external { }
-    receive() payable external { }
+    
+    function Foo(uint256 a) public returns (uint256) {return 0;}
+    
+    function Bar(Struct[2][2] memory a) public returns (uint256[2][2] memory) {return [[0, 0], [0, 0]];}
+    
+    fallback() external {}
+    
+    receive() payable external {}
 }

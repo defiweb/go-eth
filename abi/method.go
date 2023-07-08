@@ -34,9 +34,9 @@ func NewMethod(name string, inputs, outputs *TupleType) *Method {
 //
 // The following examples are valid signatures:
 //
-//   foo((uint256,bytes32)[])(uint256)
-//   foo((uint256 a, bytes32 b)[] c)(uint256 d)
-//   function foo(tuple(uint256 a, bytes32 b)[] memory c) pure returns (uint256 d)
+//	foo((uint256,bytes32)[])(uint256)
+//	foo((uint256 a, bytes32 b)[] c)(uint256 d)
+//	function foo(tuple(uint256 a, bytes32 b)[] memory c) pure returns (uint256 d)
 //
 // This function is equivalent to calling Parser.ParseMethod with the default
 // configuration.

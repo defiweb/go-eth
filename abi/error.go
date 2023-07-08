@@ -29,9 +29,9 @@ func NewError(name string, inputs *TupleType) *Error {
 //
 // The following examples are valid signatures:
 //
-//   foo((uint256,bytes32)[])
-//   foo((uint256 a, bytes32 b)[] c)
-//   error foo(tuple(uint256 a, bytes32 b)[] c)
+//	foo((uint256,bytes32)[])
+//	foo((uint256 a, bytes32 b)[] c)
+//	error foo(tuple(uint256 a, bytes32 b)[] c)
 //
 // This function is equivalent to calling Parser.ParseError with the default
 // configuration.

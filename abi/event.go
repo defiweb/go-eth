@@ -32,9 +32,9 @@ func NewEvent(name string, inputs *EventTupleType, anonymous bool) *Event {
 //
 // The following examples are valid signatures:
 //
-//   foo(int indexed,(uint256,bytes32)[])
-//   foo(int indexed a, (uint256 b, bytes32 c)[] d)
-//   event foo(int indexed a tuple(uint256 b, bytes32 c)[] d)
+//	foo(int indexed,(uint256,bytes32)[])
+//	foo(int indexed a, (uint256 b, bytes32 c)[] d)
+//	event foo(int indexed a tuple(uint256 b, bytes32 c)[] d)
 //
 // This function is equivalent to calling Parser.ParseEvent with the default
 // configuration.
