@@ -470,7 +470,8 @@ func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 	default:
 		return 0, fmt.Errorf("invalid transaction type: %d", data[0])
 	}
-	if _, err := rlp.DecodeInto(data, list); err != nil {
+	if _, err := rlp.DecodeTo(data, list)
+	err != nil{
 		return 0, err
 	}
 	t.ChainID = &chainID.X
@@ -654,7 +655,8 @@ func (a *AccessList) DecodeRLP(data []byte) (int, error) {
 	}
 	for _, tuple := range l {
 		var t AccessTuple
-		if err := tuple.DecodeInto(&t); err != nil {
+		if err := tuple.DecodeTo(&t)
+		err != nil{
 			return 0, err
 		}
 		*a = append(*a, t)
@@ -683,7 +685,8 @@ func (a *AccessTuple) DecodeRLP(data []byte) (int, error) {
 	if len(l) != 2 {
 		return n, fmt.Errorf("invalid access list tuple")
 	}
-	if err := l[0].DecodeInto(&a.Address); err != nil {
+	if err := l[0].DecodeTo(&a.Address)
+	err != nil{
 		return n, err
 	}
 	h, err := l[1].GetList()
@@ -692,7 +695,8 @@ func (a *AccessTuple) DecodeRLP(data []byte) (int, error) {
 	}
 	for _, item := range h {
 		var hash Hash
-		if err := item.DecodeInto(&hash); err != nil {
+		if err := item.DecodeTo(&hash)
+		err != nil{
 			return n, err
 		}
 		a.StorageKeys = append(a.StorageKeys, hash)
