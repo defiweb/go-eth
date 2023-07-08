@@ -1,11 +1,5 @@
 # go-eth
 
----
-
-**This software is in alpha stage and is subject to change.**
-
----
-
 The `go-eth` package is a suite of tools for interacting with Ethereum-based blockchains.
 
 Some of key features include:
@@ -17,34 +11,33 @@ Some of key features include:
 * Support for JSON and HD wallets.
 
 <!-- TOC -->
-
-* [Installation](#installation)
-* [Basic usage](#basic-usage)
+* [go-eth](#go-eth)
+  * [Installation](#installation)
+  * [Basic usage](#basic-usage)
     * [Connecting to a node](#connecting-to-a-node)
     * [Calling a contract method](#calling-a-contract-method)
     * [Sending a transaction](#sending-a-transaction)
-* [Transports](#transports)
-* [Wallets](#wallets)
-* [Working with ABI](#working-with-abi)
+  * [Transports](#transports)
+  * [Wallets](#wallets)
+  * [Working with ABI](#working-with-abi)
     * [Methods](#methods)
-        * [Encoding method arguments](#encoding-method-arguments)
-        * [Decoding method arguments](#decoding-method-arguments)
+      * [Encoding method arguments](#encoding-method-arguments)
+      * [Decoding method arguments](#decoding-method-arguments)
     * [Events / Logs](#events--logs)
-        * [Decoding events](#decoding-events)
+      * [Decoding events](#decoding-events)
     * [Errors](#errors)
     * [Reverts](#reverts)
     * [Panics](#panics)
     * [Contract ABI](#contract-abi)
-        * [JSON-ABI](#json-abi)
-        * [Human-Readable ABI](#human-readable-abi)
+      * [JSON-ABI](#json-abi)
+      * [Human-Readable ABI](#human-readable-abi)
     * [Mapping rules](#mapping-rules)
     * [Signature parser syntax](#signature-parser-syntax)
     * [Custom types](#custom-types)
-        * [Simple types](#simple-types)
-        * [Advanced types](#advanced-types)
-* [Additional tools](#additional-tools)
-* [Documentation](#documentation)
-
+      * [Simple types](#simple-types)
+      * [Advanced types](#advanced-types)
+  * [Additional tools](#additional-tools)
+  * [Documentation](#documentation)
 <!-- TOC -->
 
 ## Installation
