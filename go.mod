@@ -7,7 +7,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/defiweb/go-anymapper v0.1.0
 	github.com/defiweb/go-rlp v0.1.0
-	github.com/defiweb/go-sigparser v0.0.0-20230708132300-a1fd6bf582f5
+	github.com/defiweb/go-sigparser v0.1.0
 	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.1
 	github.com/tyler-smith/go-bip39 v1.1.0
