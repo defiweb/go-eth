@@ -256,6 +256,44 @@ func (t *EventTupleType) Elements() []EventTupleElem {
 	return cpy
 }
 
+// TopicsTuple returns the tuple of indexed arguments.
+func (t *EventTupleType) TopicsTuple() *TupleType {
+	topics := make([]TupleTypeElem, 0, t.indexed)
+	for _, elem := range t.elems {
+		if !elem.Indexed {
+			continue
+		}
+		name := elem.Name
+		if len(name) == 0 {
+			name = fmt.Sprintf("topic%d", len(topics))
+		}
+		topics = append(topics, TupleTypeElem{
+			Name: name,
+			Type: elem.Type,
+		})
+	}
+	return &TupleType{elems: topics}
+}
+
+// DataTuple returns the tuple of non-indexed arguments.
+func (t *EventTupleType) DataTuple() *TupleType {
+	data := make([]TupleTypeElem, 0, len(t.elems)-t.indexed)
+	for _, elem := range t.elems {
+		if elem.Indexed {
+			continue
+		}
+		name := elem.Name
+		if len(name) == 0 {
+			name = fmt.Sprintf("data%d", len(data))
+		}
+		data = append(data, TupleTypeElem{
+			Name: name,
+			Type: elem.Type,
+		})
+	}
+	return &TupleType{elems: data}
+}
+
 // CanonicalType implements the Type interface.
 func (t *EventTupleType) CanonicalType() string {
 	var buf strings.Builder

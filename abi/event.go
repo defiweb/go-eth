@@ -105,7 +105,19 @@ func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 	if topics[0] != e.topic0 {
 		return fmt.Errorf("abi: topic0 mismatch for event %s", e.name)
 	}
-	return e.config.DecodeValue(e.inputs, e.mergeData(topics[1:], data), val)
+	// The anymapper package does not zero out values before decoding into
+	// it, therefore we can decode topics and data into the same value.
+	if len(topics) > 1 {
+		if err := e.config.DecodeValue(e.inputs.TopicsTuple(), hashSliceToBytes(topics[1:]), val); err != nil {
+			return err
+		}
+	}
+	if len(data) > 0 {
+		if err := e.config.DecodeValue(e.inputs.DataTuple(), data, val); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // DecodeValues decodes the event into a map or structure. If a structure is
@@ -120,7 +132,29 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 	if topics[0] != e.topic0 {
 		return fmt.Errorf("abi: topic0 mismatch for event %s", e.name)
 	}
-	return e.config.DecodeValues(e.inputs, e.mergeData(topics[1:], data), vals...)
+	indexedVals := make([]any, 0, e.inputs.IndexedSize())
+	dataVals := make([]any, 0, e.inputs.DataSize())
+	for i := range e.inputs.Elements() {
+		if i >= len(vals) {
+			break
+		}
+		if e.inputs.Elements()[i].Indexed {
+			indexedVals = append(indexedVals, vals[i])
+		} else {
+			dataVals = append(dataVals, vals[i])
+		}
+	}
+	if len(topics) > 1 {
+		if err := e.config.DecodeValues(e.inputs.TopicsTuple(), hashSliceToBytes(topics[1:]), indexedVals...); err != nil {
+			return err
+		}
+	}
+	if len(data) > 0 {
+		if err := e.config.DecodeValues(e.inputs.DataTuple(), data, dataVals...); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // String returns the human-readable signature of the event.
@@ -143,14 +177,10 @@ func (e *Event) generateSignature() {
 	e.signature = fmt.Sprintf("%s%s", e.name, e.inputs.CanonicalType())
 }
 
-func (e *Event) mergeData(topics []types.Hash, data []byte) []byte {
-	if len(topics) == 0 {
-		return data
+func hashSliceToBytes(hashes []types.Hash) []byte {
+	buf := make([]byte, len(hashes)*types.HashLength)
+	for i, hash := range hashes {
+		copy(buf[i*types.HashLength:], hash[:])
 	}
-	merged := make([]byte, len(topics)*types.HashLength+len(data))
-	for i, topic := range topics {
-		copy(merged[i*types.HashLength:], topic[:])
-	}
-	copy(merged[len(topics)*types.HashLength:], data)
-	return merged
+	return buf
 }
