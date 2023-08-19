@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"errors"
 	"fmt"
 	"math/big"
@@ -13,11 +12,13 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-var s256 = btcec.S256()
-
 // ECPublicKeyToAddress returns the Ethereum address for the given ECDSA public key.
 func ECPublicKeyToAddress(pub *ecdsa.PublicKey) (addr types.Address) {
-	b := Keccak256(elliptic.Marshal(s256, pub.X, pub.Y)[1:])
+	publicKey, err := pub.ECDH()
+	if err != nil {
+		panic(err)
+	}
+	b := Keccak256(publicKey.Bytes())
 	copy(addr[:], b[12:])
 	return
 }

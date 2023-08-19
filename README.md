@@ -1,3 +1,5 @@
+[![Run Tests](https://github.com/defiweb/go-eth/actions/workflows/test.yml/badge.svg)](https://github.com/defiweb/go-eth/actions/workflows/test.yml)
+
 # go-eth
 
 The `go-eth` package is a suite of tools for interacting with Ethereum-based blockchains.

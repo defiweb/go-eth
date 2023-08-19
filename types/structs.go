@@ -298,6 +298,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+//nolint:funlen
 func (t Transaction) EncodeRLP() ([]byte, error) {
 	var (
 		chainID              = uint64(1)
@@ -400,6 +401,7 @@ func (t Transaction) EncodeRLP() ([]byte, error) {
 	}
 }
 
+//nolint:funlen
 func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, fmt.Errorf("empty data")
@@ -1094,17 +1096,13 @@ func (q FilterLogsQuery) MarshalJSON() ([]byte, error) {
 	}
 	if len(q.Address) > 0 {
 		logsQuery.Address = make([]Address, len(q.Address))
-		for i, a := range q.Address {
-			logsQuery.Address[i] = a
-		}
+		copy(logsQuery.Address, q.Address)
 	}
 	if len(q.Topics) > 0 {
 		logsQuery.Topics = make([]hashList, len(q.Topics))
 		for i, t := range q.Topics {
 			logsQuery.Topics[i] = make([]Hash, len(t))
-			for j, h := range t {
-				logsQuery.Topics[i][j] = h
-			}
+			copy(logsQuery.Topics[i], t)
 		}
 	}
 	return json.Marshal(logsQuery)
@@ -1128,9 +1126,7 @@ func (q *FilterLogsQuery) UnmarshalJSON(input []byte) error {
 		q.Topics = make([][]Hash, len(logsQuery.Topics))
 		for i, t := range logsQuery.Topics {
 			q.Topics[i] = make([]Hash, len(t))
-			for j, h := range t {
-				q.Topics[i][j] = h
-			}
+			copy(q.Topics[i], t)
 		}
 	}
 	return nil

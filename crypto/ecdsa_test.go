@@ -35,6 +35,7 @@ func Test_ecSignMessage(t *testing.T) {
 	assert.Equal(t, "51601fe3219055482c45a14bf616c3e2bc7914c953f438627de2aa541eef61b5", signature.S.Text(16))
 }
 
+//nolint:funlen
 func Test_ecSignTransaction(t *testing.T) {
 	t.Run("legacy", func(t *testing.T) {
 		key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
