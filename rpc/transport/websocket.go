@@ -52,7 +52,7 @@ func NewWebsocket(opts WebsocketOptions) (*Websocket, error) {
 	if opts.Timout == 0 {
 		opts.Timout = 60 * time.Second
 	}
-	conn, _, err := websocket.Dial(opts.Context, opts.URL, &websocket.DialOptions{
+	conn, _, err := websocket.Dial(opts.Context, opts.URL, &websocket.DialOptions{ //nolint:bodyclose
 		HTTPClient: opts.HTTPClient,
 		HTTPHeader: opts.HTTPHeader,
 	})

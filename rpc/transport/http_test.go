@@ -26,6 +26,7 @@ type httpMock struct {
 	Response *http.Response
 }
 
+//nolint:funlen
 func TestHTTP(t *testing.T) {
 	tests := []struct {
 		asserts func(t *testing.T, h *httpMock)

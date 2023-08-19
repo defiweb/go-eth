@@ -407,7 +407,7 @@ func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 		return 0, fmt.Errorf("empty data")
 	}
 	var (
-		list                 = &rlp.ListItem{}
+		list                 *rlp.ListItem
 		chainID              = &rlp.UintItem{}
 		nonce                = &rlp.UintItem{}
 		gasPrice             = &rlp.BigIntItem{}
@@ -509,8 +509,8 @@ func (t Transaction) Hash(h HashFunc) (Hash, error) {
 }
 
 type jsonTransaction struct {
-	From                 *Address   `json:"from,omitempty,omitempty"`
-	To                   *Address   `json:"to,omitempty,omitempty"`
+	From                 *Address   `json:"from,omitempty"`
+	To                   *Address   `json:"to,omitempty"`
 	GasLimit             *Number    `json:"gas,omitempty"`
 	GasPrice             *Number    `json:"gasPrice,omitempty"`
 	MaxFeePerGas         *Number    `json:"maxFeePerGas,omitempty"`
@@ -1118,9 +1118,7 @@ func (q *FilterLogsQuery) UnmarshalJSON(input []byte) error {
 	q.BlockHash = logsQuery.BlockHash
 	if len(logsQuery.Address) > 0 {
 		q.Address = make([]Address, len(logsQuery.Address))
-		for i, a := range logsQuery.Address {
-			q.Address[i] = a
-		}
+		copy(q.Address, logsQuery.Address)
 	}
 	if len(logsQuery.Topics) > 0 {
 		q.Topics = make([][]Hash, len(logsQuery.Topics))

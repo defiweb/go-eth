@@ -2,23 +2,22 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"errors"
 	"fmt"
 	"math/big"
 
 	"github.com/btcsuite/btcd/btcec/v2"
-	ecdsa2 "github.com/btcsuite/btcd/btcec/v2/ecdsa"
+	btcececdsa "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
 	"github.com/defiweb/go-eth/types"
 )
 
+var s256 = btcec.S256()
+
 // ECPublicKeyToAddress returns the Ethereum address for the given ECDSA public key.
 func ECPublicKeyToAddress(pub *ecdsa.PublicKey) (addr types.Address) {
-	publicKey, err := pub.ECDH()
-	if err != nil {
-		panic(err)
-	}
-	b := Keccak256(publicKey.Bytes())
+	b := Keccak256(elliptic.Marshal(s256, pub.X, pub.Y)[1:])
 	copy(addr[:], b[12:])
 	return
 }
@@ -29,7 +28,7 @@ func ecSignHash(key *ecdsa.PrivateKey, hash types.Hash) (*types.Signature, error
 		return nil, fmt.Errorf("missing private key")
 	}
 	privKey, _ := btcec.PrivKeyFromBytes(key.D.Bytes())
-	sig, err := ecdsa2.SignCompact(privKey, hash.Bytes(), false)
+	sig, err := btcececdsa.SignCompact(privKey, hash.Bytes(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +113,7 @@ func ecRecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error)
 	bin[0] = v
 	copy(bin[1+(32-len(rb)):], rb)
 	copy(bin[33+(32-len(sb)):], sb)
-	pub, _, err := ecdsa2.RecoverCompact(bin, hash.Bytes())
+	pub, _, err := btcececdsa.RecoverCompact(bin, hash.Bytes())
 	if err != nil {
 		return nil, err
 	}

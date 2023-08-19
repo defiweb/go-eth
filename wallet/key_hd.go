@@ -113,10 +113,10 @@ func (m Mnemonic) Derive(path DerivationPath) (*PrivateKey, error) {
 		}
 	}
 	privKey, err := key.ECPrivKey()
-	privKeyECDSA := privKey.ToECDSA()
 	if err != nil {
 		return nil, err
 	}
+	privKeyECDSA := privKey.ToECDSA()
 	return NewKeyFromECDSA(privKeyECDSA), nil
 }
 

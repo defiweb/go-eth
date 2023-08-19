@@ -43,6 +43,7 @@ func (f *fakeTransport) Unsubscribe(ctx context.Context, id string) error {
 	return <-f.unsubResult
 }
 
+//nolint:funlen
 func TestRetry(t *testing.T) {
 	tests := []struct {
 		retry   RetryOptions
@@ -376,6 +377,7 @@ func TestRetry(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func TestRetryOnAnyError(t *testing.T) {
 	tests := []struct {
 		err  error
@@ -442,6 +444,7 @@ func TestRetryOnAnyError(t *testing.T) {
 	}
 }
 
+//nolint:dupl
 func TestRetryOnLimitExceeded(t *testing.T) {
 	tests := []struct {
 		err  error

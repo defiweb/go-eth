@@ -305,6 +305,7 @@ func subscribe[T any](ctx context.Context, t transport.Transport, method string,
 	return msgCh, nil
 }
 
+//nolint:errcheck
 func subscriptionRoutine[T any](ctx context.Context, t transport.SubscriptionTransport, subID string, rawCh chan json.RawMessage, msgCh chan T) {
 	defer close(msgCh)
 	defer t.Unsubscribe(ctx, subID)
