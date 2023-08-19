@@ -407,7 +407,7 @@ func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 		return 0, fmt.Errorf("empty data")
 	}
 	var (
-		list                 = (*rlp.ListItem)(nil)
+		list                 = &rlp.ListItem{}
 		chainID              = &rlp.UintItem{}
 		nonce                = &rlp.UintItem{}
 		gasPrice             = &rlp.BigIntItem{}

@@ -11,6 +11,7 @@ import (
 	"github.com/defiweb/go-eth/hexutil"
 )
 
+//nolint:funlen
 func TestTransaction_RLP(t1 *testing.T) {
 	tests := []struct {
 		tx   *Transaction
