@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
+	ecdsa2 "github.com/btcsuite/btcd/btcec/v2/ecdsa"
 
 	"github.com/defiweb/go-eth/types"
 )
@@ -26,7 +27,8 @@ func ecSignHash(key *ecdsa.PrivateKey, hash types.Hash) (*types.Signature, error
 	if key == nil {
 		return nil, fmt.Errorf("missing private key")
 	}
-	sig, err := btcec.SignCompact(s256, (*btcec.PrivateKey)(key), hash.Bytes(), false)
+	privKey, _ := btcec.PrivKeyFromBytes(key.D.Bytes())
+	sig, err := ecdsa2.SignCompact(privKey, hash.Bytes(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +113,7 @@ func ecRecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error)
 	bin[0] = v
 	copy(bin[1+(32-len(rb)):], rb)
 	copy(bin[33+(32-len(sb)):], sb)
-	pub, _, err := btcec.RecoverCompact(s256, bin, hash.Bytes())
+	pub, _, err := ecdsa2.RecoverCompact(bin, hash.Bytes())
 	if err != nil {
 		return nil, err
 	}
