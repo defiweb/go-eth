@@ -1,6 +1,6 @@
 module github.com/defiweb/go-eth
 
-go 1.20
+go 1.21
 
 require (
 	github.com/btcsuite/btcd v0.23.4
