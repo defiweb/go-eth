@@ -92,6 +92,6 @@ func Fuzz_parseArrays(f *testing.F) {
 		f.Add(typ)
 	}
 	f.Fuzz(func(t *testing.T, typ string) {
-		parseArrays(typ)
+		_, _, _ = parseArrays(typ)
 	})
 }

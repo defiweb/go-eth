@@ -1724,10 +1724,6 @@ func TestABI_decodeToMap(t *testing.T) {
 }
 
 func TestABI_decodeToNil(t *testing.T) {
-	type str struct {
-		BigInt *big.Int `abi:"bigInt"`
-	}
-
 	typ := MustParseType("(uint256 bigInt)")
 	abi := Words{padL("0x01")}
 

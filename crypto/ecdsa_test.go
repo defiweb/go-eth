@@ -2,11 +2,10 @@ package crypto
 
 import (
 	"bytes"
-	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -15,8 +14,8 @@ import (
 )
 
 func Test_ecSignHash(t *testing.T) {
-	key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
-	signature, err := ecSignHash((*ecdsa.PrivateKey)(key), types.MustHashFromBytes(bytes.Repeat([]byte{0x02}, 32), types.PadNone))
+	key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
+	signature, err := ecSignHash(key.ToECDSA(), types.MustHashFromBytes(bytes.Repeat([]byte{0x02}, 32), types.PadNone))
 
 	require.NoError(t, err)
 	require.NotNil(t, signature)
@@ -26,8 +25,8 @@ func Test_ecSignHash(t *testing.T) {
 }
 
 func Test_ecSignMessage(t *testing.T) {
-	key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
-	signature, err := ecSignMessage((*ecdsa.PrivateKey)(key), []byte("hello world"))
+	key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
+	signature, err := ecSignMessage(key.ToECDSA(), []byte("hello world"))
 
 	require.NoError(t, err)
 	require.NotNil(t, signature)
@@ -36,9 +35,10 @@ func Test_ecSignMessage(t *testing.T) {
 	assert.Equal(t, "51601fe3219055482c45a14bf616c3e2bc7914c953f438627de2aa541eef61b5", signature.S.Text(16))
 }
 
+//nolint:funlen
 func Test_ecSignTransaction(t *testing.T) {
 	t.Run("legacy", func(t *testing.T) {
-		key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
+		key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
 		tx := (&types.Transaction{}).
 			SetType(types.LegacyTxType).
 			SetTo(types.MustAddressFromHex("0x3535353535353535353535353535353535353535")).
@@ -46,7 +46,7 @@ func Test_ecSignTransaction(t *testing.T) {
 			SetGasPrice(big.NewInt(20000000000)).
 			SetNonce(9).
 			SetValue(big.NewInt(1000000000000000000))
-		err := ecSignTransaction((*ecdsa.PrivateKey)(key), tx)
+		err := ecSignTransaction(key.ToECDSA(), tx)
 
 		require.NoError(t, err)
 		assert.Equal(t, "1b", tx.Signature.V.Text(16))
@@ -54,7 +54,7 @@ func Test_ecSignTransaction(t *testing.T) {
 		assert.Equal(t, "615bff48c483d368ed4f6e327a6ddd8831e544d0ca08f1345433e4ed204f8537", tx.Signature.S.Text(16))
 	})
 	t.Run("legacy-eip155", func(t *testing.T) {
-		key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
+		key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
 		tx := (&types.Transaction{}).
 			SetType(types.LegacyTxType).
 			SetTo(types.MustAddressFromHex("0x3535353535353535353535353535353535353535")).
@@ -63,7 +63,7 @@ func Test_ecSignTransaction(t *testing.T) {
 			SetNonce(9).
 			SetValue(big.NewInt(1000000000000000000)).
 			SetChainID(1337)
-		err := ecSignTransaction((*ecdsa.PrivateKey)(key), tx)
+		err := ecSignTransaction(key.ToECDSA(), tx)
 
 		require.NoError(t, err)
 		assert.Equal(t, "a95", tx.Signature.V.Text(16))
@@ -71,7 +71,7 @@ func Test_ecSignTransaction(t *testing.T) {
 		assert.Equal(t, "4a10ba6cf47ace7e3c847e38583f5b1e1c7d8a862f4b43cd74480a03007363f7", tx.Signature.S.Text(16))
 	})
 	t.Run("access-list", func(t *testing.T) {
-		key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
+		key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
 		tx := (&types.Transaction{}).
 			SetType(types.AccessListTxType).
 			SetTo(types.MustAddressFromHex("0x3535353535353535353535353535353535353535")).
@@ -79,7 +79,7 @@ func Test_ecSignTransaction(t *testing.T) {
 			SetGasPrice(big.NewInt(20000000000)).
 			SetNonce(9).
 			SetValue(big.NewInt(1000000000000000000))
-		err := ecSignTransaction((*ecdsa.PrivateKey)(key), tx)
+		err := ecSignTransaction(key.ToECDSA(), tx)
 
 		require.NoError(t, err)
 		assert.Equal(t, "1", tx.Signature.V.Text(16))
@@ -87,7 +87,7 @@ func Test_ecSignTransaction(t *testing.T) {
 		assert.Equal(t, "2743f261c001ee472c9664258708eaf849fc85623ee337d2018d37fc6f397d8c", tx.Signature.S.Text(16))
 	})
 	t.Run("dynamic-fee", func(t *testing.T) {
-		key, _ := btcec.PrivKeyFromBytes(s256, bytes.Repeat([]byte{0x01}, 32))
+		key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
 		tx := (&types.Transaction{}).
 			SetType(types.DynamicFeeTxType).
 			SetTo(types.MustAddressFromHex("0x3535353535353535353535353535353535353535")).
@@ -96,7 +96,7 @@ func Test_ecSignTransaction(t *testing.T) {
 			SetMaxPriorityFeePerGas(big.NewInt(20000000000)).
 			SetNonce(9).
 			SetValue(big.NewInt(1000000000000000000))
-		err := ecSignTransaction((*ecdsa.PrivateKey)(key), tx)
+		err := ecSignTransaction(key.ToECDSA(), tx)
 
 		require.NoError(t, err)
 		assert.Equal(t, "0", tx.Signature.V.Text(16))
@@ -215,14 +215,14 @@ func Test_fuzzECSignHash(t *testing.T) {
 		// Generate a random key.
 		prv := make([]byte, 32)
 		new(big.Int).SetInt64(i + 1).FillBytes(prv)
-		key, _ := btcec.PrivKeyFromBytes(s256, prv)
+		key, _ := btcec.PrivKeyFromBytes(prv)
 
 		// Generate a random hash.
 		msg := make([]byte, 32)
 		new(big.Int).SetInt64(i + 1).FillBytes(msg)
 
 		// Sign the hash.
-		s, err := ecSignHash((*ecdsa.PrivateKey)(key), types.MustHashFromBytes(msg, types.PadNone))
+		s, err := ecSignHash(key.ToECDSA(), types.MustHashFromBytes(msg, types.PadNone))
 		require.NoError(t, err)
 
 		// Recover the address.
@@ -230,7 +230,7 @@ func Test_fuzzECSignHash(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check that the address is correct.
-		require.Equal(t, ECPublicKeyToAddress((*ecdsa.PublicKey)(key.PubKey())), *addr)
+		require.Equal(t, ECPublicKeyToAddress(key.PubKey().ToECDSA()), *addr)
 	}
 }
 
@@ -239,14 +239,14 @@ func Test_fuzzECSignMessage(t *testing.T) {
 		// Generate a random key.
 		prv := make([]byte, 32)
 		new(big.Int).SetInt64(i + 1).FillBytes(prv)
-		key, _ := btcec.PrivKeyFromBytes(s256, prv)
+		key, _ := btcec.PrivKeyFromBytes(prv)
 
 		// Generate a random hash.
 		msg := make([]byte, 32)
 		new(big.Int).SetInt64(i + 1).FillBytes(msg)
 
 		// Sign the hash.
-		s, err := ecSignMessage((*ecdsa.PrivateKey)(key), msg)
+		s, err := ecSignMessage(key.ToECDSA(), msg)
 		require.NoError(t, err)
 
 		// Recover the address.
@@ -254,6 +254,6 @@ func Test_fuzzECSignMessage(t *testing.T) {
 		require.NoError(t, err)
 
 		// Check that the address is correct.
-		require.Equal(t, ECPublicKeyToAddress((*ecdsa.PublicKey)(key.PubKey())), *addr)
+		require.Equal(t, ECPublicKeyToAddress(key.PubKey().ToECDSA()), *addr)
 	}
 }

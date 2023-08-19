@@ -17,6 +17,7 @@ func TestWallet_Mnemonic(t *testing.T) {
 		{0, 0, "0x02941ca660485ba7dc196b510d9a6192c2648709"},
 		{0, 1, "0xd050d1f66eb5ed560079754f3c1623b369a1a5ee"},
 		{1, 0, "0x7931220c3f0ee7efb9e323de4b9053e8aba3ff30"},
+		{1, 1, "0x784f2db7796a9198898bc5da9c878cf027c03a33"},
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
@@ -109,6 +110,6 @@ func FuzzParseDerivationPath(f *testing.F) {
 		f.Add([]byte(input))
 	}
 	f.Fuzz(func(t *testing.T, input []byte) {
-		ParseDerivationPath(string(input))
+		_, _ = ParseDerivationPath(string(input))
 	})
 }

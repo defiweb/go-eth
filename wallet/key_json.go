@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/defiweb/go-eth/types"
@@ -14,7 +14,7 @@ var ErrKeyNotFound = errors.New("key not found")
 
 // NewKeyFromJSON loads an Ethereum key from a JSON file.
 func NewKeyFromJSON(path string, passphrase string) (*PrivateKey, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func NewKeyFromJSONContent(content []byte, passphrase string) (*PrivateKey, erro
 // NewKeyFromDirectory returns a new key from a directory containing JSON
 // files.
 func NewKeyFromDirectory(path string, passphrase string, address types.Address) (*PrivateKey, error) {
-	items, err := ioutil.ReadDir(path)
+	items, err := os.ReadDir(path)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,8 @@ func NewKeyFromDirectory(path string, passphrase string, address types.Address) 
 			// Skip directories.
 			continue
 		}
-		if item.Size() == 0 || item.Size() > 1<<20 {
+		i, _ := item.Info()
+		if i.Size() == 0 || i.Size() > 1<<20 {
 			// Skip empty files and files larger than 1MB.
 			continue
 		}

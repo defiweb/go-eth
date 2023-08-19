@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/btcec/v2"
 
 	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/types"
@@ -34,8 +34,8 @@ func NewKeyFromECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
 
 // NewKeyFromBytes creates a new private key from private key bytes.
 func NewKeyFromBytes(prv []byte) *PrivateKey {
-	key, _ := btcec.PrivKeyFromBytes(s256, prv)
-	return NewKeyFromECDSA((*ecdsa.PrivateKey)(key))
+	key, _ := btcec.PrivKeyFromBytes(prv)
+	return NewKeyFromECDSA(key.ToECDSA())
 }
 
 // NewRandomKey creates a random private key.

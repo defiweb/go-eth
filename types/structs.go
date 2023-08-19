@@ -298,6 +298,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+//nolint:funlen
 func (t Transaction) EncodeRLP() ([]byte, error) {
 	var (
 		chainID              = uint64(1)
@@ -400,12 +401,13 @@ func (t Transaction) EncodeRLP() ([]byte, error) {
 	}
 }
 
+//nolint:funlen
 func (t *Transaction) DecodeRLP(data []byte) (int, error) {
 	if len(data) == 0 {
 		return 0, fmt.Errorf("empty data")
 	}
 	var (
-		list                 = (*rlp.ListItem)(nil)
+		list                 *rlp.ListItem
 		chainID              = &rlp.UintItem{}
 		nonce                = &rlp.UintItem{}
 		gasPrice             = &rlp.BigIntItem{}
@@ -507,8 +509,8 @@ func (t Transaction) Hash(h HashFunc) (Hash, error) {
 }
 
 type jsonTransaction struct {
-	From                 *Address   `json:"from,omitempty,omitempty"`
-	To                   *Address   `json:"to,omitempty,omitempty"`
+	From                 *Address   `json:"from,omitempty"`
+	To                   *Address   `json:"to,omitempty"`
 	GasLimit             *Number    `json:"gas,omitempty"`
 	GasPrice             *Number    `json:"gasPrice,omitempty"`
 	MaxFeePerGas         *Number    `json:"maxFeePerGas,omitempty"`
@@ -1094,17 +1096,13 @@ func (q FilterLogsQuery) MarshalJSON() ([]byte, error) {
 	}
 	if len(q.Address) > 0 {
 		logsQuery.Address = make([]Address, len(q.Address))
-		for i, a := range q.Address {
-			logsQuery.Address[i] = a
-		}
+		copy(logsQuery.Address, q.Address)
 	}
 	if len(q.Topics) > 0 {
 		logsQuery.Topics = make([]hashList, len(q.Topics))
 		for i, t := range q.Topics {
 			logsQuery.Topics[i] = make([]Hash, len(t))
-			for j, h := range t {
-				logsQuery.Topics[i][j] = h
-			}
+			copy(logsQuery.Topics[i], t)
 		}
 	}
 	return json.Marshal(logsQuery)
@@ -1120,17 +1118,13 @@ func (q *FilterLogsQuery) UnmarshalJSON(input []byte) error {
 	q.BlockHash = logsQuery.BlockHash
 	if len(logsQuery.Address) > 0 {
 		q.Address = make([]Address, len(logsQuery.Address))
-		for i, a := range logsQuery.Address {
-			q.Address[i] = a
-		}
+		copy(q.Address, logsQuery.Address)
 	}
 	if len(logsQuery.Topics) > 0 {
 		q.Topics = make([][]Hash, len(logsQuery.Topics))
 		for i, t := range logsQuery.Topics {
 			q.Topics[i] = make([]Hash, len(t))
-			for j, h := range t {
-				q.Topics[i][j] = h
-			}
+			copy(q.Topics[i], t)
 		}
 	}
 	return nil

@@ -7,7 +7,7 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 
-	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -113,10 +113,10 @@ func (m Mnemonic) Derive(path DerivationPath) (*PrivateKey, error) {
 		}
 	}
 	privKey, err := key.ECPrivKey()
-	privKeyECDSA := privKey.ToECDSA()
 	if err != nil {
 		return nil, err
 	}
+	privKeyECDSA := privKey.ToECDSA()
 	return NewKeyFromECDSA(privKeyECDSA), nil
 }
 

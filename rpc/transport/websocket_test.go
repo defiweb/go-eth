@@ -19,6 +19,7 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+//nolint:funlen
 func TestWebsocket(t *testing.T) {
 	tests := []struct {
 		asserts func(t *testing.T, ws *Websocket, reqCh, resCh chan string)
@@ -137,8 +138,8 @@ func TestWebsocket(t *testing.T) {
 				}
 
 				// Request reader.
+				wg.Add(1)
 				go func() {
-					wg.Add(1)
 					defer wg.Done()
 					for {
 						var req json.RawMessage
@@ -153,8 +154,8 @@ func TestWebsocket(t *testing.T) {
 				}()
 
 				// Response writer.
+				wg.Add(1)
 				go func() {
-					wg.Add(1)
 					defer wg.Done()
 					for {
 						select {
@@ -181,8 +182,8 @@ func TestWebsocket(t *testing.T) {
 			if err != nil {
 				require.NoError(t, err)
 			}
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				defer wg.Done()
 				if err := server.Serve(ln); err != nil {
 					if !errors.Is(err, http.ErrServerClosed) {
@@ -206,7 +207,7 @@ func TestWebsocket(t *testing.T) {
 
 			// Stop the server.
 			close(closeCh)
-			server.Close()
+			_ = server.Close()
 			wg.Wait()
 		})
 	}

@@ -200,7 +200,7 @@ func decodeBool(a *bool, w Words) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode bool from empty data")
 	}
-	*a = w[0].IsZero() == false
+	*a = !w[0].IsZero()
 	return 1, nil
 }
 
