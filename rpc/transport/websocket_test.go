@@ -85,7 +85,7 @@ func TestWebsocket(t *testing.T) {
 			asserts: func(t *testing.T, ws *Websocket, reqCh, resCh chan string) {
 				go func() {
 					assert.JSONEq(t,
-						`{"id":1, "jsonrpc":"2.0", "method":"eth_subscribe", "params":["eth_sub", ["foo", "bar"]]}`,
+						`{"id":1, "jsonrpc":"2.0", "method":"eth_subscribe", "params":["eth_sub", "foo", "bar"]}`,
 						<-reqCh,
 					)
 					resCh <- `{"id":1, "result":"0xff"}`

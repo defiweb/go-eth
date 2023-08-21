@@ -88,7 +88,7 @@ func (s *stream) Subscribe(ctx context.Context, method string, args ...any) (cha
 	params := make([]any, 0, 2)
 	params = append(params, method)
 	if len(args) > 0 {
-		params = append(params, args)
+		params = append(params, args...)
 	}
 	if err := s.Call(ctx, &rawID, "eth_subscribe", params...); err != nil {
 		return nil, "", err
