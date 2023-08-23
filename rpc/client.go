@@ -9,15 +9,29 @@ import (
 	"github.com/defiweb/go-eth/wallet"
 )
 
+// Client allows to interact with the Ethereum node.
 type Client struct {
 	baseClient
 
 	keys        []wallet.Key
 	defaultAddr *types.Address
 	chainID     *uint64
+	txModifiers []TXModifier
 }
 
 type ClientOptions func(c *Client) error
+
+// TXModifier allows to modify the transaction before it is signed or sent to
+// the node.
+type TXModifier interface {
+	Modify(ctx context.Context, client RPC, tx *types.Transaction) error
+}
+
+type TXModifierFunc func(ctx context.Context, client RPC, tx *types.Transaction) error
+
+func (f TXModifierFunc) Modify(ctx context.Context, client RPC, tx *types.Transaction) error {
+	return f(ctx, client, tx)
+}
 
 // WithTransport sets the transport for the client.
 func WithTransport(transport transport.Transport) ClientOptions {
@@ -65,6 +79,17 @@ func WithDefaultAddress(addr types.Address) ClientOptions {
 func WithChainID(chainID uint64) ClientOptions {
 	return func(c *Client) error {
 		c.chainID = &chainID
+		return nil
+	}
+}
+
+// WithTXModifiers allows to modify the transaction before it is signed and
+// sent to the node.
+//
+// Modifiers will be applied in the order they are provided.
+func WithTXModifiers(modifiers ...TXModifier) ClientOptions {
+	return func(c *Client) error {
+		c.txModifiers = append(c.txModifiers, modifiers...)
 		return nil
 	}
 }
@@ -121,6 +146,11 @@ func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]b
 	if err := c.verifyTXChainID(txPtr); err != nil {
 		return nil, nil, err
 	}
+	for _, modifier := range c.txModifiers {
+		if err := modifier.Modify(ctx, c, txPtr); err != nil {
+			return nil, nil, err
+		}
+	}
 	if len(c.keys) == 0 {
 		return c.baseClient.SignTransaction(ctx, tx)
 	}
@@ -150,6 +180,11 @@ func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*ty
 	}
 	if err := c.verifyTXChainID(txPtr); err != nil {
 		return nil, err
+	}
+	for _, modifier := range c.txModifiers {
+		if err := modifier.Modify(ctx, c, txPtr); err != nil {
+			return nil, err
+		}
 	}
 	if len(c.keys) == 0 {
 		return c.baseClient.SendTransaction(ctx, tx)
