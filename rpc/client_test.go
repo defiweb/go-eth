@@ -119,3 +119,33 @@ func TestClient_SendTransaction(t *testing.T) {
 	assert.JSONEq(t, mockSendRawTransactionRequest, readBody(httpMock.Request))
 	assert.Equal(t, types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), *txHash)
 }
+
+func TestClient_Call(t *testing.T) {
+	httpMock := newHTTPMock()
+	client, _ := NewClient(
+		WithTransport(httpMock),
+		WithDefaultAddress(types.MustAddressFromHex("0x1111111111111111111111111111111111111111")),
+	)
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockCallResponse)),
+	}
+
+	to := types.MustAddressFromHex("0x2222222222222222222222222222222222222222")
+	gasLimit := uint64(30400)
+	_, err := client.Call(
+		context.Background(),
+		types.Call{
+			From:     nil,
+			To:       &to,
+			GasLimit: &gasLimit,
+			GasPrice: big.NewInt(10000000000000),
+			Value:    big.NewInt(10000000000),
+			Input:    hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
+		},
+		types.BlockNumberFromUint64(1),
+	)
+	require.NoError(t, err)
+	assert.JSONEq(t, mockCallRequest, readBody(httpMock.Request))
+}

@@ -167,6 +167,15 @@ func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*ty
 	return nil, fmt.Errorf("rpc client: no key found for address %s", tx.Call.From)
 }
 
+// Call implements the RPC interface.
+func (c *Client) Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, error) {
+	if call.From == nil && c.defaultAddr != nil {
+		defaultAddr := *c.defaultAddr
+		call.From = &defaultAddr
+	}
+	return c.baseClient.Call(ctx, call, block)
+}
+
 // verifyTXChainID verifies that the transaction chain ID is set. If the client
 // has a chain ID set, it will also verify that the transaction chain ID matches
 // the client chain ID.
