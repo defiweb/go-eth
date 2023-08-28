@@ -146,11 +146,10 @@ func Test_mappingRules(t *testing.T) {
 			wantDst: 1,
 		},
 		{
-			name:    "intX<=>bytesX#negative",
-			goTyp:   new(int),
-			solTyp:  "bytes32",
-			src:     -1,
-			wantDst: -1,
+			name:       "intX<=>bytesX#negative",
+			goTyp:      new(int),
+			solTyp:     "bytes32",
+			wantEncErr: true,
 		},
 		{
 			name:       "intX<=>bytesX#encode-error",
@@ -923,11 +922,17 @@ func Test_mappingRules(t *testing.T) {
 			wantDst: big.NewInt(1),
 		},
 		{
-			name:    "intX<=>bytesX#negative",
+			name:    "intX<=>bytesX#maxUint",
 			goTyp:   new(big.Int),
 			solTyp:  "bytes32",
-			src:     big.NewInt(-1),
-			wantDst: big.NewInt(-1),
+			src:     MaxUint[256],
+			wantDst: MaxUint[256],
+		},
+		{
+			name:       "intX<=>bytesX#negative",
+			goTyp:      new(big.Int),
+			solTyp:     "bytes32",
+			wantEncErr: true,
 		},
 		{
 			name:       "big.Int<=>bytesX#encode-error",
@@ -1394,11 +1399,17 @@ func Test_mappingRules(t *testing.T) {
 			wantDst: types.NumberFromBigInt(big.NewInt(1)),
 		},
 		{
-			name:    "types.Number<=>bytesX#negative",
+			name:    "types.Number<=>bytesX#maxUint",
 			goTyp:   new(types.Number),
 			solTyp:  "bytes32",
-			src:     types.NumberFromBigInt(big.NewInt(-1)),
-			wantDst: types.NumberFromBigInt(big.NewInt(-1)),
+			src:     types.NumberFromBigInt(MaxUint[256]),
+			wantDst: types.NumberFromBigInt(MaxUint[256]),
+		},
+		{
+			name:       "types.Number<=>bytesX#negative",
+			goTyp:      new(types.Number),
+			solTyp:     "bytes32",
+			wantEncErr: true,
 		},
 		{
 			name:       "types.Number<=>bytesX#encode-error",

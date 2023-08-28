@@ -832,12 +832,10 @@ func TestMapFrom(t *testing.T) {
 			},
 		},
 		{
-			name: "int64->bytes32/negative",
-			val:  make(FixedBytesValue, 32),
-			data: int64(-42),
-			want: Words{
-				padL("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd6"), // data
-			},
+			name:    "int64->bytes32/negative",
+			val:     make(FixedBytesValue, 32),
+			data:    int64(-42),
+			wantErr: true,
 		},
 		{
 			name:    "int64->bytes16",
@@ -860,12 +858,10 @@ func TestMapFrom(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "big.Int->bytes32/negative",
-			val:  make(FixedBytesValue, 32),
-			data: big.NewInt(-42),
-			want: Words{
-				padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd6"),
-			},
+			name:    "big.Int->bytes32/negative",
+			val:     make(FixedBytesValue, 32),
+			data:    big.NewInt(-42),
+			wantErr: true,
 		},
 		{
 			name:    "big.Int->bytes16",
@@ -1438,7 +1434,7 @@ func TestMapTo(t *testing.T) {
 				v := FixedBytesValue(hexutil.MustHexToBytes("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffd6"))
 				return &v
 			}(),
-			want: func() *int64 { i := int64(-42); return &i }(),
+			wantErr: true,
 		},
 		{
 			name: "bytes16->int64",

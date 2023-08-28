@@ -437,8 +437,11 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 		if len(b) != 32 {
 			return fmt.Errorf("abi: cannot map %s to bytes%d: only bytes32 is supported", srcRef.Type(), len(b))
 		}
-		x := newIntX(256)
-		_ = x.SetInt64(srcRef.Int())
+		if srcRef.Int() < 0 {
+			return fmt.Errorf("abi: cannot map negative %s to bytes%d", srcRef.Type(), len(b))
+		}
+		x := newUintX(256)
+		_ = x.SetUint64(uint64(srcRef.Int()))
 		bin := x.Bytes()
 		for i := 0; i < len(b)-len(bin); i++ {
 			b[i] = 0
@@ -450,7 +453,10 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map %s to bytes%d: only bytes32 is supported", srcRef.Type(), len(b))
 			}
-			x := newIntX(len(b) * 8)
+			if srcTyp.Sign() < 0 {
+				return fmt.Errorf("abi: cannot map negative %s to bytes%d", srcRef.Type(), len(b))
+			}
+			x := newUintX(len(b) * 8)
 			if err := x.SetBigInt(&srcTyp); err != nil {
 				return fmt.Errorf("abi: cannot map %s to bytes%d: %v", srcRef.Type(), len(b), err)
 			}
@@ -463,7 +469,10 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map %s to bytes%d: only bytes32 is supported", srcRef.Type(), len(b))
 			}
-			x := newIntX(len(b) * 8)
+			if srcTyp.Big().Sign() < 0 {
+				return fmt.Errorf("abi: cannot map negative %s to bytes%d", srcRef.Type(), len(b))
+			}
+			x := newUintX(len(b) * 8)
 			if err := x.SetBigInt(srcTyp.Big()); err != nil {
 				return fmt.Errorf("abi: cannot map %s to bytes%d: %v", srcRef.Type(), len(b), err)
 			}
@@ -473,13 +482,13 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 			}
 			copy(b[len(b)-len(bin):], bin)
 		case types.BlockNumber:
-			if srcTyp.Big().Sign() < 0 {
-				return fmt.Errorf("abi: cannot map %s to bytes%d: latest, earliest and pending are not supported", srcRef.Type(), len(b))
-			}
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map %s to bytes%d: only bytes32 is supported", srcRef.Type(), len(b))
 			}
-			x := newIntX(len(b) * 8)
+			if srcTyp.Big().Sign() < 0 {
+				return fmt.Errorf("abi: cannot map %s to bytes%d: latest, earliest and pending are not supported", srcRef.Type(), len(b))
+			}
+			x := newUintX(len(b) * 8)
 			if err := x.SetBigInt(srcTyp.Big()); err != nil {
 				return fmt.Errorf("abi: cannot map %s to bytes%d: %v", srcRef.Type(), len(b), err)
 			}
@@ -533,16 +542,16 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 		if len(b) != 32 {
 			return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
 		}
-		x := newIntX(256)
+		x := newUintX(256)
 		if err := x.SetBytes(b); err != nil {
 			return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 		}
-		i64, err := x.Int64()
-		if err != nil {
-			return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
+		if !x.BigInt().IsInt64() {
+			return fmt.Errorf("abi: cannot map bytes%d to %s: overflow", len(b), dstRef.Type())
 		}
+		i64 := x.BigInt().Int64()
 		if dstRef.OverflowInt(i64) {
-			return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
+			return fmt.Errorf("abi: cannot map bytes%d to %s: overflow", len(b), dstRef.Type())
 		}
 		dstRef.SetInt(i64)
 	case reflect.Interface:
@@ -557,7 +566,7 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
 			}
-			x := newIntX(256)
+			x := newUintX(256)
 			if err := x.SetBytes(b); err != nil {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 			}
@@ -566,7 +575,7 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
 			}
-			x := newIntX(256)
+			x := newUintX(256)
 			if err := x.SetBytes(b); err != nil {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 			}
@@ -575,7 +584,7 @@ func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
 			if len(b) != 32 {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: only bytes32 is supported", len(b), dstRef.Type())
 			}
-			x := newIntX(256)
+			x := newUintX(256)
 			if err := x.SetBytes(b); err != nil {
 				return fmt.Errorf("abi: cannot map bytes%d to %s: %v", len(b), dstRef.Type(), err)
 			}

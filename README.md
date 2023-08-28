@@ -13,33 +13,35 @@ Some of key features include:
 * Support for JSON and HD wallets.
 
 <!-- TOC -->
+
 * [go-eth](#go-eth)
-  * [Installation](#installation)
-  * [Basic usage](#basic-usage)
-    * [Connecting to a node](#connecting-to-a-node)
-    * [Calling a contract method](#calling-a-contract-method)
-    * [Sending a transaction](#sending-a-transaction)
-  * [Transports](#transports)
-  * [Wallets](#wallets)
-  * [Working with ABI](#working-with-abi)
-    * [Methods](#methods)
-      * [Encoding method arguments](#encoding-method-arguments)
-      * [Decoding method arguments](#decoding-method-arguments)
-    * [Events / Logs](#events--logs)
-      * [Decoding events](#decoding-events)
-    * [Errors](#errors)
-    * [Reverts](#reverts)
-    * [Panics](#panics)
-    * [Contract ABI](#contract-abi)
-      * [JSON-ABI](#json-abi)
-      * [Human-Readable ABI](#human-readable-abi)
-    * [Mapping rules](#mapping-rules)
-    * [Signature parser syntax](#signature-parser-syntax)
-    * [Custom types](#custom-types)
-      * [Simple types](#simple-types)
-      * [Advanced types](#advanced-types)
-  * [Additional tools](#additional-tools)
-  * [Documentation](#documentation)
+    * [Installation](#installation)
+    * [Basic usage](#basic-usage)
+        * [Connecting to a node](#connecting-to-a-node)
+        * [Calling a contract method](#calling-a-contract-method)
+        * [Sending a transaction](#sending-a-transaction)
+    * [Transports](#transports)
+    * [Wallets](#wallets)
+    * [Working with ABI](#working-with-abi)
+        * [Methods](#methods)
+            * [Encoding method arguments](#encoding-method-arguments)
+            * [Decoding method arguments](#decoding-method-arguments)
+        * [Events / Logs](#events--logs)
+            * [Decoding events](#decoding-events)
+        * [Errors](#errors)
+        * [Reverts](#reverts)
+        * [Panics](#panics)
+        * [Contract ABI](#contract-abi)
+            * [JSON-ABI](#json-abi)
+            * [Human-Readable ABI](#human-readable-abi)
+        * [Mapping rules](#mapping-rules)
+        * [Signature parser syntax](#signature-parser-syntax)
+        * [Custom types](#custom-types)
+            * [Simple types](#simple-types)
+            * [Advanced types](#advanced-types)
+    * [Additional tools](#additional-tools)
+    * [Documentation](#documentation)
+
 <!-- TOC -->
 
 ## Installation
@@ -759,17 +761,17 @@ When mapping between Go and Solidity types, the following rules apply:
 
 | Go type \ Solidity type | `intX`           | `uintX`            | `bool` | `string` | `bytes`       | `bytesX`         | `address`       |
 |-------------------------|------------------|--------------------|--------|----------|---------------|------------------|-----------------|
-| `intX`                  | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3</sup>    | ✗               |
-| `uintX`                 | ✓<sup>1,2</sup>  | ✓<sup>1</sup>      | ✗      | ✗        | ✗             | ✓<sup>3</sup>    | ✗               |
+| `intX`                  | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
+| `uintX`                 | ✓<sup>1,2</sup>  | ✓<sup>1</sup>      | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
 | `bool`                  | ✗                | ✗                  | ✓      | ✗        | ✗             | ✗                | ✗               |
 | `string`                | ✓<sup>5</sup>    | ✓<sup>5,6</sup>    | ✗      | ✓        | ✓<sup>7</sup> | ✓<sup>7,8</sup>  | ✓<sup>7,9</sup> |
 | `[]byte`                | ✗                | ✗                  | ✗      | ✓        | ✓             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
 | `[X]byte`               | ✗                | ✗                  | ✗      | ✗        | ✗             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
-| `big.Int`               | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3</sup>    | ✗               |
+| `big.Int`               | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
 | `types.Address`         | ✗                | ✗                  | ✗      | ✗        | ✓             | ✓<sup>4</sup>    | ✓               |
 | `types.Hash`            | ✗                | ✗                  | ✗      | ✗        | ✓             | ✓<sup>3</sup>    | ✗               |
 | `types.Bytes`           | ✗                | ✗                  | ✗      | ✓        | ✓             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
-| `types.Number`          | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3</sup>    | ✗               |
+| `types.Number`          | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
 | `types.BlockNumber`     | ✓<sup>1,10</sup> | ✓<sup>1,2,10</sup> | ✗      | ✗        | ✗             | ✓<sup>3,10</sup> | ✗               |
 
 * ✓ - Supported
