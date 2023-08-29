@@ -74,7 +74,7 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
-		assert.Equal(t, big.NewInt(1500), tx.GasPrice)
+		assert.Equal(t, big.NewInt(1500), tx.MaxFeePerGas)
 		assert.Equal(t, big.NewInt(10), tx.MaxPriorityFeePerGas)
 		assert.Equal(t, types.DynamicFeeTxType, tx.Type)
 	})
@@ -111,7 +111,7 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
-		assert.Equal(t, big.NewInt(500), tx.GasPrice)           // should be clamped to minGasPrice
+		assert.Equal(t, big.NewInt(500), tx.MaxFeePerGas)       // should be clamped to minGasPrice
 		assert.Equal(t, big.NewInt(2), tx.MaxPriorityFeePerGas) // should be clamped to minPriorityFeePerGas
 	})
 
@@ -124,7 +124,7 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
-		assert.Equal(t, big.NewInt(2000), tx.GasPrice)           // should be clamped to maxGasPrice
+		assert.Equal(t, big.NewInt(2000), tx.MaxFeePerGas)       // should be clamped to maxGasPrice
 		assert.Equal(t, big.NewInt(10), tx.MaxPriorityFeePerGas) // should be clamped to maxPriorityFeePerGas
 	})
 }

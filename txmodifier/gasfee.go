@@ -109,21 +109,21 @@ func NewEIP1559GasFeeEstimator(
 
 // Modify implements the rpc.TXModifier interface.
 func (e *EIP1559GasFeeEstimator) Modify(ctx context.Context, client rpc.RPC, tx *types.Transaction) error {
-	gasPrice, err := client.GasPrice(ctx)
+	maxFeePerGas, err := client.GasPrice(ctx)
 	if err != nil {
-		return fmt.Errorf("EIP-1669 gas fee estimator: failed to get gas price: %w", err)
+		return fmt.Errorf("EIP-1559 gas fee estimator: failed to get gas price: %w", err)
 	}
 	priorityFeePerGas, err := client.MaxPriorityFeePerGas(ctx)
 	if err != nil {
 		return fmt.Errorf("EIP-1559 gas fee estimator: failed to get max priority fee per gas: %w", err)
 	}
-	gasPrice, _ = new(big.Float).Mul(new(big.Float).SetInt(gasPrice), big.NewFloat(e.gasPriceMultiplier)).Int(nil)
+	maxFeePerGas, _ = new(big.Float).Mul(new(big.Float).SetInt(maxFeePerGas), big.NewFloat(e.gasPriceMultiplier)).Int(nil)
 	priorityFeePerGas, _ = new(big.Float).Mul(new(big.Float).SetInt(priorityFeePerGas), big.NewFloat(e.priorityFeePerGasMultiplier)).Int(nil)
-	if e.minGasPrice != nil && gasPrice.Cmp(e.minGasPrice) < 0 {
-		gasPrice = e.minGasPrice
+	if e.minGasPrice != nil && maxFeePerGas.Cmp(e.minGasPrice) < 0 {
+		maxFeePerGas = e.minGasPrice
 	}
-	if e.maxGasPrice != nil && gasPrice.Cmp(e.maxGasPrice) > 0 {
-		gasPrice = e.maxGasPrice
+	if e.maxGasPrice != nil && maxFeePerGas.Cmp(e.maxGasPrice) > 0 {
+		maxFeePerGas = e.maxGasPrice
 	}
 	if e.minPriorityFeePerGas != nil && priorityFeePerGas.Cmp(e.minPriorityFeePerGas) < 0 {
 		priorityFeePerGas = e.minPriorityFeePerGas
@@ -131,7 +131,8 @@ func (e *EIP1559GasFeeEstimator) Modify(ctx context.Context, client rpc.RPC, tx 
 	if e.maxPriorityFeePerGas != nil && priorityFeePerGas.Cmp(e.maxPriorityFeePerGas) > 0 {
 		priorityFeePerGas = e.maxPriorityFeePerGas
 	}
-	tx.GasPrice = gasPrice
+	tx.GasPrice = nil
+	tx.MaxFeePerGas = maxFeePerGas
 	tx.MaxPriorityFeePerGas = priorityFeePerGas
 	tx.Type = types.DynamicFeeTxType
 	return nil
