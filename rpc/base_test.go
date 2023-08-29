@@ -579,8 +579,11 @@ func TestBaseClient_SendTransaction(t *testing.T) {
 	from := types.MustAddressFromHex("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
 	to := types.MustAddressFromHex("0xd46e8dd67c5d32be8058bb8eb970870f07244567")
 	gasLimit := uint64(30400)
+	gasPrice := big.NewInt(10000000000000)
+	value := big.NewInt(10000000000)
+	input := hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675")
 	chainID := uint64(1)
-	txHash, err := client.SendTransaction(
+	txHash, tx, err := client.SendTransaction(
 		context.Background(),
 		types.Transaction{
 			ChainID: &chainID,
@@ -597,6 +600,12 @@ func TestBaseClient_SendTransaction(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, mockSendTransactionRequest, readBody(httpMock.Request))
 	assert.Equal(t, types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), *txHash)
+	assert.Equal(t, &from, tx.From)
+	assert.Equal(t, &to, tx.To)
+	assert.Equal(t, gasLimit, *tx.GasLimit)
+	assert.Equal(t, gasPrice, tx.GasPrice)
+	assert.Equal(t, value, tx.Value)
+	assert.Equal(t, input, tx.Input)
 }
 
 const mockSendRawTransactionRequest = `
@@ -672,22 +681,33 @@ func TestBaseClient_Call(t *testing.T) {
 		Body:       io.NopCloser(bytes.NewBufferString(mockCallResponse)),
 	}
 
+	from := types.MustAddressFromHexPtr("0x1111111111111111111111111111111111111111")
+	to := types.MustAddressFromHexPtr("0x2222222222222222222222222222222222222222")
 	gasLimit := uint64(30400)
-	call, err := client.Call(
+	gasPrice := big.NewInt(10000000000000)
+	value := big.NewInt(10000000000)
+	input := hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333")
+	calldata, call, err := client.Call(
 		context.Background(),
 		types.Call{
-			From:     types.MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-			To:       types.MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+			From:     from,
+			To:       to,
 			GasLimit: &gasLimit,
-			GasPrice: big.NewInt(10000000000000),
-			Value:    big.NewInt(10000000000),
-			Input:    hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
+			GasPrice: gasPrice,
+			Value:    value,
+			Input:    input,
 		},
 		types.MustBlockNumberFromHex("0x1"),
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockCallRequest, readBody(httpMock.Request))
-	assert.Equal(t, hexToBytes("0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000004000000000000000000000000d9c9cd5f6779558b6e0ed4e6acf6b1947e7fa1f300000000000000000000000078d1ad571a1a09d60d9bbf25894b44e4c8859595000000000000000000000000286834935f4a8cfb4ff4c77d5770c2775ae2b0e7000000000000000000000000b86e2b0ab5a4b1373e40c51a7c712c70ba2f9f8e"), call)
+	assert.Equal(t, hexToBytes("0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000004000000000000000000000000d9c9cd5f6779558b6e0ed4e6acf6b1947e7fa1f300000000000000000000000078d1ad571a1a09d60d9bbf25894b44e4c8859595000000000000000000000000286834935f4a8cfb4ff4c77d5770c2775ae2b0e7000000000000000000000000b86e2b0ab5a4b1373e40c51a7c712c70ba2f9f8e"), calldata)
+	assert.Equal(t, from, call.From)
+	assert.Equal(t, to, call.To)
+	assert.Equal(t, gasLimit, *call.GasLimit)
+	assert.Equal(t, gasPrice, call.GasPrice)
+	assert.Equal(t, value, call.Value)
+	assert.Equal(t, input, call.Input)
 }
 
 const mockEstimateGasRequest = `

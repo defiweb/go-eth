@@ -126,7 +126,7 @@ func main() {
 	}
 
 	// Call balanceOf.
-	b, err := c.Call(context.Background(), types.Call{
+	b, _, err := c.Call(context.Background(), types.Call{
 		To:   types.MustHexToAddressPtr("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
 		Data: calldata,
 	}, types.LatestBlockNumber)
@@ -216,7 +216,7 @@ func main() {
 		SetMaxPriorityFeePerGas(big.NewInt(1 * 1e9)).
 		SetMaxFeePerGas(big.NewInt(20 * 1e9))
 
-	txHash, err := c.SendTransaction(context.Background(), *tx)
+	txHash, _, err := c.SendTransaction(context.Background(), *tx)
 	if err != nil {
 		panic(err)
 	}

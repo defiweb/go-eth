@@ -134,81 +134,86 @@ func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (
 
 // SignTransaction implements the RPC interface.
 func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error) {
-	txPtr := &tx
-	if tx.ChainID == nil && c.chainID != nil {
+	txCpy := tx.Copy()
+	if txCpy.ChainID == nil && c.chainID != nil {
 		chainID := *c.chainID
-		txPtr.ChainID = &chainID
+		txCpy.ChainID = &chainID
 	}
-	if tx.Call.From == nil && c.defaultAddr != nil {
+	if txCpy.Call.From == nil && c.defaultAddr != nil {
 		defaultAddr := *c.defaultAddr
-		txPtr.Call.From = &defaultAddr
+		txCpy.Call.From = &defaultAddr
 	}
-	if err := c.verifyTXChainID(txPtr); err != nil {
+	if err := c.verifyTXChainID(txCpy); err != nil {
 		return nil, nil, err
 	}
 	for _, modifier := range c.txModifiers {
-		if err := modifier.Modify(ctx, c, txPtr); err != nil {
+		if err := modifier.Modify(ctx, c, txCpy); err != nil {
 			return nil, nil, err
 		}
 	}
 	if len(c.keys) == 0 {
-		return c.baseClient.SignTransaction(ctx, tx)
+		return c.baseClient.SignTransaction(ctx, *txCpy)
 	}
-	if key := c.findKey(tx.Call.From); key != nil {
-		if err := key.SignTransaction(txPtr); err != nil {
+	if key := c.findKey(txCpy.Call.From); key != nil {
+		if err := key.SignTransaction(txCpy); err != nil {
 			return nil, nil, err
 		}
-		raw, err := tx.Raw()
+		raw, err := txCpy.Raw()
 		if err != nil {
 			return nil, nil, err
 		}
-		return raw, txPtr, nil
+		return raw, txCpy, nil
 	}
 	return nil, nil, fmt.Errorf("rpc client: no key found for address %s", tx.Call.From)
 }
 
 // SendTransaction implements the RPC interface.
-func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
-	txPtr := &tx
-	if tx.ChainID == nil && c.chainID != nil {
+func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, *types.Transaction, error) {
+	txCpy := tx.Copy()
+	if txCpy.ChainID == nil && c.chainID != nil {
 		chainID := *c.chainID
-		txPtr.ChainID = &chainID
+		txCpy.ChainID = &chainID
 	}
-	if tx.Call.From == nil && c.defaultAddr != nil {
+	if txCpy.Call.From == nil && c.defaultAddr != nil {
 		defaultAddr := *c.defaultAddr
-		txPtr.Call.From = &defaultAddr
+		txCpy.Call.From = &defaultAddr
 	}
-	if err := c.verifyTXChainID(txPtr); err != nil {
-		return nil, err
+	if err := c.verifyTXChainID(txCpy); err != nil {
+		return nil, nil, err
 	}
 	for _, modifier := range c.txModifiers {
-		if err := modifier.Modify(ctx, c, txPtr); err != nil {
-			return nil, err
+		if err := modifier.Modify(ctx, c, txCpy); err != nil {
+			return nil, nil, err
 		}
 	}
 	if len(c.keys) == 0 {
-		return c.baseClient.SendTransaction(ctx, tx)
+		return c.baseClient.SendTransaction(ctx, *txCpy)
 	}
-	if key := c.findKey(tx.Call.From); key != nil {
-		if err := key.SignTransaction(txPtr); err != nil {
-			return nil, err
+	if key := c.findKey(txCpy.Call.From); key != nil {
+		if err := key.SignTransaction(txCpy); err != nil {
+			return nil, nil, err
 		}
-		raw, err := tx.Raw()
+		raw, err := txCpy.Raw()
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return c.SendRawTransaction(ctx, raw)
+		txHash, err := c.SendRawTransaction(ctx, raw)
+		if err != nil {
+			return nil, nil, err
+		}
+		return txHash, txCpy, nil
 	}
-	return nil, fmt.Errorf("rpc client: no key found for address %s", tx.Call.From)
+	return nil, nil, fmt.Errorf("rpc client: no key found for address %s", tx.Call.From)
 }
 
 // Call implements the RPC interface.
-func (c *Client) Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, error) {
-	if call.From == nil && c.defaultAddr != nil {
+func (c *Client) Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, *types.Call, error) {
+	callCpy := call.Copy()
+	if callCpy.From == nil && c.defaultAddr != nil {
 		defaultAddr := *c.defaultAddr
-		call.From = &defaultAddr
+		callCpy.From = &defaultAddr
 	}
-	return c.baseClient.Call(ctx, call, block)
+	return c.baseClient.Call(ctx, *callCpy, block)
 }
 
 // verifyTXChainID verifies that the transaction chain ID is set. If the client

@@ -72,6 +72,62 @@ func (c *Call) SetMaxFeePerGas(maxFeePerGas *big.Int) *Call {
 	return c
 }
 
+func (c Call) Copy() *Call {
+	var (
+		from                 *Address
+		to                   *Address
+		gasLimit             *uint64
+		gasPrice             *big.Int
+		value                *big.Int
+		input                []byte
+		accessList           AccessList
+		maxPriorityFeePerGas *big.Int
+		maxFeePerGas         *big.Int
+	)
+	if c.From != nil {
+		from = new(Address)
+		copy(from[:], c.From[:])
+	}
+	if c.To != nil {
+		to = new(Address)
+		copy(to[:], c.To[:])
+	}
+	if c.GasLimit != nil {
+		gasLimit = new(uint64)
+		*gasLimit = *c.GasLimit
+	}
+	if c.GasPrice != nil {
+		gasPrice = new(big.Int).Set(c.GasPrice)
+	}
+	if c.Value != nil {
+		value = new(big.Int).Set(c.Value)
+	}
+	if c.Input != nil {
+		input = make([]byte, len(c.Input))
+		copy(input, c.Input)
+	}
+	if c.AccessList != nil {
+		accessList = c.AccessList.Copy()
+	}
+	if c.MaxPriorityFeePerGas != nil {
+		maxPriorityFeePerGas = new(big.Int).Set(c.MaxPriorityFeePerGas)
+	}
+	if c.MaxFeePerGas != nil {
+		maxFeePerGas = new(big.Int).Set(c.MaxFeePerGas)
+	}
+	return &Call{
+		From:                 from,
+		To:                   to,
+		GasLimit:             gasLimit,
+		GasPrice:             gasPrice,
+		Value:                value,
+		Input:                input,
+		AccessList:           accessList,
+		MaxPriorityFeePerGas: maxPriorityFeePerGas,
+		MaxFeePerGas:         maxFeePerGas,
+	}
+}
+
 func (c Call) MarshalJSON() ([]byte, error) {
 	call := &jsonCall{
 		From:       c.From,
@@ -229,6 +285,32 @@ func (t *Transaction) SetChainID(chainID uint64) *Transaction {
 // Raw returns the raw transaction data that could be sent to the network.
 func (t Transaction) Raw() ([]byte, error) {
 	return t.EncodeRLP()
+}
+
+func (t *Transaction) Copy() *Transaction {
+	var (
+		nonce     *uint64
+		signature *Signature
+		chainID   *uint64
+	)
+	if t.Nonce != nil {
+		nonce = new(uint64)
+		*nonce = *t.Nonce
+	}
+	if t.Signature != nil {
+		signature = t.Signature.Copy()
+	}
+	if t.ChainID != nil {
+		chainID = new(uint64)
+		*chainID = *t.ChainID
+	}
+	return &Transaction{
+		Call:      *t.Call.Copy(),
+		Type:      t.Type,
+		Nonce:     nonce,
+		Signature: signature,
+		ChainID:   chainID,
+	}
 }
 
 func (t Transaction) MarshalJSON() ([]byte, error) {
@@ -636,6 +718,17 @@ type AccessTuple struct {
 	StorageKeys []Hash  `json:"storageKeys"`
 }
 
+func (a *AccessList) Copy() AccessList {
+	if a == nil {
+		return nil
+	}
+	c := make(AccessList, len(*a))
+	for i, tuple := range *a {
+		c[i] = tuple.Copy()
+	}
+	return c
+}
+
 func (a AccessList) EncodeRLP() ([]byte, error) {
 	l := rlp.NewList()
 	for _, tuple := range a {
@@ -662,6 +755,15 @@ func (a *AccessList) DecodeRLP(data []byte) (int, error) {
 		*a = append(*a, t)
 	}
 	return n, nil
+}
+
+func (a *AccessTuple) Copy() AccessTuple {
+	keys := make([]Hash, len(a.StorageKeys))
+	copy(keys, a.StorageKeys)
+	return AccessTuple{
+		Address:     a.Address,
+		StorageKeys: keys,
+	}
 }
 
 func (a AccessTuple) EncodeRLP() ([]byte, error) {

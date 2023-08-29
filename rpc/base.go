@@ -162,12 +162,12 @@ func (c *baseClient) SignTransaction(ctx context.Context, tx types.Transaction) 
 }
 
 // SendTransaction implements the RPC interface.
-func (c *baseClient) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
+func (c *baseClient) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, *types.Transaction, error) {
 	var res types.Hash
 	if err := c.transport.Call(ctx, &res, "eth_sendTransaction", tx); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return &res, nil
+	return &res, &tx, nil
 }
 
 // SendRawTransaction implements the RPC interface.
@@ -180,12 +180,12 @@ func (c *baseClient) SendRawTransaction(ctx context.Context, data []byte) (*type
 }
 
 // Call implements the RPC interface.
-func (c *baseClient) Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, error) {
+func (c *baseClient) Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, *types.Call, error) {
 	var res types.Bytes
 	if err := c.transport.Call(ctx, &res, "eth_call", call, block); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return res, nil
+	return res, &call, nil
 }
 
 // EstimateGas implements the RPC interface.

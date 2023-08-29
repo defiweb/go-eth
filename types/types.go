@@ -716,6 +716,20 @@ func (s Signature) IsZero() bool {
 	return true
 }
 
+func (s Signature) Copy() *Signature {
+	cpy := &Signature{}
+	if s.V != nil {
+		cpy.V = new(big.Int).Set(s.V)
+	}
+	if s.R != nil {
+		cpy.R = new(big.Int).Set(s.R)
+	}
+	if s.S != nil {
+		cpy.S = new(big.Int).Set(s.S)
+	}
+	return cpy
+}
+
 func (s Signature) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(s.Bytes()), nil
 }

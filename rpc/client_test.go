@@ -100,8 +100,11 @@ func TestClient_SendTransaction(t *testing.T) {
 	from := types.MustAddressFromHex("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
 	to := types.MustAddressFromHex("0xd46e8dd67c5d32be8058bb8eb970870f07244567")
 	gasLimit := uint64(30400)
+	gasPrice := big.NewInt(10000000000000)
+	value := big.NewInt(10000000000)
+	input := hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675")
 	chainID := uint64(1)
-	txHash, err := client.SendTransaction(
+	txHash, tx, err := client.SendTransaction(
 		context.Background(),
 		types.Transaction{
 			ChainID: &chainID,
@@ -109,15 +112,20 @@ func TestClient_SendTransaction(t *testing.T) {
 				From:     &from,
 				To:       &to,
 				GasLimit: &gasLimit,
-				GasPrice: big.NewInt(10000000000000),
-				Value:    big.NewInt(10000000000),
-				Input:    hexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"),
+				GasPrice: gasPrice,
+				Value:    value,
+				Input:    input,
 			},
 		},
 	)
 	require.NoError(t, err)
 	assert.JSONEq(t, mockSendRawTransactionRequest, readBody(httpMock.Request))
 	assert.Equal(t, types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), *txHash)
+	assert.Equal(t, &to, tx.To)
+	assert.Equal(t, gasLimit, *tx.GasLimit)
+	assert.Equal(t, gasPrice, tx.GasPrice)
+	assert.Equal(t, value, tx.Value)
+	assert.Equal(t, input, tx.Input)
 }
 
 func TestClient_Call(t *testing.T) {
@@ -134,7 +142,7 @@ func TestClient_Call(t *testing.T) {
 
 	to := types.MustAddressFromHex("0x2222222222222222222222222222222222222222")
 	gasLimit := uint64(30400)
-	_, err := client.Call(
+	_, _, err := client.Call(
 		context.Background(),
 		types.Call{
 			From:     nil,
