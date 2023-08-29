@@ -1,7 +1,7 @@
 module github.com/defiweb/go-eth
 
 retract (
-    v4.0.0
+    v0.4.0
 )
 
 go 1.18
