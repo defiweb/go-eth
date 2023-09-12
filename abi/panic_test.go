@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
 )
@@ -48,4 +49,10 @@ func TestDecodePanic(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestToPanicError(t *testing.T) {
+	panicErr := ToPanicError(hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000020"))
+	require.NotNil(t, panicErr)
+	assert.Equal(t, "panic: 32", panicErr.Error())
 }

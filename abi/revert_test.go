@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
 )
@@ -47,4 +48,10 @@ func TestDecodeRevert(t *testing.T) {
 			assert.Equal(t, tt.want, DecodeRevert(tt.data))
 		})
 	}
+}
+
+func TestToRevertError(t *testing.T) {
+	revertErr := ToRevertError(hexutil.MustHexToBytes("0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003666f6f0000000000000000000000000000000000000000000000000000000000"))
+	require.NotNil(t, revertErr)
+	assert.Equal(t, "revert: foo", revertErr.Error())
 }

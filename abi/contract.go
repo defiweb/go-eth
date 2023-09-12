@@ -21,6 +21,37 @@ type Contract struct {
 	Errors             map[string]*Error
 }
 
+// IsError returns true if the given data returned by a contract call is a
+// revert, panic or a custom error.
+func (c *Contract) IsError(data []byte) bool {
+	if IsRevert(data) || IsPanic(data) {
+		return true
+	}
+	for _, err := range c.Errors {
+		if err.Is(data) {
+			return true
+		}
+	}
+	return false
+}
+
+// ToError returns error if the given data returned by a contract call is a
+// revert, panic or a custom error.
+func (c *Contract) ToError(data []byte) error {
+	if IsRevert(data) {
+		return RevertError{Reason: DecodeRevert(data)}
+	}
+	if IsPanic(data) {
+		return PanicError{Code: DecodePanic(data)}
+	}
+	for _, err := range c.Errors {
+		if err.Is(data) {
+			return CustomError{Type: err, Data: data}
+		}
+	}
+	return nil
+}
+
 // LoadJSON loads the ABI from the given JSON file and returns a Contract instance.
 func LoadJSON(path string) (*Contract, error) {
 	data, err := os.ReadFile(path)

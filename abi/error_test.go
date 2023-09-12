@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 func TestParseError(t *testing.T) {
@@ -33,4 +35,21 @@ func TestParseError(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestError_Is(t *testing.T) {
+	e, err := ParseError("error foo(uint256)")
+	require.NoError(t, err)
+
+	assert.True(t, e.Is(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c")))
+	assert.False(t, e.Is(hexutil.MustHexToBytes("0xaabbccdd000000000000000000000000000000000000000000000000000000000000012c")))
+}
+
+func TestError_ToError(t *testing.T) {
+	e, err := ParseError("error foo(uint256)")
+	require.NoError(t, err)
+
+	customErr := e.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
+	require.NotNil(t, customErr)
+	assert.Equal(t, "error: foo", customErr.Error())
 }

@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 func TestABI_LoadJSON(t *testing.T) {
@@ -43,6 +45,38 @@ func TestABI_ParseSignatures(t *testing.T) {
 	assert.NotNil(t, c.Constructor)
 	assert.NotNil(t, c.Events["baz"])
 	assert.NotNil(t, c.Errors["qux"])
+}
+
+func TestContract_IsError(t *testing.T) {
+	c, err := ParseSignatures(
+		"error foo(uint256)",
+	)
+	require.NoError(t, err)
+
+	assert.True(t, c.IsError(hexutil.MustHexToBytes("0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003666f6f0000000000000000000000000000000000000000000000000000000000")))
+	assert.True(t, c.IsError(hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000020")))
+	assert.True(t, c.IsError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c")))
+	assert.False(t, c.IsError(hexutil.MustHexToBytes("0xaabbccdd000000000000000000000000000000000000000000000000000000000000012c")))
+}
+
+func TestContract_ToError(t *testing.T) {
+	c, err := ParseSignatures("error foo(uint256)")
+	require.NoError(t, err)
+
+	// Revert
+	revertErr := c.ToError(hexutil.MustHexToBytes("0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003666f6f0000000000000000000000000000000000000000000000000000000000"))
+	require.NotNil(t, revertErr)
+	assert.Equal(t, "revert: foo", revertErr.Error())
+
+	// Panic
+	panicErr := c.ToError(hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000020"))
+	require.NotNil(t, panicErr)
+	assert.Equal(t, "panic: 32", panicErr.Error())
+
+	// Custom error
+	customErr := c.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
+	require.NotNil(t, customErr)
+	assert.Equal(t, "error: foo", customErr.Error())
 }
 
 func Test_parseArrays(t *testing.T) {

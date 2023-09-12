@@ -6,6 +6,17 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
+// CustomError represents an custom error returned by a contract call.
+type CustomError struct {
+	Type *Error // The error type.
+	Data []byte // The error data returned by the contract call.
+}
+
+// Error implements the error interface.
+func (e CustomError) Error() string {
+	return fmt.Sprintf("error: %s", e.Type.Name())
+}
+
 // Error represents an error in an ABI. The error can be used to decode errors
 // returned by a contract call.
 type Error struct {
@@ -91,7 +102,7 @@ func (m *Error) Signature() string {
 
 // Is returns true if the ABI encoded data is an error of this type.
 func (m *Error) Is(data []byte) bool {
-	return m.fourBytes.Match(data)
+	return m.fourBytes.Match(data) && (len(data)-4)%WordLength == 0
 }
 
 // DecodeValue decodes the error into a map or structure. If a structure is
@@ -110,6 +121,18 @@ func (m *Error) DecodeValues(data []byte, vals ...any) error {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
 	return m.config.DecodeValues(m.inputs, data[4:], vals...)
+}
+
+// ToError converts the error data returned by contract calls into a CustomError.
+// If the data does not contain a valid error message, it returns nil.
+func (m *Error) ToError(data []byte) error {
+	if !m.fourBytes.Match(data) {
+		return nil
+	}
+	return CustomError{
+		Type: m,
+		Data: data[4:],
+	}
 }
 
 // String returns the human-readable signature of the error.

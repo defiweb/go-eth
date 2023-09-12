@@ -1,6 +1,7 @@
 package abi
 
 import (
+	"fmt"
 	"math/big"
 )
 
@@ -11,10 +12,20 @@ var Panic = NewError("Panic", NewTupleType(TupleTypeElem{Name: "error", Type: Ne
 // keccak256 hash of the string "Panic(uint256)".
 var panicPrefix = FourBytes{0x4e, 0x48, 0x7b, 0x71}
 
-// IsPanic returns true if the data has the panic prefix. It does not check
-// whether the data is a valid panic message.
+// PanicError represents an error returned by contract calls when the call
+// panics.
+type PanicError struct {
+	Code *big.Int
+}
+
+// Error implements the error interface.
+func (e PanicError) Error() string {
+	return fmt.Sprintf("panic: %s", e.Code.String())
+}
+
+// IsPanic returns true if the data has the panic prefix.
 func IsPanic(data []byte) bool {
-	return panicPrefix.Match(data)
+	return panicPrefix.Match(data) && len(data) == 36
 }
 
 // DecodePanic decodes the panic data returned by contract calls.
@@ -22,7 +33,7 @@ func IsPanic(data []byte) bool {
 func DecodePanic(data []byte) *big.Int {
 	// The code below is a slightly optimized version of
 	// Panic.DecodeValues(data).
-	if !panicPrefix.Match(data) {
+	if !IsPanic(data) {
 		return nil
 	}
 	s := &UintValue{Size: 256}
@@ -31,4 +42,13 @@ func DecodePanic(data []byte) *big.Int {
 		return nil
 	}
 	return &s.Int
+}
+
+// ToPanicError converts the panic data returned by contract calls into a PanicError.
+// If the data does not contain a valid panic message, it returns nil.
+func ToPanicError(data []byte) error {
+	if !IsPanic(data) {
+		return nil
+	}
+	return PanicError{Code: DecodePanic(data)}
 }
