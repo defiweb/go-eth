@@ -79,9 +79,6 @@ func newConstructorFromSig(abi *ABI, s sigparser.Signature) (*Constructor, error
 // newErrorFromSig creates a new error from a sigparser.Signature.
 func newErrorFromSig(abi *ABI, s sigparser.Signature) (*Error, error) {
 	var in []TupleTypeElem
-	if len(s.Inputs) == 0 {
-		return nil, fmt.Errorf("abi: event %q has no inputs", s.Name)
-	}
 	for _, param := range s.Inputs {
 		typ, err := newTypeFromSig(abi, param)
 		if err != nil {
