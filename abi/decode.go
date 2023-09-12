@@ -171,8 +171,12 @@ func decodeInt(v *big.Int, w Words, size int) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode int from empty data")
 	}
+	if size%8 != 0 {
+		return 0, fmt.Errorf("abi: cannot decode int, size not a multiple of 8")
+	}
+	b := w[0].Bytes()[WordLength-size/8:]
 	x := newIntX(size)
-	if err := x.SetBytes(w[0].Bytes()); err != nil {
+	if err := x.SetBytes(b); err != nil {
 		return 0, err
 	}
 	v.Set(x.BigInt())
@@ -186,8 +190,12 @@ func decodeUint(v *big.Int, w Words, size int) (int, error) {
 	if len(w) == 0 {
 		return 0, fmt.Errorf("abi: cannot decode int from empty data")
 	}
+	if size%8 != 0 {
+		return 0, fmt.Errorf("abi: cannot decode int, size not a multiple of 8")
+	}
+	b := w[0].Bytes()[WordLength-size/8:]
 	x := newUintX(size)
-	if err := x.SetBytes(w[0].Bytes()); err != nil {
+	if err := x.SetBytes(b); err != nil {
 		return 0, err
 	}
 	v.Set(x.BigInt())

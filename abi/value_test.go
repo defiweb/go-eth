@@ -222,6 +222,12 @@ func TestEncodeABI(t *testing.T) {
 		},
 		// UintValue:
 		{
+			name: "uint8#0",
+			val:  &UintValue{Size: 8},
+			arg:  big.NewInt(0),
+			want: Words{padL("00")},
+		},
+		{
 			name: "uint256#0",
 			val:  &UintValue{Size: 256},
 			arg:  big.NewInt(0),
@@ -234,6 +240,12 @@ func TestEncodeABI(t *testing.T) {
 			want: Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
 		},
 		// IntValue:
+		{
+			name: "int8#0",
+			val:  &IntValue{Size: 8},
+			arg:  big.NewInt(0),
+			want: Words{padL("00")},
+		},
 		{
 			name: "int256#0",
 			val:  &IntValue{Size: 256},
@@ -566,6 +578,18 @@ func TestDecodeABI(t *testing.T) {
 		},
 		// UintValue:
 		{
+			name: "uint8#0",
+			abi:  Words{padL("00")},
+			val:  &UintValue{Size: 8},
+			want: func() *UintValue { u := UintValue{Size: 8, Int: *big.NewInt(0)}; return &u }(),
+		},
+		{
+			name: "uint8#1",
+			abi:  Words{padL("01")},
+			val:  &UintValue{Size: 8},
+			want: func() *UintValue { u := UintValue{Size: 8, Int: *big.NewInt(1)}; return &u }(),
+		},
+		{
 			name: "uint256#0",
 			abi:  Words{padL("00")},
 			val:  &UintValue{Size: 256},
@@ -578,6 +602,24 @@ func TestDecodeABI(t *testing.T) {
 			want: func() *UintValue { u := UintValue{Size: 256, Int: *MaxUint[256]}; return &u }(),
 		},
 		// IntValue:
+		{
+			name: "int8#0",
+			abi:  Words{padL("00")},
+			val:  &IntValue{Size: 8},
+			want: func() *IntValue { i := IntValue{Size: 8, Int: *big.NewInt(0)}; return &i }(),
+		},
+		{
+			name: "int8#1",
+			abi:  Words{padL("01")},
+			val:  &IntValue{Size: 8},
+			want: func() *IntValue { i := IntValue{Size: 8, Int: *big.NewInt(1)}; return &i }(),
+		},
+		{
+			name: "int8#-1",
+			abi:  Words{padL("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
+			val:  &IntValue{Size: 8},
+			want: func() *IntValue { i := IntValue{Size: 8, Int: *big.NewInt(-1)}; return &i }(),
+		},
 		{
 			name: "int256#0",
 			abi:  Words{padL("00")},
