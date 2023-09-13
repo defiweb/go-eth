@@ -127,4 +127,17 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 		assert.Equal(t, big.NewInt(2000), tx.MaxFeePerGas)       // should be clamped to maxGasPrice
 		assert.Equal(t, big.NewInt(10), tx.MaxPriorityFeePerGas) // should be clamped to maxPriorityFeePerGas
 	})
+
+	t.Run("gas tip fee higher than gas fee", func(t *testing.T) {
+		rpcMock := new(mockRPC)
+		rpcMock.On("GasPrice", ctx).Return(big.NewInt(500), nil)
+		rpcMock.On("MaxPriorityFeePerGas", ctx).Return(big.NewInt(2500), nil)
+
+		estimator := NewEIP1559GasFeeEstimator(1.0, 1.0, nil, nil, nil, nil)
+		err := estimator.Modify(ctx, rpcMock, tx)
+
+		assert.NoError(t, err)
+		assert.Equal(t, big.NewInt(500), tx.MaxFeePerGas)
+		assert.Equal(t, big.NewInt(500), tx.MaxPriorityFeePerGas) // should not be higher than tx.MaxFeePerGas
+	})
 }

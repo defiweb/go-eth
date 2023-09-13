@@ -131,6 +131,9 @@ func (e *EIP1559GasFeeEstimator) Modify(ctx context.Context, client rpc.RPC, tx 
 	if e.maxPriorityFeePerGas != nil && priorityFeePerGas.Cmp(e.maxPriorityFeePerGas) > 0 {
 		priorityFeePerGas = e.maxPriorityFeePerGas
 	}
+	if maxFeePerGas.Cmp(priorityFeePerGas) < 0 {
+		priorityFeePerGas = maxFeePerGas
+	}
 	tx.GasPrice = nil
 	tx.MaxFeePerGas = maxFeePerGas
 	tx.MaxPriorityFeePerGas = priorityFeePerGas
