@@ -44,7 +44,5 @@ func (e *GasLimitEstimator) Modify(ctx context.Context, client rpc.RPC, tx *type
 		return fmt.Errorf("gas limit estimator: estimated gas limit %d is out of range [%d, %d]", gasLimit, e.minGas, e.maxGas)
 	}
 	tx.GasLimit = &gasLimit
-	tx.MaxPriorityFeePerGas = nil
-	tx.MaxFeePerGas = nil
 	return nil
 }
