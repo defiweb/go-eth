@@ -14,7 +14,7 @@ type Event struct {
 	name      string
 	inputs    *EventTupleType
 	anonymous bool
-	config    *ABI
+	abi       *ABI
 
 	topic0    types.Hash
 	signature string
@@ -57,7 +57,7 @@ func (a *ABI) NewEvent(name string, inputs *EventTupleType, anonymous bool) *Eve
 		name:      name,
 		inputs:    inputs,
 		anonymous: anonymous,
-		config:    a,
+		abi:       a,
 	}
 	e.generateSignature()
 	e.calculateTopic0()
@@ -97,7 +97,7 @@ func (e *Event) Signature() string {
 // given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 	if e.anonymous {
-		return e.config.DecodeValue(e.inputs, data, val)
+		return e.abi.DecodeValue(e.inputs, data, val)
 	}
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
@@ -108,12 +108,12 @@ func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 	// The anymapper package does not zero out values before decoding into
 	// it, therefore we can decode topics and data into the same value.
 	if len(topics) > 1 {
-		if err := e.config.DecodeValue(e.inputs.TopicsTuple(), hashSliceToBytes(topics[1:]), val); err != nil {
+		if err := e.abi.DecodeValue(e.inputs.TopicsTuple(), hashSliceToBytes(topics[1:]), val); err != nil {
 			return err
 		}
 	}
 	if len(data) > 0 {
-		if err := e.config.DecodeValue(e.inputs.DataTuple(), data, val); err != nil {
+		if err := e.abi.DecodeValue(e.inputs.DataTuple(), data, val); err != nil {
 			return err
 		}
 	}
@@ -124,7 +124,7 @@ func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 // given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) error {
 	if e.anonymous {
-		return e.config.DecodeValues(e.inputs, data, vals...)
+		return e.abi.DecodeValues(e.inputs, data, vals...)
 	}
 	if len(topics) != e.inputs.IndexedSize()+1 {
 		return fmt.Errorf("abi: wrong number of topics for event %s", e.name)
@@ -145,12 +145,12 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 		}
 	}
 	if len(topics) > 1 {
-		if err := e.config.DecodeValues(e.inputs.TopicsTuple(), hashSliceToBytes(topics[1:]), indexedVals...); err != nil {
+		if err := e.abi.DecodeValues(e.inputs.TopicsTuple(), hashSliceToBytes(topics[1:]), indexedVals...); err != nil {
 			return err
 		}
 	}
 	if len(data) > 0 {
-		if err := e.config.DecodeValues(e.inputs.DataTuple(), data, dataVals...); err != nil {
+		if err := e.abi.DecodeValues(e.inputs.DataTuple(), data, dataVals...); err != nil {
 			return err
 		}
 	}

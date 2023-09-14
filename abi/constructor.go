@@ -4,7 +4,7 @@ package abi
 // encode arguments for a constructor call.
 type Constructor struct {
 	inputs *TupleType
-	config *ABI
+	abi    *ABI
 }
 
 // NewConstructor creates a new Constructor instance.
@@ -43,7 +43,7 @@ func MustParseConstructor(signature string) *Constructor {
 func (a *ABI) NewConstructor(inputs *TupleType) *Constructor {
 	return &Constructor{
 		inputs: inputs,
-		config: a,
+		abi:    a,
 	}
 }
 
@@ -63,7 +63,7 @@ func (m *Constructor) Inputs() *TupleType {
 // structure. The map or structure must have fields with the same names as
 // the constructor arguments.
 func (m *Constructor) EncodeArg(arg any) ([]byte, error) {
-	encoded, err := m.config.EncodeValue(m.inputs, arg)
+	encoded, err := m.abi.EncodeValue(m.inputs, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (m *Constructor) EncodeArg(arg any) ([]byte, error) {
 
 // EncodeArgs encodes arguments for a constructor call.
 func (m *Constructor) EncodeArgs(args ...any) ([]byte, error) {
-	encoded, err := m.config.EncodeValues(m.inputs, args...)
+	encoded, err := m.abi.EncodeValues(m.inputs, args...)
 	if err != nil {
 		return nil, err
 	}

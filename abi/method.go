@@ -13,7 +13,7 @@ type Method struct {
 	name    string
 	inputs  *TupleType
 	outputs *TupleType
-	config  *ABI
+	abi     *ABI
 
 	fourBytes FourBytes
 	signature string
@@ -59,7 +59,7 @@ func (a *ABI) NewMethod(name string, inputs, outputs *TupleType) *Method {
 		name:    name,
 		inputs:  inputs,
 		outputs: outputs,
-		config:  a,
+		abi:     a,
 	}
 	m.generateSignature()
 	m.calculateFourBytes()
@@ -104,7 +104,7 @@ func (m *Method) Signature() string {
 // structure. The map or structure must have fields with the same names as
 // the method arguments.
 func (m *Method) EncodeArg(arg any) ([]byte, error) {
-	encoded, err := m.config.EncodeValue(m.inputs, arg)
+	encoded, err := m.abi.EncodeValue(m.inputs, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (m *Method) EncodeArg(arg any) ([]byte, error) {
 
 // EncodeArgs encodes arguments for a method call.
 func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
-	encoded, err := m.config.EncodeValues(m.inputs, args...)
+	encoded, err := m.abi.EncodeValues(m.inputs, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (m *Method) DecodeArg(data []byte, arg any) error {
 			m.fourBytes,
 		)
 	}
-	return m.config.DecodeValue(m.inputs, data[4:], arg)
+	return m.abi.DecodeValue(m.inputs, data[4:], arg)
 }
 
 // DecodeArgs decodes ABI-encoded arguments a method call.
@@ -141,19 +141,19 @@ func (m *Method) DecodeArgs(data []byte, args ...any) error {
 			m.fourBytes,
 		)
 	}
-	return m.config.DecodeValues(m.inputs, data[4:], args...)
+	return m.abi.DecodeValues(m.inputs, data[4:], args...)
 }
 
 // DecodeValue decodes the values returned by a method call into a map or
 // structure. If a structure is given, it must have fields with the same names
 // as the values returned by the method.
 func (m *Method) DecodeValue(data []byte, val any) error {
-	return m.config.DecodeValue(m.outputs, data, val)
+	return m.abi.DecodeValue(m.outputs, data, val)
 }
 
 // DecodeValues decodes return values from a method call to a given values.
 func (m *Method) DecodeValues(data []byte, vals ...any) error {
-	return m.config.DecodeValues(m.outputs, data, vals...)
+	return m.abi.DecodeValues(m.outputs, data, vals...)
 }
 
 // String returns the human-readable signature of the method.

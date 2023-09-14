@@ -22,7 +22,7 @@ func (e CustomError) Error() string {
 type Error struct {
 	name   string
 	inputs *TupleType
-	config *ABI
+	abi    *ABI
 
 	fourBytes FourBytes
 	signature string
@@ -64,7 +64,7 @@ func (a *ABI) NewError(name string, inputs *TupleType) *Error {
 	m := &Error{
 		name:   name,
 		inputs: inputs,
-		config: a,
+		abi:    a,
 	}
 	m.generateSignature()
 	m.calculateFourBytes()
@@ -111,7 +111,7 @@ func (m *Error) DecodeValue(data []byte, val any) error {
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
-	return m.config.DecodeValue(m.inputs, data[4:], val)
+	return m.abi.DecodeValue(m.inputs, data[4:], val)
 }
 
 // DecodeValues decodes the error into a map or structure. If a structure is
@@ -120,7 +120,7 @@ func (m *Error) DecodeValues(data []byte, vals ...any) error {
 	if m.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
-	return m.config.DecodeValues(m.inputs, data[4:], vals...)
+	return m.abi.DecodeValues(m.inputs, data[4:], vals...)
 }
 
 // ToError converts the error data returned by contract calls into a CustomError.
