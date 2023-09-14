@@ -27,9 +27,6 @@ func BigIntToHex(x *big.Int) string {
 // HexToBigInt returns the big integer representation of the given hex string.
 // The hex string may be prefixed with "0x".
 func HexToBigInt(h string) (*big.Int, error) {
-	if len(h) == 0 {
-		return big.NewInt(0), nil
-	}
 	isNeg := len(h) > 1 && h[0] == '-'
 	if isNeg {
 		h = h[1:]
