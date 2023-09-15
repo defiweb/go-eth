@@ -65,11 +65,11 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 	select {
 	case res := <-ch:
 		if res.Error != nil {
-			return &RPCError{
-				Code:    res.Error.Code,
-				Message: res.Error.Message,
-				Data:    res.Error.Data,
-			}
+			return NewRPCError(
+				res.Error.Code,
+				res.Error.Message,
+				res.Error.Data,
+			)
 		}
 		if result != nil {
 			if err := json.Unmarshal(res.Result, result); err != nil {

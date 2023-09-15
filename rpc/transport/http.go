@@ -68,14 +68,14 @@ func (h *HTTP) Call(ctx context.Context, result any, method string, args ...any)
 	if err := json.NewDecoder(httpRes.Body).Decode(rpcRes); err != nil {
 		// If the response is not a valid JSON-RPC response, return the HTTP
 		// status code as the error code.
-		return &HTTPError{Code: httpRes.StatusCode}
+		return NewHTTPError(httpRes.StatusCode, nil)
 	}
 	if rpcRes.Error != nil {
-		return &RPCError{
-			Code:    rpcRes.Error.Code,
-			Message: rpcRes.Error.Message,
-			Data:    rpcRes.Error.Data,
-		}
+		return NewRPCError(
+			rpcRes.Error.Code,
+			rpcRes.Error.Message,
+			rpcRes.Error.Data,
+		)
 	}
 	if result == nil {
 		return nil

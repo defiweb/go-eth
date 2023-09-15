@@ -435,6 +435,14 @@ func TestRetryOnAnyError(t *testing.T) {
 			err:  &RPCError{Code: -32005},
 			want: true,
 		},
+		{
+			err:  &RPCError{Code: -32000, Message: "foo"},
+			want: true,
+		},
+		{
+			err:  &RPCError{Code: -32000, Message: "execution reverted"},
+			want: false,
+		},
 	}
 	for n, test := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {

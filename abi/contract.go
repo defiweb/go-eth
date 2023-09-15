@@ -21,8 +21,8 @@ type Contract struct {
 	Errors             map[string]*Error
 }
 
-// IsError returns true if the given data returned by a contract call is a
-// revert, panic or a custom error.
+// IsError returns true if the given error data returned by a contract call is
+// a revert, panic or a custom error.
 func (c *Contract) IsError(data []byte) bool {
 	if IsRevert(data) || IsPanic(data) {
 		return true
@@ -35,8 +35,9 @@ func (c *Contract) IsError(data []byte) bool {
 	return false
 }
 
-// ToError returns error if the given data returned by a contract call is a
-// revert, panic or a custom error.
+// ToError returns error if the given error data returned by a contract call is
+// a revert, panic or a custom error. It returns nil if the data cannot be
+// recognized as an error.
 func (c *Contract) ToError(data []byte) error {
 	if IsRevert(data) {
 		return RevertError{Reason: DecodeRevert(data)}

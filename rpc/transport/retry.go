@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -12,34 +13,49 @@ var ErrNotSubscriptionTransport = errors.New("transport does not implement Subsc
 
 var (
 	// RetryOnAnyError retries on any error except for the following:
+	// 3: Execution error.
 	// -32700: Parse error.
 	// -32600: Invalid request.
 	// -32601: Method not found.
 	// -32602: Invalid params.
+	// -32000: If error message starts with "execution reverted".
 	RetryOnAnyError = func(err error) bool {
 		// List of errors that should not be retried:
 		switch errorCode(err) {
-		case -32700: // Parse error.
+		case ErrCodeExecutionError:
 			return false
-		case -32600: // Invalid request.
+		case ErrCodeParseError:
 			return false
-		case -32601: // Method not found.
+		case ErrCodeInvalidRequest:
 			return false
-		case -32602: // Invalid params.
+		case ErrCodeMethodNotFound:
 			return false
+		case ErrCodeInvalidParams:
+			return false
+		case ErrCodeGeneral:
+			rpcErr := &RPCError{}
+			if errors.As(err, &rpcErr) {
+				if strings.HasPrefix(rpcErr.Message, "execution reverted") {
+					return false
+				}
+			}
 		}
+
 		// Retry on all other errors:
 		return err != nil
 	}
 
 	// RetryOnLimitExceeded retries on the following errors:
 	// -32005: Limit exceeded.
-	// 429: Too many requests.
+	// -32097: Rate limit reached (Blast).
+	// 429: Too many requests
 	RetryOnLimitExceeded = func(err error) bool {
 		switch errorCode(err) {
-		case -32005: // Limit exceeded.
+		case ErrCodeLimitExceeded:
 			return true
-		case 429: // Too many requests.
+		case BlastErrRateLimitReached:
+			return true
+		case AlchemyErrCodeLimitExceeded:
 			return true
 		}
 		return false

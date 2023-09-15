@@ -31,7 +31,7 @@ func HexToBigInt(h string) (*big.Int, error) {
 	if isNeg {
 		h = h[1:]
 	}
-	if has0xPrefix(h) {
+	if Has0xPrefix(h) {
 		h = h[2:]
 	}
 	x, ok := new(big.Int).SetString(h, 16)
@@ -68,7 +68,7 @@ func HexToBytes(h string) ([]byte, error) {
 	if len(h) == 0 {
 		return []byte{}, nil
 	}
-	if has0xPrefix(h) {
+	if Has0xPrefix(h) {
 		h = h[2:]
 	}
 	if len(h) == 1 && h[0] == '0' {
@@ -91,7 +91,7 @@ func MustHexToBytes(h string) []byte {
 	return b
 }
 
-// has0xPrefix returns true if the given byte slice starts with "0x".
-func has0xPrefix(h string) bool {
+// Has0xPrefix returns true if the given byte slice starts with "0x".
+func Has0xPrefix(h string) bool {
 	return len(h) >= 2 && h[0] == '0' && (h[1] == 'x' || h[1] == 'X')
 }
