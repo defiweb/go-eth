@@ -7,9 +7,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 
@@ -60,7 +61,7 @@ func encryptV3Key(key *ecdsa.PrivateKey, passphrase string, scryptN, scryptP int
 	mac := crypto.Keccak256(derivedKey[16:32], cipherText)
 
 	// Generate a random UUID for the keyfile.
-	id, err := uuid.NewRandom()
+	id, err := randUUID()
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +69,7 @@ func encryptV3Key(key *ecdsa.PrivateKey, passphrase string, scryptN, scryptP int
 	// Assemble and return the key JSON.
 	return &jsonKey{
 		Version: 3,
-		ID:      id.String(),
+		ID:      id,
 		Address: crypto.ECPublicKeyToAddress(&key.PublicKey),
 		Crypto: jsonKeyCrypto{
 			Cipher: "aes-128-ctr",
@@ -156,4 +157,24 @@ func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
 	outText := make([]byte, len(inText))
 	stream.XORKeyStream(outText, inText)
 	return outText, err
+}
+
+func randUUID() (string, error) {
+	var uuid [16]byte
+	var text [36]byte
+	if _, err := io.ReadFull(rand.Reader, uuid[:]); err != nil {
+		return "", err
+	}
+	uuid[6] = (uuid[6] & 0x0f) | 0x40
+	uuid[8] = (uuid[8] & 0x3f) | 0x80
+	hex.Encode(text[:8], uuid[:4])
+	text[8] = '-'
+	hex.Encode(text[9:13], uuid[4:6])
+	text[13] = '-'
+	hex.Encode(text[14:18], uuid[6:8])
+	text[18] = '-'
+	hex.Encode(text[19:23], uuid[8:10])
+	text[23] = '-'
+	hex.Encode(text[24:], uuid[10:])
+	return string(text[:]), nil
 }
