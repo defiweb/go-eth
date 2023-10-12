@@ -12,13 +12,17 @@ import (
 
 func TestGasLimitEstimator_Modify(t *testing.T) {
 	ctx := context.Background()
-	tx := &types.Transaction{Call: types.Call{}}
 
 	t.Run("successful gas estimation", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("EstimateGas", ctx, tx.Call, types.LatestBlockNumber).Return(uint64(1000), nil)
 
-		estimator := NewGasLimitEstimator(1.5, 500, 2000)
+		estimator := NewGasLimitEstimator(GasLimitEstimatorOptions{
+			Multiplier: 1.5,
+			MinGas:     500,
+			MaxGas:     2000,
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
@@ -26,10 +30,15 @@ func TestGasLimitEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas estimation error", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("EstimateGas", ctx, tx.Call, types.LatestBlockNumber).Return(uint64(0), errors.New("rpc error"))
 
-		estimator := NewGasLimitEstimator(1.5, 500, 2000)
+		estimator := NewGasLimitEstimator(GasLimitEstimatorOptions{
+			Multiplier: 1.5,
+			MinGas:     500,
+			MaxGas:     2000,
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.Error(t, err)
@@ -37,10 +46,15 @@ func TestGasLimitEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas out of range", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("EstimateGas", ctx, tx.Call, types.LatestBlockNumber).Return(uint64(3000), nil)
 
-		estimator := NewGasLimitEstimator(1.5, 500, 2000)
+		estimator := NewGasLimitEstimator(GasLimitEstimatorOptions{
+			Multiplier: 1.5,
+			MinGas:     500,
+			MaxGas:     2000,
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.Error(t, err)

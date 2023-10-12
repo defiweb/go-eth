@@ -13,13 +13,16 @@ import (
 
 func TestLegacyGasFeeEstimator_Modify(t *testing.T) {
 	ctx := context.Background()
-	tx := &types.Transaction{}
 
 	t.Run("successful gas fee estimation", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return(big.NewInt(1000), nil)
-
-		estimator := NewLegacyGasFeeEstimator(1.5, big.NewInt(500), big.NewInt(2000))
+		estimator := NewLegacyGasFeeEstimator(LegacyGasFeeEstimatorOptions{
+			Multiplier:  1.5,
+			MinGasPrice: big.NewInt(500),
+			MaxGasPrice: big.NewInt(2000),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
@@ -28,10 +31,15 @@ func TestLegacyGasFeeEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas fee estimation error", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return((*big.Int)(nil), errors.New("rpc error"))
 
-		estimator := NewLegacyGasFeeEstimator(1.5, big.NewInt(500), big.NewInt(2000))
+		estimator := NewLegacyGasFeeEstimator(LegacyGasFeeEstimatorOptions{
+			Multiplier:  1.5,
+			MinGasPrice: big.NewInt(500),
+			MaxGasPrice: big.NewInt(2000),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.Error(t, err)
@@ -39,10 +47,15 @@ func TestLegacyGasFeeEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas fee below min bound", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return(big.NewInt(300), nil)
 
-		estimator := NewLegacyGasFeeEstimator(1.0, big.NewInt(500), big.NewInt(2000))
+		estimator := NewLegacyGasFeeEstimator(LegacyGasFeeEstimatorOptions{
+			Multiplier:  1.0,
+			MinGasPrice: big.NewInt(500),
+			MaxGasPrice: big.NewInt(2000),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
@@ -50,10 +63,15 @@ func TestLegacyGasFeeEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas fee above max bound", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return(big.NewInt(2500), nil)
 
-		estimator := NewLegacyGasFeeEstimator(1.0, big.NewInt(500), big.NewInt(2000))
+		estimator := NewLegacyGasFeeEstimator(LegacyGasFeeEstimatorOptions{
+			Multiplier:  1.0,
+			MinGasPrice: big.NewInt(500),
+			MaxGasPrice: big.NewInt(2000),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
@@ -63,14 +81,21 @@ func TestLegacyGasFeeEstimator_Modify(t *testing.T) {
 
 func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 	ctx := context.Background()
-	tx := &types.Transaction{}
 
 	t.Run("successful gas fee estimation", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return(big.NewInt(1000), nil)
 		rpcMock.On("MaxPriorityFeePerGas", ctx).Return(big.NewInt(5), nil)
 
-		estimator := NewEIP1559GasFeeEstimator(1.5, 2.0, big.NewInt(500), big.NewInt(2000), big.NewInt(2), big.NewInt(10))
+		estimator := NewEIP1559GasFeeEstimator(EIP1559GasFeeEstimatorOptions{
+			GasPriceMultiplier:          1.5,
+			PriorityFeePerGasMultiplier: 2.0,
+			MinGasPrice:                 big.NewInt(500),
+			MaxGasPrice:                 big.NewInt(2000),
+			MinPriorityFeePerGas:        big.NewInt(2),
+			MaxPriorityFeePerGas:        big.NewInt(10),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
@@ -80,10 +105,18 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas fee estimation error (GasPrice call error)", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return((*big.Int)(nil), errors.New("rpc error"))
 
-		estimator := NewEIP1559GasFeeEstimator(1.5, 2.0, big.NewInt(500), big.NewInt(2000), big.NewInt(2), big.NewInt(10))
+		estimator := NewEIP1559GasFeeEstimator(EIP1559GasFeeEstimatorOptions{
+			GasPriceMultiplier:          1.5,
+			PriorityFeePerGasMultiplier: 2.0,
+			MinGasPrice:                 big.NewInt(500),
+			MaxGasPrice:                 big.NewInt(2000),
+			MinPriorityFeePerGas:        big.NewInt(2),
+			MaxPriorityFeePerGas:        big.NewInt(10),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.Error(t, err)
@@ -91,11 +124,19 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas fee estimation error (MaxPriorityFeePerGas call error)", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return(big.NewInt(1000), nil)
 		rpcMock.On("MaxPriorityFeePerGas", ctx).Return((*big.Int)(nil), errors.New("rpc error"))
 
-		estimator := NewEIP1559GasFeeEstimator(1.5, 2.0, big.NewInt(500), big.NewInt(2000), big.NewInt(2), big.NewInt(10))
+		estimator := NewEIP1559GasFeeEstimator(EIP1559GasFeeEstimatorOptions{
+			GasPriceMultiplier:          1.5,
+			PriorityFeePerGasMultiplier: 2.0,
+			MinGasPrice:                 big.NewInt(500),
+			MaxGasPrice:                 big.NewInt(2000),
+			MinPriorityFeePerGas:        big.NewInt(2),
+			MaxPriorityFeePerGas:        big.NewInt(10),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.Error(t, err)
@@ -103,11 +144,19 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas fee below min bound", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return(big.NewInt(300), nil)
 		rpcMock.On("MaxPriorityFeePerGas", ctx).Return(big.NewInt(1), nil)
 
-		estimator := NewEIP1559GasFeeEstimator(1.0, 1.0, big.NewInt(500), big.NewInt(2000), big.NewInt(2), big.NewInt(10))
+		estimator := NewEIP1559GasFeeEstimator(EIP1559GasFeeEstimatorOptions{
+			GasPriceMultiplier:          1.0,
+			PriorityFeePerGasMultiplier: 1.0,
+			MinGasPrice:                 big.NewInt(500),
+			MaxGasPrice:                 big.NewInt(2000),
+			MinPriorityFeePerGas:        big.NewInt(2),
+			MaxPriorityFeePerGas:        big.NewInt(10),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
@@ -116,11 +165,19 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas fee above max bound", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return(big.NewInt(2500), nil)
 		rpcMock.On("MaxPriorityFeePerGas", ctx).Return(big.NewInt(12), nil)
 
-		estimator := NewEIP1559GasFeeEstimator(1.0, 1.0, big.NewInt(500), big.NewInt(2000), big.NewInt(2), big.NewInt(10))
+		estimator := NewEIP1559GasFeeEstimator(EIP1559GasFeeEstimatorOptions{
+			GasPriceMultiplier:          1.0,
+			PriorityFeePerGasMultiplier: 1.0,
+			MinGasPrice:                 big.NewInt(500),
+			MaxGasPrice:                 big.NewInt(2000),
+			MinPriorityFeePerGas:        big.NewInt(2),
+			MaxPriorityFeePerGas:        big.NewInt(10),
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)
@@ -129,11 +186,15 @@ func TestEIP1559GasFeeEstimator_Modify(t *testing.T) {
 	})
 
 	t.Run("gas tip fee higher than gas fee", func(t *testing.T) {
+		tx := &types.Transaction{}
 		rpcMock := new(mockRPC)
 		rpcMock.On("GasPrice", ctx).Return(big.NewInt(500), nil)
 		rpcMock.On("MaxPriorityFeePerGas", ctx).Return(big.NewInt(2500), nil)
 
-		estimator := NewEIP1559GasFeeEstimator(1.0, 1.0, nil, nil, nil, nil)
+		estimator := NewEIP1559GasFeeEstimator(EIP1559GasFeeEstimatorOptions{
+			GasPriceMultiplier:          1.0,
+			PriorityFeePerGasMultiplier: 1.0,
+		})
 		err := estimator.Modify(ctx, rpcMock, tx)
 
 		assert.NoError(t, err)

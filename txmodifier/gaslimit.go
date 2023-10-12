@@ -18,23 +18,32 @@ type GasLimitEstimator struct {
 	multiplier float64
 	minGas     uint64
 	maxGas     uint64
+	replace    bool
+}
+
+// GasLimitEstimatorOptions is the options for NewGasLimitEstimator.
+type GasLimitEstimatorOptions struct {
+	Multiplier float64 // Multiplier is applied to the gas limit.
+	MinGas     uint64  // MinGas is the minimum gas limit, or 0 if there is no lower bound.
+	MaxGas     uint64  // MaxGas is the maximum gas limit, or 0 if there is no upper bound.
+	Replace    bool    // Replace is true if the gas limit should be replaced even if it is already set.
 }
 
 // NewGasLimitEstimator returns a new GasLimitEstimator.
-//
-// The multiplier is applied to the estimated gas limit.
-// The estimated gas is out of range [minGas, maxGas], then error is returned.
-// If maxGas is 0, then there is no upper bound.
-func NewGasLimitEstimator(multiplier float64, minGas, maxGas uint64) *GasLimitEstimator {
+func NewGasLimitEstimator(opts GasLimitEstimatorOptions) *GasLimitEstimator {
 	return &GasLimitEstimator{
-		multiplier: multiplier,
-		minGas:     minGas,
-		maxGas:     maxGas,
+		multiplier: opts.Multiplier,
+		minGas:     opts.MinGas,
+		maxGas:     opts.MaxGas,
+		replace:    opts.Replace,
 	}
 }
 
 // Modify implements the rpc.TXModifier interface.
 func (e *GasLimitEstimator) Modify(ctx context.Context, client rpc.RPC, tx *types.Transaction) error {
+	if !e.replace && tx.GasLimit != nil {
+		return nil
+	}
 	gasLimit, err := client.EstimateGas(ctx, tx.Call, types.LatestBlockNumber)
 	if err != nil {
 		return fmt.Errorf("gas limit estimator: failed to estimate gas limit: %w", err)
