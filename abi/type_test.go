@@ -8,13 +8,16 @@ import (
 
 type nullType struct{}
 type nullValue struct{}
+type dynamicNullType struct{ nullType }
 
 func (n nullType) Value() Value                    { return new(nullValue) }
 func (n nullType) String() string                  { return "null" }
+func (n nullType) IsDynamic() bool                 { return false }
 func (n nullType) CanonicalType() string           { return "null" }
 func (n nullValue) IsDynamic() bool                { return false }
 func (n nullValue) EncodeABI() (Words, error)      { return nil, nil }
 func (n nullValue) DecodeABI(_ Words) (int, error) { return 0, nil }
+func (n dynamicNullType) IsDynamic() bool          { return true }
 
 func TestAliasType(t *testing.T) {
 	v := NewAliasType("alias", nullType{})
@@ -42,17 +45,21 @@ func TestEventTupleType(t *testing.T) {
 	v := NewEventTupleType(
 		EventTupleElem{Name: "foo", Type: nullType{}},
 		EventTupleElem{Name: "bar", Type: nullType{}, Indexed: true},
+		EventTupleElem{Name: "qux", Type: dynamicNullType{}, Indexed: true},
 		EventTupleElem{Type: nullType{}, Indexed: true},
 		EventTupleElem{Type: nullType{}},
 	)
 	assert.Equal(t, &TupleValue{
 		{Name: "bar", Value: &nullValue{}},
-		{Name: "topic2", Value: &nullValue{}},
+		{Name: "qux", Value: &nullValue{}},
+		{Name: "topic3", Value: &nullValue{}},
 		{Name: "foo", Value: &nullValue{}},
 		{Name: "data1", Value: &nullValue{}},
 	}, v.Value())
-	assert.Equal(t, v.String(), "(null foo, null indexed bar, null indexed, null)")
-	assert.Equal(t, v.CanonicalType(), "(null,null,null,null)")
+	assert.Equal(t, v.String(), "(null foo, null indexed bar, null indexed qux, null indexed, null)")
+	assert.Equal(t, v.CanonicalType(), "(null,null,null,null,null)")
+	assert.Equal(t, v.TopicsTuple().String(), "(null bar, bytes32 qux, null topic2)")
+	assert.Equal(t, v.DataTuple().String(), "(null foo, null data1)")
 }
 
 func TestArrayType(t *testing.T) {

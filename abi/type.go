@@ -8,6 +8,9 @@ import (
 // Type is a representation of a type like uint256 or address. The type can be
 // used to create a new value of that type, but it cannot store a value.
 type Type interface {
+	// IsDynamic indicates whether the type is dynamic.
+	IsDynamic() bool
+
 	// CanonicalType returns the canonical name of the type. In case of a
 	// tuple, the canonical name is the canonical name of the tuple's
 	// elements, separated by commas and enclosed in parentheses. Arrays
@@ -108,6 +111,11 @@ func (a *AliasType) Type() Type {
 	return a.typ
 }
 
+// IsDynamic implements the Type interface.
+func (a *AliasType) IsDynamic() bool {
+	return a.typ.IsDynamic()
+}
+
 // CanonicalType implements the Type interface.
 func (a *AliasType) CanonicalType() string {
 	return a.typ.CanonicalType()
@@ -154,6 +162,16 @@ func (t *TupleType) Elements() []TupleTypeElem {
 	cpy := make([]TupleTypeElem, len(t.elems))
 	copy(cpy, t.elems)
 	return cpy
+}
+
+// IsDynamic implements the Type interface.
+func (t *TupleType) IsDynamic() bool {
+	for _, elem := range t.elems {
+		if elem.Type.IsDynamic() {
+			return true
+		}
+	}
+	return false
 }
 
 // CanonicalType implements the Type interface.
@@ -274,9 +292,13 @@ func (t *EventTupleType) TopicsTuple() *TupleType {
 		if len(name) == 0 {
 			name = fmt.Sprintf("topic%d", len(topics))
 		}
+		typ := elem.Type
+		if typ.IsDynamic() {
+			typ = &FixedBytesType{size: 32}
+		}
 		topics = append(topics, TupleTypeElem{
 			Name: name,
-			Type: elem.Type,
+			Type: typ,
 		})
 	}
 	return &TupleType{elems: topics}
@@ -299,6 +321,16 @@ func (t *EventTupleType) DataTuple() *TupleType {
 		})
 	}
 	return &TupleType{elems: data}
+}
+
+// IsDynamic implements the Type interface.
+func (t *EventTupleType) IsDynamic() bool {
+	for _, elem := range t.elems {
+		if elem.Type.IsDynamic() {
+			return true
+		}
+	}
+	return false
 }
 
 // CanonicalType implements the Type interface.
@@ -380,6 +412,11 @@ func (a *ArrayType) ElementType() Type {
 	return a.typ
 }
 
+// IsDynamic implements the Type interface.
+func (a *ArrayType) IsDynamic() bool {
+	return true
+}
+
 // CanonicalType implements the Type interface.
 func (a *ArrayType) CanonicalType() string {
 	return a.typ.CanonicalType() + "[]"
@@ -420,6 +457,11 @@ func (f *FixedArrayType) ElementType() Type {
 	return f.typ
 }
 
+// IsDynamic implements the Type interface.
+func (f *FixedArrayType) IsDynamic() bool {
+	return false
+}
+
 // CanonicalType implements the Type interface.
 func (f *FixedArrayType) CanonicalType() string {
 	return f.typ.CanonicalType() + fmt.Sprintf("[%d]", f.size)
@@ -445,6 +487,11 @@ type BytesType struct{}
 // NewBytesType creates a new "bytes" type.
 func NewBytesType() *BytesType {
 	return &BytesType{}
+}
+
+// IsDynamic implements the Type interface.
+func (b *BytesType) IsDynamic() bool {
+	return true
 }
 
 // CanonicalType implements the Type interface.
@@ -475,6 +522,11 @@ func (s *StringType) String() string {
 	return "string"
 }
 
+// IsDynamic implements the Type interface.
+func (s *StringType) IsDynamic() bool {
+	return true
+}
+
 // CanonicalType implements the Type interface.
 func (s *StringType) CanonicalType() string {
 	return "string"
@@ -500,6 +552,11 @@ func NewFixedBytesType(size int) *FixedBytesType {
 // Size returns the size of the bytes type.
 func (f *FixedBytesType) Size() int {
 	return f.size
+}
+
+// IsDynamic implements the Type interface.
+func (f *FixedBytesType) IsDynamic() bool {
+	return false
 }
 
 // CanonicalType implements the Type interface.
@@ -533,6 +590,11 @@ func NewUintType(size int) *UintType {
 // Size returns the size of the uint type.
 func (u *UintType) Size() int {
 	return u.size
+}
+
+// IsDynamic implements the Type interface.
+func (u *UintType) IsDynamic() bool {
+	return false
 }
 
 // CanonicalType implements the Type interface.
@@ -572,6 +634,11 @@ func (i *IntType) String() string {
 	return fmt.Sprintf("int%d", i.size)
 }
 
+// IsDynamic implements the Type interface.
+func (i *IntType) IsDynamic() bool {
+	return false
+}
+
 // CanonicalType implements the Type interface.
 func (i *IntType) CanonicalType() string {
 	return fmt.Sprintf("int%d", i.size)
@@ -588,6 +655,11 @@ type BoolType struct{}
 // NewBoolType creates a new "bool" type.
 func NewBoolType() *BoolType {
 	return &BoolType{}
+}
+
+// IsDynamic implements the Type interface.
+func (b *BoolType) IsDynamic() bool {
+	return false
 }
 
 // CanonicalType implements the Type interface.
@@ -611,6 +683,11 @@ type AddressType struct{}
 // NewAddressType creates a new "address" type.
 func NewAddressType() *AddressType {
 	return &AddressType{}
+}
+
+// IsDynamic implements the Type interface.
+func (a *AddressType) IsDynamic() bool {
+	return false
 }
 
 // CanonicalType implements the Type interface.

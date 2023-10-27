@@ -45,6 +45,7 @@ func TestEvent_DecodeValue(t *testing.T) {
 		arg       any
 		topics    []string
 		data      string
+		target    any
 		expected  any
 		wantErr   bool
 	}{
@@ -53,6 +54,7 @@ func TestEvent_DecodeValue(t *testing.T) {
 			arg:       map[string]any{},
 			topics:    []string{"0x2fbebd3821c4e005fbe0a9002cc1bd25dc266d788dba1dbcb39cc66a07e7b38b"},
 			data:      "0000000000000000000000000000000000000000000000000000000000000001",
+			target:    map[string]any{"data0": new(big.Int)},
 			expected:  map[string]any{"data0": big.NewInt(1)},
 		},
 		{
@@ -60,7 +62,16 @@ func TestEvent_DecodeValue(t *testing.T) {
 			arg:       map[string]any{"data0": map[string]any{"a": []byte{}}},
 			topics:    []string{"0x7a699d0514ec3b3aad6ef3992fd4993cacccf6906a6b41200cbd7c24d4dde537"},
 			data:      "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000004deadbeef00000000000000000000000000000000000000000000000000000000",
+			target:    map[string]any{"data0": map[string]any{"a": []byte{}}},
 			expected:  map[string]any{"data0": map[string]any{"a": []byte{0xde, 0xad, 0xbe, 0xef}}},
+		},
+		{
+			signature: "foo(string indexed data0)",
+			arg:       map[string]any{"data0": "Hello, world!"},
+			topics:    []string{"0xf31a6969fc2f2e0b01964045ad21a28ad3ee38d276e1e6cf5b80124e63ba8190", "0xb6e16d27ac5ab427a7f68900ac5559ce272dc6c37c82b3e052246c82244c50e4"},
+			data:      "",
+			target:    map[string]any{"data0": [32]byte{}},
+			expected:  map[string]any{"data0": ([32]byte)(types.MustHashFromHex("0xb6e16d27ac5ab427a7f68900ac5559ce272dc6c37c82b3e052246c82244c50e4", types.PadNone))},
 		},
 		{
 			signature: "foo(address indexed a, address indexed b, (bytes32 ca, address cb, bytes cc) c, (uint128 da, uint32 db) d)",
@@ -83,6 +94,19 @@ func TestEvent_DecodeValue(t *testing.T) {
 				"0x00000000000000000000000068E527780872cda0216Ba0d8fBD58b67a5D5e351",
 			},
 			data: "0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000005b0000000000000000000000000000000000000000000000000000000064dcea4063cff3f05ab6a55e7e49095371098bf6455d27c6ed5b6e3c3178c661a821f7290000000000000000000000005b1742020856ad976469f498a296465d7803a7d100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000014140310010a12090d020c11130e060b040507080f000000000000000000000000",
+			target: map[string]any{
+				"a": &types.Address{},
+				"b": &types.Address{},
+				"c": map[string]any{
+					"ca": &types.Hash{},
+					"cb": &types.Address{},
+					"cc": []byte{},
+				},
+				"d": map[string]any{
+					"da": big.NewInt(0),
+					"db": big.NewInt(0),
+				},
+			},
 			expected: map[string]any{
 				"a": types.MustAddressFromHexPtr("0x1F7acDa376eF37EC371235a094113dF9Cb4EfEe1"),
 				"b": types.MustAddressFromHexPtr("0x68E527780872cda0216Ba0d8fBD58b67a5D5e351"),
@@ -106,12 +130,12 @@ func TestEvent_DecodeValue(t *testing.T) {
 			for _, topic := range tt.topics {
 				topics = append(topics, types.MustHashFromHex(topic, types.PadNone))
 			}
-			err = c.DecodeValue(topics, hexutil.MustHexToBytes(tt.data), &tt.arg)
+			err = c.DecodeValue(topics, hexutil.MustHexToBytes(tt.data), &tt.target)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expected, tt.arg)
+				assert.Equal(t, tt.expected, tt.target)
 			}
 		})
 	}

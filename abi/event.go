@@ -144,6 +144,8 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 			dataVals = append(dataVals, vals[i])
 		}
 	}
+	// The anymapper package does not zero out values before decoding into
+	// it, therefore we can decode topics and data into the same value.
 	if len(topics) > 1 {
 		if err := e.abi.DecodeValues(e.inputs.TopicsTuple(), hashSliceToBytes(topics[1:]), indexedVals...); err != nil {
 			return err
