@@ -12,39 +12,80 @@ import (
 
 func TestABI_LoadJSON(t *testing.T) {
 	abi, err := LoadJSON("testdata/abi.json")
+
 	require.NoError(t, err)
 
-	assert.NotNil(t, abi.Methods["Foo"])
-	assert.NotNil(t, abi.Methods["Bar"])
-	assert.NotNil(t, abi.Constructor)
-	assert.NotNil(t, abi.Events["EventA"])
-	assert.NotNil(t, abi.Events["EventB"])
-	assert.NotNil(t, abi.Errors["ErrorA"])
+	require.NotNil(t, abi.Types["Status"])
+	require.NotNil(t, abi.Types["Struct"])
+	require.NotNil(t, abi.Types["CustomUint"])
+	require.NotNil(t, abi.Events["EventA"])
+	require.NotNil(t, abi.Events["EventB"])
+	require.NotNil(t, abi.Events["EventC"])
+	require.NotNil(t, abi.Errors["ErrorA"])
+	require.NotNil(t, abi.Constructor)
+	require.NotNil(t, abi.Methods["Foo"])
+	require.NotNil(t, abi.Methods["Bar"])
+	require.NotNil(t, abi.Methods["structField"])
+	require.NotNil(t, abi.Methods["structsMapping"])
+	require.NotNil(t, abi.Methods["structsArray"])
 
-	assert.Equal(t, "function Foo(uint256 a) returns (uint256)", abi.Methods["Foo"].String())
-	assert.Equal(t, "function Bar((bytes32 A, bytes32 B)[2][2] a) returns (uint256[2][2])", abi.Methods["Bar"].String())
-	assert.Equal(t, "constructor(uint256 a)", abi.Constructor.String())
-	assert.Equal(t, "event EventA(uint256 indexed a, uint256 b)", abi.Events["EventA"].String())
-	assert.Equal(t, "event EventB(uint256 indexed a, uint256 b) anonymous", abi.Events["EventB"].String())
+	assert.Equal(t, "Status", abi.Types["Status"].String())
+	assert.Equal(t, "Struct", abi.Types["Struct"].String())
+	assert.Equal(t, "CustomUint", abi.Types["CustomUint"].String())
+	assert.Equal(t, "event EventA(uint256 indexed a, string b)", abi.Events["EventA"].String())
+	assert.Equal(t, "event EventB(uint256 indexed a, string indexed b)", abi.Events["EventB"].String())
+	assert.Equal(t, "event EventC(uint256 indexed a, string b) anonymous", abi.Events["EventC"].String())
 	assert.Equal(t, "error ErrorA(uint256 a, uint256 b)", abi.Errors["ErrorA"].String())
+	assert.Equal(t, "constructor(CustomUint a)", abi.Constructor.String())
+	assert.Equal(t, "function Foo(CustomUint a) nonpayable returns (CustomUint)", abi.Methods["Foo"].String())
+	assert.Equal(t, "function Bar(Struct[2][2] a) nonpayable returns (uint8[2][2])", abi.Methods["Bar"].String())
+	assert.Equal(t, "function structField() view returns (bytes32 A, bytes32 B, Status status)", abi.Methods["structField"].String())
+
+	assert.Equal(t, "uint8", abi.Types["Status"].CanonicalType())
+	assert.Equal(t, "(bytes32,bytes32,uint8)", abi.Types["Struct"].CanonicalType())
+	assert.Equal(t, "uint256", abi.Types["CustomUint"].CanonicalType())
 }
 
 func TestABI_ParseSignatures(t *testing.T) {
-	c, err := ParseSignatures(
-		"foo(uint256)",
-		"function bar(uint256) returns (uint256)",
-		"constructor(uint256)",
-		"event baz(uint256)",
-		"error qux(uint256)",
+	abi, err := ParseSignatures(
+		`uint8 Status`,
+		`struct Struct { bytes32 A; bytes32 B; Status status;}`,
+		`uint256 CustomUint`,
+		`event EventA(uint256 indexed a, string b)`,
+		`event EventB(uint256 indexed a, string indexed b)`,
+		`event EventC(uint256 indexed a, string b) anonymous`,
+		`error ErrorA(uint256 a, uint256 b)`,
+		`constructor(CustomUint a)`,
+		`function Foo(CustomUint a) nonpayable returns (CustomUint)`,
+		`function Bar(Struct[2][2] a) nonpayable returns (uint8[2][2])`,
 	)
+
 	require.NoError(t, err)
-	assert.NotNil(t, c.Methods["foo"])
-	assert.NotNil(t, c.Methods["bar"])
-	assert.NotNil(t, c.MethodsBySignature["foo(uint256)"])
-	assert.NotNil(t, c.MethodsBySignature["bar(uint256)"])
-	assert.NotNil(t, c.Constructor)
-	assert.NotNil(t, c.Events["baz"])
-	assert.NotNil(t, c.Errors["qux"])
+	require.NotNil(t, abi.Types["Status"])
+	require.NotNil(t, abi.Types["Struct"])
+	require.NotNil(t, abi.Types["CustomUint"])
+	require.NotNil(t, abi.Events["EventA"])
+	require.NotNil(t, abi.Events["EventB"])
+	require.NotNil(t, abi.Events["EventC"])
+	require.NotNil(t, abi.Errors["ErrorA"])
+	require.NotNil(t, abi.Constructor)
+	require.NotNil(t, abi.Methods["Foo"])
+	require.NotNil(t, abi.Methods["Bar"])
+
+	assert.Equal(t, "Status", abi.Types["Status"].String())
+	assert.Equal(t, "Struct", abi.Types["Struct"].String())
+	assert.Equal(t, "CustomUint", abi.Types["CustomUint"].String())
+	assert.Equal(t, "event EventA(uint256 indexed a, string b)", abi.Events["EventA"].String())
+	assert.Equal(t, "event EventB(uint256 indexed a, string indexed b)", abi.Events["EventB"].String())
+	assert.Equal(t, "event EventC(uint256 indexed a, string b) anonymous", abi.Events["EventC"].String())
+	assert.Equal(t, "error ErrorA(uint256 a, uint256 b)", abi.Errors["ErrorA"].String())
+	assert.Equal(t, "constructor(CustomUint a)", abi.Constructor.String())
+	assert.Equal(t, "function Foo(CustomUint a) nonpayable returns (CustomUint)", abi.Methods["Foo"].String())
+	assert.Equal(t, "function Bar(Struct[2][2] a) nonpayable returns (uint8[2][2])", abi.Methods["Bar"].String())
+
+	assert.Equal(t, "uint8", abi.Types["Status"].CanonicalType())
+	assert.Equal(t, "(bytes32,bytes32,uint8)", abi.Types["Struct"].CanonicalType())
+	assert.Equal(t, "uint256", abi.Types["CustomUint"].CanonicalType())
 }
 
 func TestContract_IsError(t *testing.T) {

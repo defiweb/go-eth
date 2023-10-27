@@ -68,7 +68,7 @@ func (a *ABI) NewEvent(name string, inputs *EventTupleType, anonymous bool) *Eve
 //
 // See ParseEvent for more information.
 func (a *ABI) ParseEvent(signature string) (*Event, error) {
-	return parseEvent(a, signature)
+	return parseEvent(a, nil, signature)
 }
 
 // Name returns the name of the event.

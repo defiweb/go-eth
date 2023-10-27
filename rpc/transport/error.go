@@ -55,6 +55,21 @@ const (
 	BlastErrRateLimitReached         = -32097
 )
 
+type HTTPErrorCode interface {
+	// HTTPErrorCode returns the HTTP status code.
+	HTTPErrorCode() int
+}
+
+type RPCErrorCode interface {
+	// RPCErrorCode returns the JSON-RPC error code.
+	RPCErrorCode() int
+}
+
+type RPCErrorData interface {
+	// RPCErrorData returns the JSON-RPC error data.
+	RPCErrorData() any
+}
+
 // RPCError is an JSON-RPC error.
 type RPCError struct {
 	Code    int    // Code is the JSON-RPC error code.
@@ -81,6 +96,16 @@ func (e *RPCError) Error() string {
 	return fmt.Sprintf("RPC error: %d %s", e.Code, e.Message)
 }
 
+// RPCErrorCode implements the ErrorCode interface.
+func (e *RPCError) RPCErrorCode() int {
+	return e.Code
+}
+
+// RPCErrorData implements the ErrorData interface.
+func (e *RPCError) RPCErrorData() any {
+	return e.Data
+}
+
 // HTTPError is an HTTP error.
 type HTTPError struct {
 	Code int   // Code is the HTTP status code.
@@ -101,6 +126,11 @@ func (e *HTTPError) Error() string {
 		return fmt.Sprintf("HTTP error: %d %s", e.Code, http.StatusText(e.Code))
 	}
 	return fmt.Sprintf("HTTP error: %d %s: %s", e.Code, http.StatusText(e.Code), e.Err)
+}
+
+// HTTPErrorCode implements the HTTPErrorCode interface.
+func (e *HTTPError) HTTPErrorCode() int {
+	return e.Code
 }
 
 // decodeHexData decodes hex-encoded data if present.

@@ -63,8 +63,9 @@ func NewABI() *ABI {
 	// the Value interface.
 	//
 	// If both types implement MapTo/MapFrom, then the method from the value
-	// that does NOT implement Value interface is used. This is to ensure
-	// that mapping functions defined by the user have higher priority.
+	// that does NOT implement Value interface is used. This is done to ensure,
+	// that custom types that implement MapTo/MapFrom interface have priority
+	// over the default mapping functions.
 	mapper.Hooks = anymapper.Hooks{
 		MapFuncHook: func(m *anymapper.Mapper, src, dst reflect.Type) anymapper.MapFunc {
 			srcImplMapTo := src.Implements(mapToTy)
@@ -95,7 +96,7 @@ func NewABI() *ABI {
 		SourceValueHook: func(v reflect.Value) reflect.Value {
 			for {
 				// If the source implements MapTo, then return it but
-				// first dereference it if it is an interface.
+				// first dereference it.
 				if _, ok := v.Interface().(MapTo); ok {
 					for v.Kind() == reflect.Interface {
 						v = v.Elem()
@@ -128,7 +129,7 @@ func NewABI() *ABI {
 					v.Set(reflect.New(v.Type().Elem()))
 				}
 				// If the destination implements MapFrom, then return it but
-				// first dereference it if it is an interface.
+				// first dereference it.
 				if _, ok := v.Interface().(MapFrom); ok {
 					for v.Kind() == reflect.Interface {
 						v = v.Elem()

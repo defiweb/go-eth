@@ -7,21 +7,62 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
+type StateMutability int
+
+const (
+	StateMutabilityUnknown StateMutability = iota
+	StateMutabilityPure
+	StateMutabilityView
+	StateMutabilityNonPayable
+	StateMutabilityPayable
+)
+
+func StateMutabilityFromString(s string) StateMutability {
+	switch strings.ToLower(s) {
+	case "pure":
+		return StateMutabilityPure
+	case "view":
+		return StateMutabilityView
+	case "nonpayable":
+		return StateMutabilityNonPayable
+	case "payable":
+		return StateMutabilityPayable
+	default:
+		return StateMutabilityUnknown
+	}
+}
+
+func (m StateMutability) String() string {
+	switch m {
+	case StateMutabilityPure:
+		return "pure"
+	case StateMutabilityView:
+		return "view"
+	case StateMutabilityNonPayable:
+		return "nonpayable"
+	case StateMutabilityPayable:
+		return "payable"
+	default:
+		return "unknown"
+	}
+}
+
 // Method represents a method in an ABI. The method can be used to encode
 // arguments for a method call and decode return values from a method call.
 type Method struct {
-	name    string
-	inputs  *TupleType
-	outputs *TupleType
-	abi     *ABI
+	name            string
+	inputs          *TupleType
+	outputs         *TupleType
+	stateMutability StateMutability
+	abi             *ABI
 
 	fourBytes FourBytes
 	signature string
 }
 
 // NewMethod creates a new Method instance.
-func NewMethod(name string, inputs, outputs *TupleType) *Method {
-	return Default.NewMethod(name, inputs, outputs)
+func NewMethod(name string, inputs, outputs *TupleType, mutability StateMutability) *Method {
+	return Default.NewMethod(name, inputs, outputs, mutability)
 }
 
 // ParseMethod parses a method signature and returns a new Method.
@@ -54,12 +95,13 @@ func MustParseMethod(signature string) *Method {
 }
 
 // NewMethod creates a new Method instance.
-func (a *ABI) NewMethod(name string, inputs, outputs *TupleType) *Method {
+func (a *ABI) NewMethod(name string, inputs, outputs *TupleType, mutability StateMutability) *Method {
 	m := &Method{
-		name:    name,
-		inputs:  inputs,
-		outputs: outputs,
-		abi:     a,
+		name:            name,
+		inputs:          inputs,
+		outputs:         outputs,
+		stateMutability: mutability,
+		abi:             a,
 	}
 	m.generateSignature()
 	m.calculateFourBytes()
@@ -70,7 +112,7 @@ func (a *ABI) NewMethod(name string, inputs, outputs *TupleType) *Method {
 //
 // See ParseMethod for more information.
 func (a *ABI) ParseMethod(signature string) (*Method, error) {
-	return parseMethod(a, signature)
+	return parseMethod(a, nil, signature)
 }
 
 // Name returns the name of the method.
@@ -86,6 +128,11 @@ func (m *Method) Inputs() *TupleType {
 // Outputs returns the output values of the method as a tuple type.
 func (m *Method) Outputs() *TupleType {
 	return m.outputs
+}
+
+// StateMutability returns the state mutability of the method.
+func (m *Method) StateMutability() StateMutability {
+	return m.stateMutability
 }
 
 // FourBytes is the first four bytes of the Keccak256 hash of the method
@@ -162,6 +209,10 @@ func (m *Method) String() string {
 	buf.WriteString("function ")
 	buf.WriteString(m.name)
 	buf.WriteString(m.inputs.String())
+	if m.stateMutability != StateMutabilityUnknown {
+		buf.WriteString(" ")
+		buf.WriteString(m.stateMutability.String())
+	}
 	if m.outputs.Size() > 0 {
 		buf.WriteString(" returns ")
 		buf.WriteString(m.outputs.String())

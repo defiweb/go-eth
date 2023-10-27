@@ -1,21 +1,49 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 contract Test {
+    // Enum
+    enum Status {
+        Inactive,
+        Active,
+        Paused
+    }
+    
+    // Struct
     struct Struct {
         bytes32 A;
         bytes32 B;
+        Status status;
     }
     
-    constructor(uint256 a) {}
-    event EventA(uint256 indexed a, uint256 b);
-    event EventB(uint256 indexed a, uint256 b) anonymous;
+    // Custom Type
+    type CustomUint is uint256;
     
+    // Events
+    event EventA(uint256 indexed a, string b);
+    event EventB(uint256 indexed a, string indexed b);
+    event EventC(uint256 indexed a, string b) anonymous;
+    
+    // Error
     error ErrorA(uint256 a, uint256 b);
     
-    function Foo(uint256 a) public returns (uint256) {return 0;}
+    // Public Variable
+    Struct public structField;
     
-    function Bar(Struct[2][2] memory a) public returns (uint256[2][2] memory) {return [[0, 0], [0, 0]];}
+    // Mapping
+    mapping(address => Struct) public structsMapping;
     
+    // Array
+    Struct[] public structsArray;
+    
+    // Constructor
+    constructor(CustomUint a) {}
+    
+    // Functions
+    function Foo(CustomUint a) public returns (CustomUint) { return a; }
+    
+    function Bar(Struct[2][2] memory a) public returns (uint8[2][2] memory) { return [[0, 0], [0, 0]]; }
+    
+    // Fallback and Receive functions
     fallback() external {}
     
     receive() payable external {}

@@ -81,14 +81,14 @@ func MustParseStruct(definition string) Type {
 //
 // See ParseType for more information.
 func (a *ABI) ParseType(signature string) (Type, error) {
-	return parseType(a, signature)
+	return parseType(a, nil, signature)
 }
 
 // ParseStruct parses a struct definition and returns a new Type.
 //
 // See ParseStruct for more information.
 func (a *ABI) ParseStruct(definition string) (Type, error) {
-	return parseStruct(a, definition)
+	return parseStruct(a, nil, definition)
 }
 
 // AliasType wraps another type and gives it a different type name. The canonical
@@ -101,6 +101,11 @@ type AliasType struct {
 // NewAliasType creates a new alias type.
 func NewAliasType(alias string, typ Type) *AliasType {
 	return &AliasType{alias: alias, typ: typ}
+}
+
+// Type returns the aliased type.
+func (a *AliasType) Type() Type {
+	return a.typ
 }
 
 // CanonicalType implements the Type interface.
@@ -257,6 +262,8 @@ func (t *EventTupleType) Elements() []EventTupleElem {
 }
 
 // TopicsTuple returns the tuple of indexed arguments.
+//
+// If the type is indexed and dynamic, the type will be converted to bytes32.
 func (t *EventTupleType) TopicsTuple() *TupleType {
 	topics := make([]TupleTypeElem, 0, t.indexed)
 	for _, elem := range t.elems {

@@ -208,13 +208,13 @@ func (c *Retry) Unsubscribe(ctx context.Context, id string) (err error) {
 // errorCode returns either the JSON-RPC error code or HTTP status code.
 // If there is no error or error code is not available, it returns 0.
 func errorCode(err error) int {
-	var rpcErr *RPCError
+	var rpcErr RPCErrorCode
 	if errors.As(err, &rpcErr) {
-		return rpcErr.Code
+		return rpcErr.RPCErrorCode()
 	}
-	var httpErr *HTTPError
+	var httpErr HTTPErrorCode
 	if errors.As(err, &httpErr) {
-		return httpErr.Code
+		return httpErr.HTTPErrorCode()
 	}
 	return 0
 }

@@ -7,64 +7,78 @@ import (
 )
 
 // parseType parses a type signature and returns a Type.
-func parseType(abi *ABI, signature string) (Type, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func parseType(abi *ABI, extraTypes map[string]Type, signature string) (Type, error) {
 	p, err := sigparser.ParseParameter(signature)
 	if err != nil {
 		return nil, err
 	}
-	return newTypeFromSig(abi, p)
+	return newTypeFromSig(abi, extraTypes, p)
 }
 
 // parseStruct parses a structure definition and returns a Type.
-func parseStruct(abi *ABI, signature string) (Type, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func parseStruct(abi *ABI, extraTypes map[string]Type, signature string) (Type, error) {
 	p, err := sigparser.ParseStruct(signature)
 	if err != nil {
 		return nil, err
 	}
-	return newTypeFromSig(abi, p)
+	return newTypeFromSig(abi, extraTypes, p)
 }
 
 // parseConstructor parses a constructor signature and returns a Constructor.
-func parseConstructor(abi *ABI, signature string) (*Constructor, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func parseConstructor(abi *ABI, extraTypes map[string]Type, signature string) (*Constructor, error) {
 	s, err := sigparser.ParseSignatureAs(sigparser.ConstructorKind, signature)
 	if err != nil {
 		return nil, err
 	}
-	return newConstructorFromSig(abi, s)
+	return newConstructorFromSig(abi, extraTypes, s)
 }
 
 // parseError parses an error signature and returns an Error.
-func parseError(abi *ABI, signature string) (*Error, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func parseError(abi *ABI, extraTypes map[string]Type, signature string) (*Error, error) {
 	s, err := sigparser.ParseSignatureAs(sigparser.ErrorKind, signature)
 	if err != nil {
 		return nil, err
 	}
-	return newErrorFromSig(abi, s)
+	return newErrorFromSig(abi, extraTypes, s)
 }
 
 // parseEvent parses an event signature and returns an Event.
-func parseEvent(abi *ABI, signature string) (*Event, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func parseEvent(abi *ABI, extraTypes map[string]Type, signature string) (*Event, error) {
 	s, err := sigparser.ParseSignatureAs(sigparser.EventKind, signature)
 	if err != nil {
 		return nil, err
 	}
-	return newEventFromSig(abi, s)
+	return newEventFromSig(abi, extraTypes, s)
 }
 
 // parseMethod parses a method signature and returns a Method.
-func parseMethod(abi *ABI, signature string) (*Method, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func parseMethod(abi *ABI, extraTypes map[string]Type, signature string) (*Method, error) {
 	s, err := sigparser.ParseSignatureAs(sigparser.FunctionKind, signature)
 	if err != nil {
 		return nil, err
 	}
-	return newMethodFromSig(abi, s)
+	return newMethodFromSig(abi, extraTypes, s)
 }
 
 // newConstructorFromSig creates a new constructor from a sigparser.Signature.
-func newConstructorFromSig(abi *ABI, s sigparser.Signature) (*Constructor, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func newConstructorFromSig(abi *ABI, extraTypes map[string]Type, s sigparser.Signature) (*Constructor, error) {
 	var in []TupleTypeElem
 	for _, param := range s.Inputs {
-		typ, err := newTypeFromSig(abi, param)
+		typ, err := newTypeFromSig(abi, extraTypes, param)
 		if err != nil {
 			return nil, err
 		}
@@ -77,10 +91,12 @@ func newConstructorFromSig(abi *ABI, s sigparser.Signature) (*Constructor, error
 }
 
 // newErrorFromSig creates a new error from a sigparser.Signature.
-func newErrorFromSig(abi *ABI, s sigparser.Signature) (*Error, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func newErrorFromSig(abi *ABI, extraTypes map[string]Type, s sigparser.Signature) (*Error, error) {
 	var in []TupleTypeElem
 	for _, param := range s.Inputs {
-		typ, err := newTypeFromSig(abi, param)
+		typ, err := newTypeFromSig(abi, extraTypes, param)
 		if err != nil {
 			return nil, err
 		}
@@ -93,13 +109,15 @@ func newErrorFromSig(abi *ABI, s sigparser.Signature) (*Error, error) {
 }
 
 // newEventFromSig creates a new event from a sigparser.Signature.
-func newEventFromSig(abi *ABI, s sigparser.Signature) (*Event, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func newEventFromSig(abi *ABI, extraTypes map[string]Type, s sigparser.Signature) (*Event, error) {
 	var in []EventTupleElem
 	if len(s.Inputs) == 0 {
 		return nil, fmt.Errorf("abi: event %q has no inputs", s.Name)
 	}
 	for _, param := range s.Inputs {
-		typ, err := newTypeFromSig(abi, param)
+		typ, err := newTypeFromSig(abi, extraTypes, param)
 		if err != nil {
 			return nil, err
 		}
@@ -120,13 +138,15 @@ func newEventFromSig(abi *ABI, s sigparser.Signature) (*Event, error) {
 }
 
 // newMethodFromSig creates a new method from a sigparser.Signature.
-func newMethodFromSig(abi *ABI, s sigparser.Signature) (*Method, error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func newMethodFromSig(abi *ABI, extraTypes map[string]Type, s sigparser.Signature) (*Method, error) {
 	var (
 		in  []TupleTypeElem
 		out []TupleTypeElem
 	)
 	for _, param := range s.Inputs {
-		typ, err := newTypeFromSig(abi, param)
+		typ, err := newTypeFromSig(abi, extraTypes, param)
 		if err != nil {
 			return nil, err
 		}
@@ -136,7 +156,7 @@ func newMethodFromSig(abi *ABI, s sigparser.Signature) (*Method, error) {
 		})
 	}
 	for _, param := range s.Outputs {
-		typ, err := newTypeFromSig(abi, param)
+		typ, err := newTypeFromSig(abi, extraTypes, param)
 		if err != nil {
 			return nil, err
 		}
@@ -145,16 +165,31 @@ func newMethodFromSig(abi *ABI, s sigparser.Signature) (*Method, error) {
 			Type: typ,
 		})
 	}
-	return abi.NewMethod(s.Name, NewTupleType(in...), NewTupleType(out...)), nil
+	mutability := StateMutabilityUnknown
+	for _, modifier := range s.Modifiers {
+		switch modifier {
+		case "pure":
+			mutability = StateMutabilityPure
+		case "view":
+			mutability = StateMutabilityView
+		case "payable":
+			mutability = StateMutabilityPayable
+		case "nonpayable":
+			mutability = StateMutabilityNonPayable
+		}
+	}
+	return abi.NewMethod(s.Name, NewTupleType(in...), NewTupleType(out...), mutability), nil
 }
 
 // newTypeFromSig creates a new type from a sigparser.Parameter.
-func newTypeFromSig(abi *ABI, s sigparser.Parameter) (typ Type, err error) {
+//
+// The extraTypes map is used to resolve types that are not part of the ABI.
+func newTypeFromSig(abi *ABI, extraTypes map[string]Type, s sigparser.Parameter) (typ Type, err error) {
 	switch {
 	case len(s.Arrays) > 0:
 		arrays := s.Arrays
 		s.Arrays = nil
-		if typ, err = newTypeFromSig(abi, s); err != nil {
+		if typ, err = newTypeFromSig(abi, extraTypes, s); err != nil {
 			return nil, err
 		}
 		for i := len(arrays) - 1; i >= 0; i-- {
@@ -169,13 +204,16 @@ func newTypeFromSig(abi *ABI, s sigparser.Parameter) (typ Type, err error) {
 		tuple := make([]TupleTypeElem, len(s.Tuple))
 		for i, param := range s.Tuple {
 			tuple[i].Name = param.Name
-			tuple[i].Type, err = newTypeFromSig(abi, param)
+			tuple[i].Type, err = newTypeFromSig(abi, extraTypes, param)
 			if err != nil {
 				return nil, err
 			}
 		}
 		return NewTupleType(tuple...), nil
 	default:
+		if typ = extraTypes[s.Type]; typ != nil {
+			return typ, nil
+		}
 		if typ = abi.Types[s.Type]; typ != nil {
 			return typ, nil
 		}

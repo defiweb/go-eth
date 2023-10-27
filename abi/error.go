@@ -6,7 +6,7 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
-// CustomError represents an custom error returned by a contract call.
+// CustomError represents a custom error returned by a contract call.
 type CustomError struct {
 	Type *Error // The error type.
 	Data []byte // The error data returned by the contract call.
@@ -75,7 +75,7 @@ func (a *ABI) NewError(name string, inputs *TupleType) *Error {
 //
 // See ParseError for more information.
 func (a *ABI) ParseError(signature string) (*Error, error) {
-	return parseError(a, signature)
+	return parseError(a, nil, signature)
 }
 
 // Name returns the name of the error.

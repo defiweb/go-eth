@@ -51,7 +51,7 @@ func (a *ABI) NewConstructor(inputs *TupleType) *Constructor {
 //
 // See ParseConstructor for more information.
 func (a *ABI) ParseConstructor(signature string) (*Constructor, error) {
-	return parseConstructor(a, signature)
+	return parseConstructor(a, nil, signature)
 }
 
 // Inputs returns the input arguments of the constructor as a tuple type.
