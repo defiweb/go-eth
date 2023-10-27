@@ -120,6 +120,21 @@ func TestContract_ToError(t *testing.T) {
 	assert.Equal(t, "error: foo", customErr.Error())
 }
 
+func TestContract_RegisterTypes(t *testing.T) {
+	abi := NewABI()
+
+	c, err := abi.ParseSignatures(
+		`uint8 Status`,
+		`struct Struct { bytes32 A; bytes32 B; Status status;}`,
+	)
+
+	require.NoError(t, err)
+
+	c.RegisterTypes(abi)
+	assert.Equal(t, "Status", abi.Types["Status"].String())
+	assert.Equal(t, "Struct", abi.Types["Struct"].String())
+}
+
 func Test_parseArrays(t *testing.T) {
 	tests := []struct {
 		typ        string

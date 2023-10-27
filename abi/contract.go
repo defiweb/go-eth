@@ -262,13 +262,13 @@ func (a *ABI) ParseSignatures(signatures ...string) (*Contract, error) {
 	return c, nil
 }
 
-// RegisterTypes registers types defined in the contract in the current ABI
+// RegisterTypes registers types defined in the contract to the given ABI
 // instance. This enables the use of types defined in the contract in all
 // Parse* methods.
 //
 // If the type name already exists, it will be overwritten.
-func (a *ABI) RegisterTypes() {
-	for n, t := range a.Types {
+func (c *Contract) RegisterTypes(a *ABI) {
+	for n, t := range c.Types {
 		a.Types[n] = t
 	}
 }
