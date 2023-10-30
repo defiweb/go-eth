@@ -87,11 +87,7 @@ func ParseMethod(signature string) (*Method, error) {
 
 // MustParseMethod is like ParseMethod but panics on error.
 func MustParseMethod(signature string) *Method {
-	m, err := ParseMethod(signature)
-	if err != nil {
-		panic(err)
-	}
-	return m
+	return Default.MustParseMethod(signature)
 }
 
 // NewMethod creates a new Method instance.
@@ -113,6 +109,15 @@ func (a *ABI) NewMethod(name string, inputs, outputs *TupleType, mutability Stat
 // See ParseMethod for more information.
 func (a *ABI) ParseMethod(signature string) (*Method, error) {
 	return parseMethod(a, nil, signature)
+}
+
+// MustParseMethod is like ParseMethod but panics on error.
+func (a *ABI) MustParseMethod(signature string) *Method {
+	m, err := a.ParseMethod(signature)
+	if err != nil {
+		panic(err)
+	}
+	return m
 }
 
 // Name returns the name of the method.
@@ -158,6 +163,15 @@ func (m *Method) EncodeArg(arg any) ([]byte, error) {
 	return append(m.fourBytes.Bytes(), encoded...), nil
 }
 
+// MustEncodeArg is like EncodeArg but panics on error.
+func (m *Method) MustEncodeArg(arg any) []byte {
+	encoded, err := m.EncodeArg(arg)
+	if err != nil {
+		panic(err)
+	}
+	return encoded
+}
+
 // EncodeArgs encodes arguments for a method call.
 func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
 	encoded, err := m.abi.EncodeValues(m.inputs, args...)
@@ -165,6 +179,15 @@ func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
 		return nil, err
 	}
 	return append(m.fourBytes.Bytes(), encoded...), nil
+}
+
+// MustEncodeArgs is like EncodeArgs but panics on error.
+func (m *Method) MustEncodeArgs(args ...any) []byte {
+	encoded, err := m.EncodeArgs(args...)
+	if err != nil {
+		panic(err)
+	}
+	return encoded
 }
 
 // DecodeArg decodes ABI-encoded arguments a method call.
@@ -179,6 +202,13 @@ func (m *Method) DecodeArg(data []byte, arg any) error {
 	return m.abi.DecodeValue(m.inputs, data[4:], arg)
 }
 
+// MustDecodeArg is like DecodeArg but panics on error.
+func (m *Method) MustDecodeArg(data []byte, arg any) {
+	if err := m.DecodeArg(data, arg); err != nil {
+		panic(err)
+	}
+}
+
 // DecodeArgs decodes ABI-encoded arguments a method call.
 func (m *Method) DecodeArgs(data []byte, args ...any) error {
 	if !m.fourBytes.Match(data[:4]) {
@@ -191,6 +221,13 @@ func (m *Method) DecodeArgs(data []byte, args ...any) error {
 	return m.abi.DecodeValues(m.inputs, data[4:], args...)
 }
 
+// MustDecodeArgs is like DecodeArgs but panics on error.
+func (m *Method) MustDecodeArgs(data []byte, args ...any) {
+	if err := m.DecodeArgs(data, args...); err != nil {
+		panic(err)
+	}
+}
+
 // DecodeValue decodes the values returned by a method call into a map or
 // structure. If a structure is given, it must have fields with the same names
 // as the values returned by the method.
@@ -198,9 +235,23 @@ func (m *Method) DecodeValue(data []byte, val any) error {
 	return m.abi.DecodeValue(m.outputs, data, val)
 }
 
+// MustDecodeValue is like DecodeValue but panics on error.
+func (m *Method) MustDecodeValue(data []byte, val any) {
+	if err := m.DecodeValue(data, val); err != nil {
+		panic(err)
+	}
+}
+
 // DecodeValues decodes return values from a method call to a given values.
 func (m *Method) DecodeValues(data []byte, vals ...any) error {
 	return m.abi.DecodeValues(m.outputs, data, vals...)
+}
+
+// MustDecodeValues is like DecodeValues but panics on error.
+func (m *Method) MustDecodeValues(data []byte, vals ...any) {
+	if err := m.DecodeValues(data, vals...); err != nil {
+		panic(err)
+	}
 }
 
 // String returns the human-readable signature of the method.

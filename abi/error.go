@@ -52,11 +52,7 @@ func ParseError(signature string) (*Error, error) {
 
 // MustParseError is like ParseError but panics on error.
 func MustParseError(signature string) *Error {
-	e, err := ParseError(signature)
-	if err != nil {
-		panic(err)
-	}
-	return e
+	return Default.MustParseError(signature)
 }
 
 // NewError creates a new Error instance.
@@ -76,6 +72,15 @@ func (a *ABI) NewError(name string, inputs *TupleType) *Error {
 // See ParseError for more information.
 func (a *ABI) ParseError(signature string) (*Error, error) {
 	return parseError(a, nil, signature)
+}
+
+// MustParseError is like ParseError but panics on error.
+func (a *ABI) MustParseError(signature string) *Error {
+	m, err := a.ParseError(signature)
+	if err != nil {
+		panic(err)
+	}
+	return m
 }
 
 // Name returns the name of the error.
@@ -114,6 +119,14 @@ func (m *Error) DecodeValue(data []byte, val any) error {
 	return m.abi.DecodeValue(m.inputs, data[4:], val)
 }
 
+// MustDecodeValue is like DecodeValue but panics on error.
+func (m *Error) MustDecodeValue(data []byte, val any) {
+	err := m.DecodeValue(data, val)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // DecodeValues decodes the error into a map or structure. If a structure is
 // given, it must have fields with the same names as error arguments.
 func (m *Error) DecodeValues(data []byte, vals ...any) error {
@@ -121,6 +134,14 @@ func (m *Error) DecodeValues(data []byte, vals ...any) error {
 		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
 	}
 	return m.abi.DecodeValues(m.inputs, data[4:], vals...)
+}
+
+// MustDecodeValues is like DecodeValues but panics on error.
+func (m *Error) MustDecodeValues(data []byte, vals ...any) {
+	err := m.DecodeValues(data, vals...)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // ToError converts the error data returned by contract calls into a CustomError.

@@ -13,10 +13,20 @@ func DecodeValue(t Type, abi []byte, val any) error {
 	return Default.DecodeValue(t, abi, val)
 }
 
+// MustDecodeValue is like DecodeValue but panics on error.
+func MustDecodeValue(t Type, abi []byte, val any) {
+	Default.MustDecodeValue(t, abi, val)
+}
+
 // DecodeValues decodes the given ABI-encoded data into the given values.
 // The t type must be a tuple type.
 func DecodeValues(t Type, abi []byte, vals ...any) error {
 	return Default.DecodeValues(t, abi, vals...)
+}
+
+// MustDecodeValues is like DecodeValues but panics on error.
+func MustDecodeValues(t Type, abi []byte, vals ...any) {
+	Default.MustDecodeValues(t, abi, vals...)
 }
 
 // DecodeValue decodes the given ABI-encoded data into the given value.
@@ -27,6 +37,13 @@ func (a *ABI) DecodeValue(t Type, abi []byte, val any) error {
 		return err
 	}
 	return a.Mapper.Map(v, val)
+}
+
+// MustDecodeValue is like DecodeValue but panics on error.
+func (a *ABI) MustDecodeValue(t Type, abi []byte, val any) {
+	if err := a.DecodeValue(t, abi, val); err != nil {
+		panic(err)
+	}
 }
 
 // DecodeValues decodes the given ABI-encoded data into the given values.
@@ -51,6 +68,13 @@ func (a *ABI) DecodeValues(t Type, abi []byte, vals ...any) error {
 		}
 	}
 	return nil
+}
+
+// MustDecodeValues is like DecodeValues but panics on error.
+func (a *ABI) MustDecodeValues(t Type, abi []byte, vals ...any) {
+	if err := a.DecodeValues(t, abi, vals...); err != nil {
+		panic(err)
+	}
 }
 
 // decodeTuple decodes a tuple from the given words and stores the result in the

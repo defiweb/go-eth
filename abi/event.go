@@ -44,11 +44,7 @@ func ParseEvent(signature string) (*Event, error) {
 
 // MustParseEvent is like ParseEvent but panics on error.
 func MustParseEvent(signature string) *Event {
-	e, err := ParseEvent(signature)
-	if err != nil {
-		panic(err)
-	}
-	return e
+	return Default.MustParseEvent(signature)
 }
 
 // NewEvent creates a new Event instance.
@@ -69,6 +65,15 @@ func (a *ABI) NewEvent(name string, inputs *EventTupleType, anonymous bool) *Eve
 // See ParseEvent for more information.
 func (a *ABI) ParseEvent(signature string) (*Event, error) {
 	return parseEvent(a, nil, signature)
+}
+
+// MustParseEvent is like ParseEvent but panics on error.
+func (a *ABI) MustParseEvent(signature string) *Event {
+	e, err := a.ParseEvent(signature)
+	if err != nil {
+		panic(err)
+	}
+	return e
 }
 
 // Name returns the name of the event.
@@ -120,6 +125,14 @@ func (e *Event) DecodeValue(topics []types.Hash, data []byte, val any) error {
 	return nil
 }
 
+// MustDecodeValue is like DecodeValue but panics on error.
+func (e *Event) MustDecodeValue(topics []types.Hash, data []byte, val any) {
+	err := e.DecodeValue(topics, data, val)
+	if err != nil {
+		panic(err)
+	}
+}
+
 // DecodeValues decodes the event into a map or structure. If a structure is
 // given, it must have fields with the same names as the event arguments.
 func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) error {
@@ -157,6 +170,14 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 		}
 	}
 	return nil
+}
+
+// MustDecodeValues is like DecodeValues but panics on error.
+func (e *Event) MustDecodeValues(topics []types.Hash, data []byte, vals ...any) {
+	err := e.DecodeValues(topics, data, vals...)
+	if err != nil {
+		panic(err)
+	}
 }
 
 // String returns the human-readable signature of the event.

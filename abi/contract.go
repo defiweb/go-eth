@@ -83,9 +83,23 @@ func LoadJSON(path string) (*Contract, error) {
 	return ParseJSON(data)
 }
 
+// MustLoadJSON is like LoadJSON but panics on error.
+func MustLoadJSON(path string) *Contract {
+	c, err := LoadJSON(path)
+	if err != nil {
+		panic(err)
+	}
+	return c
+}
+
 // ParseJSON parses the given ABI JSON and returns a Contract instance.
 func ParseJSON(data []byte) (*Contract, error) {
 	return Default.ParseJSON(data)
+}
+
+// MustParseJSON is like ParseJSON but panics on error.
+func MustParseJSON(data []byte) *Contract {
+	return Default.MustParseJSON(data)
 }
 
 // ParseSignatures parses list of signatures and returns a Contract instance.
@@ -97,22 +111,9 @@ func ParseSignatures(signatures ...string) (*Contract, error) {
 	return Default.ParseSignatures(signatures...)
 }
 
-// MustParseJSON is like ParseJSON but panics on error.
-func MustParseJSON(data []byte) *Contract {
-	abi, err := ParseJSON(data)
-	if err != nil {
-		panic(err)
-	}
-	return abi
-}
-
 // MustParseSignatures is like ParseSignatures but panics on error.
 func MustParseSignatures(signatures ...string) *Contract {
-	abi, err := ParseSignatures(signatures...)
-	if err != nil {
-		panic(err)
-	}
-	return abi
+	return Default.MustParseSignatures(signatures...)
 }
 
 // ParseJSON parses the given ABI JSON and returns a Contract instance.
@@ -168,6 +169,15 @@ func (a *ABI) ParseJSON(data []byte) (*Contract, error) {
 		}
 	}
 	return c, nil
+}
+
+// MustParseJSON is like ParseJSON but panics on error.
+func (a *ABI) MustParseJSON(data []byte) *Contract {
+	c, err := a.ParseJSON(data)
+	if err != nil {
+		panic(err)
+	}
+	return c
 }
 
 // ParseSignatures parses list of signatures and returns a Contract instance.
@@ -260,6 +270,15 @@ func (a *ABI) ParseSignatures(signatures ...string) (*Contract, error) {
 		}
 	}
 	return c, nil
+}
+
+// MustParseSignatures is like ParseSignatures but panics on error.
+func (a *ABI) MustParseSignatures(signatures ...string) *Contract {
+	c, err := a.ParseSignatures(signatures...)
+	if err != nil {
+		panic(err)
+	}
+	return c
 }
 
 // RegisterTypes registers types defined in the contract to the given ABI

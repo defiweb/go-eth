@@ -12,28 +12,20 @@ func EncodeValue(t Type, val any) ([]byte, error) {
 	return Default.EncodeValue(t, val)
 }
 
+// MustEncodeValue is like EncodeValue but panics on error.
+func MustEncodeValue(t Type, val any) []byte {
+	return Default.MustEncodeValue(t, val)
+}
+
 // EncodeValues encodes a list of values to ABI encoding.
 // The t type must be a tuple type.
 func EncodeValues(t Type, vals ...any) ([]byte, error) {
 	return Default.EncodeValues(t, vals...)
 }
 
-// MustEncodeValue is like EncodeValue but panics on error.
-func MustEncodeValue(t Type, val any) []byte {
-	b, err := EncodeValue(t, val)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
 // MustEncodeValues is like EncodeValues but panics on error.
 func MustEncodeValues(t Type, vals ...any) []byte {
-	b, err := EncodeValues(t, vals...)
-	if err != nil {
-		panic(err)
-	}
-	return b
+	return Default.MustEncodeValues(t, vals...)
 }
 
 // EncodeValue encodes a value to ABI encoding.
@@ -47,6 +39,15 @@ func (a *ABI) EncodeValue(t Type, val any) ([]byte, error) {
 		return nil, err
 	}
 	return words.Bytes(), nil
+}
+
+// MustEncodeValue is like EncodeValue but panics on error.
+func (a *ABI) MustEncodeValue(t Type, val any) []byte {
+	encoded, err := a.EncodeValue(t, val)
+	if err != nil {
+		panic(err)
+	}
+	return encoded
 }
 
 // EncodeValues encodes a list of values to ABI encoding.
@@ -69,6 +70,15 @@ func (a *ABI) EncodeValues(t Type, vals ...any) ([]byte, error) {
 		return nil, err
 	}
 	return words.Bytes(), nil
+}
+
+// MustEncodeValues is like EncodeValues but panics on error.
+func (a *ABI) MustEncodeValues(t Type, vals ...any) []byte {
+	encoded, err := a.EncodeValues(t, vals...)
+	if err != nil {
+		panic(err)
+	}
+	return encoded
 }
 
 // encodeTuple encodes a tuple of types.
