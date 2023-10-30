@@ -78,7 +78,10 @@ func main() {
 	}
 
 	// Create a JSON-RPC client.
-	c := rpc.NewClient(rpc.WithTransport(t))
+	c, err := rpc.NewClient(rpc.WithTransport(t))
+	if err != nil {
+		panic(err)
+	}
 
 	// Get the latest block number.
 	b, err := c.BlockNumber(context.Background())
@@ -108,13 +111,16 @@ import (
 
 func main() {
 	// Create a transport.
-	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://example.com/rpc-node"})
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "http://example.com/rpc-node"})
 	if err != nil {
 		panic(err)
 	}
 
 	// Create a JSON-RPC client.
-	c := rpc.NewClient(rpc.WithTransport(t))
+	c, err := rpc.NewClient(rpc.WithTransport(t))
+	if err != nil {
+		panic(err)
+	}
 
 	// Parse method signature.
 	balanceOf := abi.MustParseMethod("balanceOf(address)(uint256)")
@@ -127,8 +133,8 @@ func main() {
 
 	// Call balanceOf.
 	b, _, err := c.Call(context.Background(), types.Call{
-		To:   types.MustHexToAddressPtr("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
-		Data: calldata,
+		To:    types.MustAddressFromHexPtr("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"),
+		Input: calldata,
 	}, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
@@ -144,6 +150,7 @@ func main() {
 	// Print the result.
 	println(balance.String())
 }
+
 ```
 
 ### Sending a transaction
@@ -160,6 +167,7 @@ import (
 	"github.com/defiweb/go-eth/abi"
 	"github.com/defiweb/go-eth/rpc"
 	"github.com/defiweb/go-eth/rpc/transport"
+	"github.com/defiweb/go-eth/txmodifier"
 	"github.com/defiweb/go-eth/types"
 	"github.com/defiweb/go-eth/wallet"
 )
@@ -172,7 +180,7 @@ func main() {
 	}
 
 	// Create a transport.
-	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://example.com/rpc-node"})
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "http://example.com/rpc-node"})
 	if err != nil {
 		panic(err)
 	}
@@ -194,6 +202,30 @@ func main() {
 		// You can specify a chain ID to use with SendTransaction if the transaction
 		// doesn't have a "ChainID" field set.
 		rpc.WithChainID(1),
+
+		// GasLimitEstimator automatically estimates the gas limit for the
+		// transaction.
+		rpc.WithTXModifiers(
+			txmodifier.NewGasLimitEstimator(txmodifier.GasLimitEstimatorOptions{
+				Multiplier: 1.25,
+			}),
+		),
+
+		// GasFeeEstimator automatically estimates the gas price for the transaction
+		// based on the current gas price.
+		rpc.WithTXModifiers(
+			txmodifier.NewEIP1559GasFeeEstimator(txmodifier.EIP1559GasFeeEstimatorOptions{
+				GasPriceMultiplier:          1.25,
+				PriorityFeePerGasMultiplier: 1.25,
+			}),
+		),
+
+		// NonceProvider automatically sets the nonce for the transaction.
+		rpc.WithTXModifiers(
+			txmodifier.NewNonceProvider(txmodifier.NonceProviderOptions{
+				UsePendingBlock: false,
+			}),
+		),
 	)
 	if err != nil {
 		panic(err)
@@ -208,13 +240,10 @@ func main() {
 	}
 
 	// Prepare a transaction.
-	tx := (&types.Transaction{}).
+	tx := types.NewTransaction().
 		SetType(types.DynamicFeeTxType).
 		SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).
-		SetInput(calldata).
-		SetNonce(0).
-		SetMaxPriorityFeePerGas(big.NewInt(1 * 1e9)).
-		SetMaxFeePerGas(big.NewInt(20 * 1e9))
+		SetInput(calldata)
 
 	txHash, _, err := c.SendTransaction(context.Background(), *tx)
 	if err != nil {
@@ -329,7 +358,6 @@ func main() {
 	// Print the decoded value.
 	println(u256ValDec.Uint64())
 }
-
 ```
 
 The example above gives an insight into the inner workings of the package, but this is not how the package is usually
@@ -549,7 +577,7 @@ import (
 )
 
 func main() {
-	abiData := hexutil.MustHexToBytes("0x0000000000000000000000000000000000000000000000002b5e3af16b1880000")
+	abiData := hexutil.MustHexToBytes("0x00000000000000000000000000000000000000000000000002b5e3af16b1880000")
 
 	// Parse method signature.
 	balanceOf := abi.MustParseMethod("balanceOf(address) returns (uint256)")
@@ -591,13 +619,16 @@ import (
 
 func main() {
 	// Create a transport.
-	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://example.com/rpc-node"})
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "http://example.com/rpc-node"})
 	if err != nil {
 		panic(err)
 	}
 
 	// Create a JSON-RPC client.
-	c := rpc.NewClient(t)
+	c, err := rpc.NewClient(rpc.WithTransport(t))
+	if err != nil {
+		panic(err)
+	}
 
 	transfer := abi.MustParseEvent("Transfer(address indexed src, address indexed dst, uint256 wad)")
 
@@ -838,7 +869,7 @@ type Point struct {
 
 func main() {
 	// Add custom type.
-	abi.Default.Types["Point"] = abi.MustParseType("(int256 x, int256 y)")
+	abi.Default.Types["Point"] = abi.MustParseStruct("struct {int256 x; int256 y;}")
 
 	// Generate calldata.
 	addTriangle := abi.MustParseMethod("addTriangle(Point a, Point b, Point c)")
@@ -873,6 +904,10 @@ import (
 )
 
 type BoolFlagsType struct{}
+
+func (b BoolFlagsType) IsDynamic() bool {
+	return false
+}
 
 func (b BoolFlagsType) CanonicalType() string {
 	return "bytes32"
@@ -914,14 +949,45 @@ func (b *BoolFlagsValue) DecodeABI(words abi.Words) (int, error) {
 	return 1, nil
 }
 
+// MapFrom and MapTo are optional methods that allow mapping between
+// different types.
+
+func (b *BoolFlagsValue) MapFrom(m abi.Mapper, src any) error {
+	switch src := src.(type) {
+	case [256]bool:
+		*b = src
+	case []bool:
+		if len(src) > 256 {
+			return fmt.Errorf("abi: cannot map []bool of length %d to BytesFlags", len(src))
+		}
+		for i, v := range src {
+			b[i] = v
+		}
+	}
+	return nil
+}
+
+func (b *BoolFlagsValue) MapTo(m abi.Mapper, dst any) error {
+	switch dst := dst.(type) {
+	case *[256]bool:
+		*dst = *b
+	case *[]bool:
+		*dst = make([]bool, 256)
+		for i, v := range b {
+			(*dst)[i] = v
+		}
+	}
+	return nil
+}
+
 func main() {
 	// Add custom type.
-	abi.Default.Types["BytesFlags"] = &BoolFlagsType{}
+	abi.Default.Types["BoolFlags"] = &BoolFlagsType{}
 
 	// Generate calldata.
-	setFlags := abi.MustParseMethod("setFlags(BytesFlags flags)")
+	setFlags := abi.MustParseMethod("setFlags(BoolFlags flags)")
 	calldata, _ := setFlags.EncodeArgs(
-		&BoolFlagsValue{true, false, true, true, false, true, false, true},
+		[]bool{true, false, true, true, false, true, false, true},
 	)
 
 	// Print the calldata.
