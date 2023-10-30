@@ -27,6 +27,10 @@ type Call struct {
 	MaxFeePerGas         *big.Int // MaxFeePerGas is the maximum fee per gas the sender is willing to pay.
 }
 
+func NewCall() *Call {
+	return &Call{}
+}
+
 func (c *Call) SetFrom(from Address) *Call {
 	c.From = &from
 	return c
@@ -215,6 +219,10 @@ type Transaction struct {
 
 	// EIP-2930 fields:
 	ChainID *uint64 // ChainID is the chain ID of the transaction.
+}
+
+func NewTransaction() *Transaction {
+	return &Transaction{}
 }
 
 func (t *Transaction) SetFrom(from Address) *Transaction {
@@ -1153,6 +1161,10 @@ type FilterLogsQuery struct {
 	ToBlock   *BlockNumber
 	Topics    [][]Hash
 	BlockHash *Hash
+}
+
+func NewFilterLogsQuery() *FilterLogsQuery {
+	return &FilterLogsQuery{}
 }
 
 func (q *FilterLogsQuery) SetAddresses(addresses []Address) *FilterLogsQuery {
