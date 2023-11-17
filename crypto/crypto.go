@@ -19,7 +19,7 @@ type Signer interface {
 	SignTransaction(tx *types.Transaction) error
 }
 
-// Recoverer is an interface for recovering data.
+// Recoverer is an interface for recovering addresses from signatures.
 type Recoverer interface {
 	// RecoverHash recovers the address from a hash and signature.
 	RecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error)
@@ -31,7 +31,8 @@ type Recoverer interface {
 	RecoverTransaction(tx *types.Transaction) (*types.Address, error)
 }
 
-// AddMessagePrefix adds the Ethereum message prefix to the given data.
+// AddMessagePrefix adds the Ethereum message prefix to the given data as
+// defined in EIP-191.
 func AddMessagePrefix(data []byte) []byte {
 	return []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data))
 }
