@@ -1167,7 +1167,7 @@ func NewFilterLogsQuery() *FilterLogsQuery {
 	return &FilterLogsQuery{}
 }
 
-func (q *FilterLogsQuery) SetAddresses(addresses []Address) *FilterLogsQuery {
+func (q *FilterLogsQuery) SetAddresses(addresses ...Address) *FilterLogsQuery {
 	q.Address = addresses
 	return q
 }
@@ -1187,7 +1187,7 @@ func (q *FilterLogsQuery) SetToBlock(toBlock *BlockNumber) *FilterLogsQuery {
 	return q
 }
 
-func (q *FilterLogsQuery) SetTopics(topics [][]Hash) *FilterLogsQuery {
+func (q *FilterLogsQuery) SetTopics(topics ...[]Hash) *FilterLogsQuery {
 	q.Topics = topics
 	return q
 }

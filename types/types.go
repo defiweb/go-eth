@@ -119,6 +119,9 @@ func (t Address) String() string {
 
 // Checksum returns the address with the checksum calculated according to
 // EIP-55.
+//
+// HashFunc is the hash function used to calculate the checksum, most likely
+// crypto.Keccak256.
 func (t Address) Checksum(h HashFunc) string {
 	hex := []byte(hexutil.BytesToHex(t[:])[2:])
 	hash := h(hex)
