@@ -170,6 +170,32 @@ func Test_parseArrays(t *testing.T) {
 	}
 }
 
+func TestParseInternalType(t *testing.T) {
+	testCases := []struct {
+		input         string
+		wantKind      int
+		wantName      string
+		wantNamespace string
+	}{
+		{"", kindNone, "", ""},
+		{"struct Foo", kindStruct, "Foo", ""},
+		{"enum Bar", kindEnum, "Bar", ""},
+		{"Baz", kindType, "Baz", ""},
+		{"invalid type", kindNone, "", ""},
+		{"struct Foo[2]", kindStruct, "Foo", ""},
+		{"struct Namespace.Foo", kindStruct, "Foo", "Namespace"},
+	}
+
+	for i, tt := range testCases {
+		t.Run(fmt.Sprintf("case-%d", i+1), func(t *testing.T) {
+			kind, name, namespace := parseInternalType(tt.input)
+			assert.Equal(t, tt.wantKind, kind)
+			assert.Equal(t, tt.wantName, name)
+			assert.Equal(t, tt.wantNamespace, namespace)
+		})
+	}
+}
+
 func Fuzz_parseArrays(f *testing.F) {
 	for _, typ := range []string{
 		"uint256",

@@ -1,6 +1,7 @@
 package abi
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/defiweb/go-eth/crypto"
@@ -30,6 +31,9 @@ type Error struct {
 
 // NewError creates a new Error instance.
 func NewError(name string, inputs *TupleType) *Error {
+	if inputs == nil {
+		inputs = NewTupleType()
+	}
 	return Default.NewError(name, inputs)
 }
 
@@ -56,15 +60,18 @@ func MustParseError(signature string) *Error {
 }
 
 // NewError creates a new Error instance.
+//
+// This method is rarely used, see ParseError for a more convenient way to
+// create a new Error.
 func (a *ABI) NewError(name string, inputs *TupleType) *Error {
-	m := &Error{
+	e := &Error{
 		name:   name,
 		inputs: inputs,
 		abi:    a,
 	}
-	m.generateSignature()
-	m.calculateFourBytes()
-	return m
+	e.generateSignature()
+	e.calculateFourBytes()
+	return e
 }
 
 // ParseError parses an error signature and returns a new Error.
@@ -84,44 +91,44 @@ func (a *ABI) MustParseError(signature string) *Error {
 }
 
 // Name returns the name of the error.
-func (m *Error) Name() string {
-	return m.name
+func (e *Error) Name() string {
+	return e.name
 }
 
 // Inputs returns the input arguments of the error as a tuple type.
-func (m *Error) Inputs() *TupleType {
-	return m.inputs
+func (e *Error) Inputs() *TupleType {
+	return e.inputs
 }
 
 // FourBytes is the first four bytes of the Keccak256 hash of the error
 // signature.
-func (m *Error) FourBytes() FourBytes {
-	return m.fourBytes
+func (e *Error) FourBytes() FourBytes {
+	return e.fourBytes
 }
 
 // Signature returns the error signature, that is, the error name and the
 // canonical type of error arguments.
-func (m *Error) Signature() string {
-	return m.signature
+func (e *Error) Signature() string {
+	return e.signature
 }
 
 // Is returns true if the ABI encoded data is an error of this type.
-func (m *Error) Is(data []byte) bool {
-	return m.fourBytes.Match(data) && (len(data)-4)%WordLength == 0
+func (e *Error) Is(data []byte) bool {
+	return e.fourBytes.Match(data) && (len(data)-4)%WordLength == 0
 }
 
 // DecodeValue decodes the error into a map or structure. If a structure is
 // given, it must have fields with the same names as error arguments.
-func (m *Error) DecodeValue(data []byte, val any) error {
-	if m.fourBytes.Match(data) {
-		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
+func (e *Error) DecodeValue(data []byte, val any) error {
+	if e.fourBytes.Match(data) {
+		return fmt.Errorf("abi: selector mismatch for error %s", e.name)
 	}
-	return m.abi.DecodeValue(m.inputs, data[4:], val)
+	return e.abi.DecodeValue(e.inputs, data[4:], val)
 }
 
 // MustDecodeValue is like DecodeValue but panics on error.
-func (m *Error) MustDecodeValue(data []byte, val any) {
-	err := m.DecodeValue(data, val)
+func (e *Error) MustDecodeValue(data []byte, val any) {
+	err := e.DecodeValue(data, val)
 	if err != nil {
 		panic(err)
 	}
@@ -129,16 +136,16 @@ func (m *Error) MustDecodeValue(data []byte, val any) {
 
 // DecodeValues decodes the error into a map or structure. If a structure is
 // given, it must have fields with the same names as error arguments.
-func (m *Error) DecodeValues(data []byte, vals ...any) error {
-	if m.fourBytes.Match(data) {
-		return fmt.Errorf("abi: selector mismatch for error %s", m.name)
+func (e *Error) DecodeValues(data []byte, vals ...any) error {
+	if e.fourBytes.Match(data) {
+		return fmt.Errorf("abi: selector mismatch for error %s", e.name)
 	}
-	return m.abi.DecodeValues(m.inputs, data[4:], vals...)
+	return e.abi.DecodeValues(e.inputs, data[4:], vals...)
 }
 
 // MustDecodeValues is like DecodeValues but panics on error.
-func (m *Error) MustDecodeValues(data []byte, vals ...any) {
-	err := m.DecodeValues(data, vals...)
+func (e *Error) MustDecodeValues(data []byte, vals ...any) {
+	err := e.DecodeValues(data, vals...)
 	if err != nil {
 		panic(err)
 	}
@@ -146,26 +153,43 @@ func (m *Error) MustDecodeValues(data []byte, vals ...any) {
 
 // ToError converts the error data returned by contract calls into a CustomError.
 // If the data does not contain a valid error message, it returns nil.
-func (m *Error) ToError(data []byte) error {
-	if !m.fourBytes.Match(data) {
+func (e *Error) ToError(data []byte) error {
+	if !e.fourBytes.Match(data) {
 		return nil
 	}
 	return CustomError{
-		Type: m,
+		Type: e,
 		Data: data[4:],
 	}
 }
 
+// HandleError converts an error returned by a contract call to a custom error
+// if possible. If provider error is nil, it returns nil.
+func (e *Error) HandleError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var dataErr interface{ RPCErrorData() any }
+	if !errors.As(err, &dataErr) {
+		return err
+	}
+	data, ok := dataErr.RPCErrorData().([]byte)
+	if !ok {
+		return err
+	}
+	return e.ToError(data)
+}
+
 // String returns the human-readable signature of the error.
-func (m *Error) String() string {
-	return "error " + m.name + m.inputs.String()
+func (e *Error) String() string {
+	return "error " + e.name + e.inputs.String()
 }
 
-func (m *Error) generateSignature() {
-	m.signature = m.name + m.inputs.CanonicalType()
+func (e *Error) generateSignature() {
+	e.signature = e.name + e.inputs.CanonicalType()
 }
 
-func (m *Error) calculateFourBytes() {
-	id := crypto.Keccak256([]byte(m.Signature()))
-	copy(m.fourBytes[:], id[:4])
+func (e *Error) calculateFourBytes() {
+	id := crypto.Keccak256([]byte(e.Signature()))
+	copy(e.fourBytes[:], id[:4])
 }

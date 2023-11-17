@@ -22,8 +22,8 @@ func (n dynamicNullType) IsDynamic() bool          { return true }
 func TestAliasType(t *testing.T) {
 	v := NewAliasType("alias", nullType{})
 	assert.Equal(t, &nullValue{}, v.Value())
-	assert.Equal(t, v.String(), "alias")
-	assert.Equal(t, v.CanonicalType(), "null")
+	assert.Equal(t, "alias", v.String())
+	assert.Equal(t, "null", v.CanonicalType())
 }
 
 func TestTupleType(t *testing.T) {
@@ -37,8 +37,8 @@ func TestTupleType(t *testing.T) {
 		{Name: "bar", Value: &nullValue{}},
 		{Name: "arg2", Value: &nullValue{}},
 	}, v.Value())
-	assert.Equal(t, v.String(), "(null foo, null bar, null)")
-	assert.Equal(t, v.CanonicalType(), "(null,null,null)")
+	assert.Equal(t, "(null foo, null bar, null)", v.String())
+	assert.Equal(t, "(null,null,null)", v.CanonicalType())
 }
 
 func TestEventTupleType(t *testing.T) {
@@ -56,77 +56,77 @@ func TestEventTupleType(t *testing.T) {
 		{Name: "foo", Value: &nullValue{}},
 		{Name: "data1", Value: &nullValue{}},
 	}, v.Value())
-	assert.Equal(t, v.String(), "(null foo, null indexed bar, null indexed qux, null indexed, null)")
-	assert.Equal(t, v.CanonicalType(), "(null,null,null,null,null)")
-	assert.Equal(t, v.TopicsTuple().String(), "(null bar, bytes32 qux, null topic2)")
-	assert.Equal(t, v.DataTuple().String(), "(null foo, null data1)")
+	assert.Equal(t, "(null foo, null indexed bar, null indexed qux, null indexed, null)", v.String())
+	assert.Equal(t, "(null,null,null,null,null)", v.CanonicalType())
+	assert.Equal(t, "(null bar, bytes32 qux, null topic3)", v.TopicsTuple().String())
+	assert.Equal(t, "(null foo, null data1)", v.DataTuple().String())
 }
 
 func TestArrayType(t *testing.T) {
 	v := NewArrayType(&nullType{})
+	assert.Equal(t, "null[]", v.String())
+	assert.Equal(t, "null[]", v.CanonicalType())
 	assert.Equal(t, &ArrayValue{
 		Type:  &nullType{},
 		Elems: nil,
 	}, v.Value())
-	assert.Equal(t, v.String(), "null[]")
-	assert.Equal(t, v.CanonicalType(), "null[]")
 }
 
 func TestFixedArrayType(t *testing.T) {
 	v := NewFixedArrayType(&nullType{}, 2)
+	assert.Equal(t, "null[2]", v.String())
+	assert.Equal(t, "null[2]", v.CanonicalType())
 	assert.Equal(t, &FixedArrayValue{
 		&nullValue{},
 		&nullValue{},
 	}, v.Value())
-	assert.Equal(t, v.String(), "null[2]")
-	assert.Equal(t, v.CanonicalType(), "null[2]")
 }
 
 func TestBytesType(t *testing.T) {
 	v := NewBytesType()
+	assert.Equal(t, "bytes", v.String())
+	assert.Equal(t, "bytes", v.CanonicalType())
 	assert.Equal(t, &BytesValue{}, v.Value())
-	assert.Equal(t, v.String(), "bytes")
-	assert.Equal(t, v.CanonicalType(), "bytes")
 }
 
 func TestStringType(t *testing.T) {
 	v := NewStringType()
+	assert.Equal(t, "string", v.String())
+	assert.Equal(t, "string", v.CanonicalType())
 	assert.Equal(t, new(StringValue), v.Value())
-	assert.Equal(t, v.String(), "string")
-	assert.Equal(t, v.CanonicalType(), "string")
 }
 
 func TestFixedBytesType(t *testing.T) {
 	v := NewFixedBytesType(2)
+	assert.Equal(t, "bytes2", v.String())
+	assert.Equal(t, "bytes2", v.CanonicalType())
 	assert.Equal(t, &FixedBytesValue{0, 0}, v.Value())
-	assert.Equal(t, v.String(), "bytes2")
-	assert.Equal(t, v.CanonicalType(), "bytes2")
 }
 
 func TestUintType(t *testing.T) {
 	v := NewUintType(256)
+	assert.Equal(t, "uint256", v.String())
+	assert.Equal(t, "uint256", v.CanonicalType())
 	assert.Equal(t, &UintValue{Size: 256}, v.Value())
-	assert.Equal(t, v.String(), "uint256")
-	assert.Equal(t, v.CanonicalType(), "uint256")
 }
 
 func TestIntType(t *testing.T) {
 	v := NewIntType(256)
+	assert.Equal(t, "int256", v.String())
+	assert.Equal(t, "int256", v.CanonicalType())
 	assert.Equal(t, &IntValue{Size: 256}, v.Value())
-	assert.Equal(t, v.String(), "int256")
-	assert.Equal(t, v.CanonicalType(), "int256")
 }
 
 func TestBoolType(t *testing.T) {
 	v := NewBoolType()
+	assert.Equal(t, "bool", v.String())
+	assert.Equal(t, "bool", v.CanonicalType())
 	assert.Equal(t, new(BoolValue), v.Value())
-	assert.Equal(t, v.String(), "bool")
-	assert.Equal(t, v.CanonicalType(), "bool")
 }
 
 func TestAddressType(t *testing.T) {
 	v := NewAddressType()
+	assert.Equal(t, "address", v.String())
+	assert.Equal(t, "address", v.CanonicalType())
 	assert.Equal(t, new(AddressValue), v.Value())
-	assert.Equal(t, v.String(), "address")
-	assert.Equal(t, v.CanonicalType(), "address")
 }

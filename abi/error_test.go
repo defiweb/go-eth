@@ -1,6 +1,7 @@
 package abi
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -9,6 +10,18 @@ import (
 
 	"github.com/defiweb/go-eth/hexutil"
 )
+
+type mockError struct {
+	data any
+}
+
+func (m *mockError) Error() string {
+	return "mock error"
+}
+
+func (m *mockError) RPCErrorData() any {
+	return m.data
+}
 
 func TestParseError(t *testing.T) {
 	tests := []struct {
@@ -52,4 +65,31 @@ func TestError_ToError(t *testing.T) {
 	customErr := e.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
 	require.NotNil(t, customErr)
 	assert.Equal(t, "error: foo", customErr.Error())
+}
+
+func TestHandleError(t *testing.T) {
+	t.Run("ReturnsNil_WhenErrorIsNil", func(t *testing.T) {
+		e := NewError("foo", nil)
+		result := e.HandleError(nil)
+		assert.Nil(t, result)
+	})
+	t.Run("ReturnsOriginalError_WhenErrorDoesNotImplementRPCErrorData", func(t *testing.T) {
+		e := NewError("foo", nil)
+		originalErr := errors.New("original error")
+		result := e.HandleError(originalErr)
+		assert.Equal(t, originalErr, result)
+	})
+	t.Run("ReturnsOriginalError_WhenRPCErrorDataIsNotByteSlice", func(t *testing.T) {
+		e := NewError("foo", nil)
+		originalErr := &mockError{data: "not a byte slice"}
+		result := e.HandleError(originalErr)
+		assert.Equal(t, originalErr, result)
+	})
+	t.Run("ReturnsCustomError_WhenRPCErrorDataIsByteSlice", func(t *testing.T) {
+		e := NewError("foo", nil)
+		println(e.fourBytes.Hex())
+		originalErr := &mockError{data: hexutil.MustHexToBytes("0xc2985578")}
+		result := e.HandleError(originalErr)
+		assert.IsType(t, CustomError{}, result)
+	})
 }

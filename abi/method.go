@@ -61,7 +61,16 @@ type Method struct {
 }
 
 // NewMethod creates a new Method instance.
+//
+// This method is rarely used, see ParseMethod for a more convenient way to
+// create a new Method.
 func NewMethod(name string, inputs, outputs *TupleType, mutability StateMutability) *Method {
+	if inputs == nil {
+		inputs = NewTupleType()
+	}
+	if outputs == nil {
+		outputs = NewTupleType()
+	}
 	return Default.NewMethod(name, inputs, outputs, mutability)
 }
 
@@ -69,9 +78,13 @@ func NewMethod(name string, inputs, outputs *TupleType, mutability StateMutabili
 //
 // The method accepts Solidity method signatures, but allows to omit the
 // "function" keyword, argument names and the "returns" keyword. Method
-// modifiers and argument data location specifiers are allowed, but ignored.
-// Tuple types are indicated by parentheses, with the optional keyword "tuple"
-// before the parentheses.
+// modifiers and argument data location specifiers are allowed. Tuple types are
+// indicated by parentheses, with the optional keyword "tuple" before the
+// parentheses.
+//
+// If argument names are omitted, the default "argN" is used, where N is the
+// argument index. Similarly, if return value names are omitted, "argN" is also
+// used.
 //
 // The following examples are valid signatures:
 //
@@ -153,8 +166,12 @@ func (m *Method) Signature() string {
 }
 
 // EncodeArg encodes arguments for a method call using a provided map or
-// structure. The map or structure must have fields with the same names as
-// the method arguments.
+// structure.
+//
+// Provided struct or map must have fields that match the names of the method's
+// arguments.
+//
+// The return value is a ABI-encoded data prefixed with the method selector.
 func (m *Method) EncodeArg(arg any) ([]byte, error) {
 	encoded, err := m.abi.EncodeValue(m.inputs, arg)
 	if err != nil {
@@ -172,7 +189,10 @@ func (m *Method) MustEncodeArg(arg any) []byte {
 	return encoded
 }
 
-// EncodeArgs encodes arguments for a method call.
+// EncodeArgs encodes arguments for a method call using a provided list of
+// arguments.
+//
+// The return value is a ABI-encoded data prefixed with the method selector.
 func (m *Method) EncodeArgs(args ...any) ([]byte, error) {
 	encoded, err := m.abi.EncodeValues(m.inputs, args...)
 	if err != nil {
@@ -190,7 +210,12 @@ func (m *Method) MustEncodeArgs(args ...any) []byte {
 	return encoded
 }
 
-// DecodeArg decodes ABI-encoded arguments a method call.
+// DecodeArg decodes an ABI-encoded data into a provided map or struct.
+//
+// Provided struct or map must have fields that match the names of the method's
+// arguments.
+//
+// Provided data must be prefixed with the method selector.
 func (m *Method) DecodeArg(data []byte, arg any) error {
 	if !m.fourBytes.Match(data[:4]) {
 		return fmt.Errorf(
@@ -209,7 +234,9 @@ func (m *Method) MustDecodeArg(data []byte, arg any) {
 	}
 }
 
-// DecodeArgs decodes ABI-encoded arguments a method call.
+// DecodeArgs decodes an ABI-encoded data into a provided list of arguments.
+//
+// Provided data must be prefixed with the method selector.
 func (m *Method) DecodeArgs(data []byte, args ...any) error {
 	if !m.fourBytes.Match(data[:4]) {
 		return fmt.Errorf(
@@ -228,9 +255,10 @@ func (m *Method) MustDecodeArgs(data []byte, args ...any) {
 	}
 }
 
-// DecodeValue decodes the values returned by a method call into a map or
-// structure. If a structure is given, it must have fields with the same names
-// as the values returned by the method.
+// DecodeValue decodes an ABI-encoded data into a provided map or struct.
+//
+// Provided struct or map must have fields that match the names of the method's
+// return values.
 func (m *Method) DecodeValue(data []byte, val any) error {
 	return m.abi.DecodeValue(m.outputs, data, val)
 }
@@ -242,7 +270,8 @@ func (m *Method) MustDecodeValue(data []byte, val any) {
 	}
 }
 
-// DecodeValues decodes return values from a method call to a given values.
+// DecodeValues decodes an ABI-encoded data into a provided list of return
+// variables.
 func (m *Method) DecodeValues(data []byte, vals ...any) error {
 	return m.abi.DecodeValues(m.outputs, data, vals...)
 }

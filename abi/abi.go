@@ -40,11 +40,17 @@ type Mapper interface {
 
 // MapFrom maps the value from the ABI Value.
 type MapFrom interface {
+	// MapFrom maps the value from the ABI Value.
+	//
+	// src is never a pointer.
 	MapFrom(m Mapper, src any) error
 }
 
 // MapTo maps the value to the ABI Value.
 type MapTo interface {
+	// MapTo maps the value to the ABI Value.
+	//
+	// dst is always an initialized pointer.
 	MapTo(m Mapper, dst any) error
 }
 

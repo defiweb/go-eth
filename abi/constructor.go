@@ -8,6 +8,9 @@ type Constructor struct {
 }
 
 // NewConstructor creates a new Constructor instance.
+//
+// This method is rarely used, see ParseConstructor for a more convenient way
+// to create a new Constructor.
 func NewConstructor(inputs *TupleType) *Constructor {
 	return Default.NewConstructor(inputs)
 }
@@ -37,6 +40,9 @@ func MustParseConstructor(signature string) *Constructor {
 
 // NewConstructor creates a new Constructor instance.
 func (a *ABI) NewConstructor(inputs *TupleType) *Constructor {
+	if inputs == nil {
+		inputs = NewTupleType()
+	}
 	return &Constructor{
 		inputs: inputs,
 		abi:    a,

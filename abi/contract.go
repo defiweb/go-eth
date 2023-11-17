@@ -38,8 +38,8 @@ func (c *Contract) IsError(data []byte) bool {
 }
 
 // ToError returns an error if the given error data, returned by a contract
-// call, corresponds to a revert, panic, or custom error. It returns nil if the
-// data cannot be recognized as an error.
+// call, corresponds to a revert, panic, or a custom error. It returns nil if
+// the data cannot be recognized as an error.
 func (c *Contract) ToError(data []byte) error {
 	if IsRevert(data) {
 		return RevertError{Reason: DecodeRevert(data)}
@@ -73,23 +73,26 @@ func (c *Contract) HandleError(err error) error {
 	return c.ToError(data)
 }
 
+// RegisterTypes registers types defined in the contract to the given ABI
+// instance. This enables the use of types defined in the contract in all
+// Parse* methods.
+//
+// If the type name already exists, it will be overwritten.
+func (c *Contract) RegisterTypes(a *ABI) {
+	for n, t := range c.Types {
+		a.Types[n] = t
+	}
+}
+
 // LoadJSON loads the ABI from the given JSON file and returns a Contract
 // instance.
 func LoadJSON(path string) (*Contract, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseJSON(data)
+	return Default.LoadJSON(path)
 }
 
 // MustLoadJSON is like LoadJSON but panics on error.
 func MustLoadJSON(path string) *Contract {
-	c, err := LoadJSON(path)
-	if err != nil {
-		panic(err)
-	}
-	return c
+	return Default.MustLoadJSON(path)
 }
 
 // ParseJSON parses the given ABI JSON and returns a Contract instance.
@@ -114,6 +117,25 @@ func ParseSignatures(signatures ...string) (*Contract, error) {
 // MustParseSignatures is like ParseSignatures but panics on error.
 func MustParseSignatures(signatures ...string) *Contract {
 	return Default.MustParseSignatures(signatures...)
+}
+
+// LoadJSON loads the ABI from the given JSON file and returns a Contract
+// instance.
+func (a *ABI) LoadJSON(path string) (*Contract, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	return a.ParseJSON(data)
+}
+
+// MustLoadJSON is like LoadJSON but panics on error.
+func (a *ABI) MustLoadJSON(path string) *Contract {
+	c, err := a.LoadJSON(path)
+	if err != nil {
+		panic(err)
+	}
+	return c
 }
 
 // ParseJSON parses the given ABI JSON and returns a Contract instance.
@@ -279,17 +301,6 @@ func (a *ABI) MustParseSignatures(signatures ...string) *Contract {
 		panic(err)
 	}
 	return c
-}
-
-// RegisterTypes registers types defined in the contract to the given ABI
-// instance. This enables the use of types defined in the contract in all
-// Parse* methods.
-//
-// If the type name already exists, it will be overwritten.
-func (c *Contract) RegisterTypes(a *ABI) {
-	for n, t := range c.Types {
-		a.Types[n] = t
-	}
 }
 
 type jsonField struct {

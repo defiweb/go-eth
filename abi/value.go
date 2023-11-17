@@ -505,7 +505,7 @@ func (b FixedBytesValue) MapFrom(m Mapper, src any) error {
 }
 
 // MapTo implements the anymapper.MapTo interface.
-func (b FixedBytesValue) MapTo(m Mapper, dst any) error {
+func (b FixedBytesValue) MapTo(_ Mapper, dst any) error {
 	dstRef := reflect.ValueOf(dst).Elem()
 	switch dstRef.Type().Kind() {
 	case reflect.Slice:
@@ -630,7 +630,7 @@ func (u *UintValue) DecodeABI(words Words) (int, error) {
 }
 
 // MapFrom implements the anymapper.MapFrom interface.
-func (u *UintValue) MapFrom(m Mapper, src any) error {
+func (u *UintValue) MapFrom(_ Mapper, src any) error {
 	srcRef := reflect.ValueOf(src)
 	switch srcRef.Type().Kind() {
 	case reflect.String:
@@ -695,7 +695,7 @@ func (u *UintValue) MapFrom(m Mapper, src any) error {
 }
 
 // MapTo implements the anymapper.MapTo interface.
-func (u *UintValue) MapTo(m Mapper, dst any) error {
+func (u *UintValue) MapTo(_ Mapper, dst any) error {
 	dstRef := reflect.ValueOf(dst).Elem()
 	switch dstRef.Type().Kind() {
 	case reflect.String:
@@ -761,7 +761,7 @@ func (i *IntValue) DecodeABI(words Words) (int, error) {
 }
 
 // MapFrom implements the anymapper.MapFrom interface.
-func (i *IntValue) MapFrom(m Mapper, src any) error {
+func (i *IntValue) MapFrom(_ Mapper, src any) error {
 	srcRef := reflect.ValueOf(src)
 	switch srcRef.Type().Kind() {
 	case reflect.String:
@@ -817,7 +817,7 @@ func (i *IntValue) MapFrom(m Mapper, src any) error {
 }
 
 // MapTo implements the anymapper.MapTo interface.
-func (i *IntValue) MapTo(m Mapper, dst any) error {
+func (i *IntValue) MapTo(_ Mapper, dst any) error {
 	dstRef := reflect.ValueOf(dst).Elem()
 	switch dstRef.Type().Kind() {
 	case reflect.String:
@@ -882,7 +882,7 @@ func (b *BoolValue) DecodeABI(words Words) (int, error) {
 }
 
 // MapFrom implements the anymapper.MapFrom interface.
-func (b *BoolValue) MapFrom(m Mapper, src any) error {
+func (b *BoolValue) MapFrom(_ Mapper, src any) error {
 	srcRef := reflect.ValueOf(src)
 	switch srcRef.Type().Kind() {
 	case reflect.Bool:
@@ -894,7 +894,7 @@ func (b *BoolValue) MapFrom(m Mapper, src any) error {
 }
 
 // MapTo implements the anymapper.MapTo interface.
-func (b *BoolValue) MapTo(m Mapper, dst any) error {
+func (b *BoolValue) MapTo(_ Mapper, dst any) error {
 	dstRef := reflect.ValueOf(dst).Elem()
 	switch dstRef.Type().Kind() {
 	case reflect.Bool:
@@ -968,7 +968,7 @@ func (a *AddressValue) MapFrom(m Mapper, src any) error {
 }
 
 // MapTo implements the anymapper.MapTo interface.
-func (a *AddressValue) MapTo(m Mapper, dst any) error {
+func (a *AddressValue) MapTo(_ Mapper, dst any) error {
 	dstRef := reflect.ValueOf(dst).Elem()
 	switch dstRef.Type().Kind() {
 	case reflect.String:

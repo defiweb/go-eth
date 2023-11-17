@@ -11,11 +11,15 @@ type Type interface {
 	// IsDynamic indicates whether the type is dynamic.
 	IsDynamic() bool
 
-	// CanonicalType returns the canonical name of the type. In case of a
-	// tuple, the canonical name is the canonical name of the tuple's
-	// elements, separated by commas and enclosed in parentheses. Arrays
-	// are represented by the canonical name of the element type followed
-	// by square brackets with the array size.
+	// CanonicalType is the type as it would appear in the ABI.
+	//
+	// Only the types defined in the ABI specification are allowed:
+	// https://docs.soliditylang.org/en/latest/abi-spec.html
+	//
+	// In case of a tuple, the canonical type is the canonical type of the
+	// tuple's elements, separated by commas and enclosed in parentheses.
+	// Arrays are represented by the canonical name of the element type
+	// followed by square brackets with the array size.
 	CanonicalType() string
 
 	// String returns the user-friendly name of the type.
@@ -300,7 +304,7 @@ func (t *EventTupleType) TopicsTuple() *TupleType {
 		}
 		name := elem.Name
 		if len(name) == 0 {
-			name = fmt.Sprintf("topic%d", len(topics))
+			name = fmt.Sprintf("topic%d", len(topics)+1)
 		}
 		typ := elem.Type
 		if typ.IsDynamic() {

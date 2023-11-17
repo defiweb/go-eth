@@ -21,6 +21,9 @@ type Event struct {
 }
 
 // NewEvent creates a new Event instance.
+//
+// This method is rarely used, see ParseEvent for a more convenient way to
+// create a new Event.
 func NewEvent(name string, inputs *EventTupleType, anonymous bool) *Event {
 	return Default.NewEvent(name, inputs, anonymous)
 }
@@ -49,6 +52,9 @@ func MustParseEvent(signature string) *Event {
 
 // NewEvent creates a new Event instance.
 func (a *ABI) NewEvent(name string, inputs *EventTupleType, anonymous bool) *Event {
+	if inputs == nil {
+		inputs = NewEventTupleType()
+	}
 	e := &Event{
 		name:      name,
 		inputs:    inputs,
