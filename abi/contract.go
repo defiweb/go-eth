@@ -70,7 +70,10 @@ func (c *Contract) HandleError(err error) error {
 	if !ok {
 		return err
 	}
-	return c.ToError(data)
+	if err := c.ToError(data); err != nil {
+		return err
+	}
+	return err
 }
 
 // RegisterTypes registers types defined in the contract to the given ABI

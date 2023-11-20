@@ -62,34 +62,53 @@ func TestError_ToError(t *testing.T) {
 	e, err := ParseError("error foo(uint256)")
 	require.NoError(t, err)
 
-	customErr := e.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
-	require.NotNil(t, customErr)
-	assert.Equal(t, "error: foo", customErr.Error())
+	// Custom error
+	t.Run("custom error", func(t *testing.T) {
+		customErr := e.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
+		require.NotNil(t, customErr)
+		assert.Equal(t, "error: foo", customErr.Error())
+	})
+
+	// Unknown error
+	t.Run("unknown error", func(t *testing.T) {
+		unkErr := e.ToError(hexutil.MustHexToBytes("0x112233440000000000000000000000000000000000000000000000000000000000000000"))
+		require.Nil(t, unkErr)
+	})
 }
 
-func TestHandleError(t *testing.T) {
-	t.Run("ReturnsNil_WhenErrorIsNil", func(t *testing.T) {
-		e := NewError("foo", nil)
-		result := e.HandleError(nil)
-		assert.Nil(t, result)
+func TestError_HandleError(t *testing.T) {
+	e, err := ParseError("error foo(uint256)")
+	require.NoError(t, err)
+
+	// Custom error
+	t.Run("custom error", func(t *testing.T) {
+		callErr := &mockError{data: hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c")}
+		customErr := e.HandleError(callErr)
+		require.NotNil(t, customErr)
+		assert.Equal(t, "error: foo", customErr.Error())
 	})
-	t.Run("ReturnsOriginalError_WhenErrorDoesNotImplementRPCErrorData", func(t *testing.T) {
-		e := NewError("foo", nil)
-		originalErr := errors.New("original error")
-		result := e.HandleError(originalErr)
-		assert.Equal(t, originalErr, result)
+
+	// Unknown error
+	t.Run("unknown error", func(t *testing.T) {
+		callErr := &mockError{data: hexutil.MustHexToBytes("0x112233440000000000000000000000000000000000000000000000000000000000000000")}
+		unkErr := e.HandleError(callErr)
+		require.NotNil(t, unkErr)
+		assert.Equal(t, callErr, unkErr)
 	})
-	t.Run("ReturnsOriginalError_WhenRPCErrorDataIsNotByteSlice", func(t *testing.T) {
-		e := NewError("foo", nil)
-		originalErr := &mockError{data: "not a byte slice"}
-		result := e.HandleError(originalErr)
-		assert.Equal(t, originalErr, result)
+
+	// Nil
+	t.Run("nil", func(t *testing.T) {
+		require.Nil(t, e.HandleError(nil))
 	})
-	t.Run("ReturnsCustomError_WhenRPCErrorDataIsByteSlice", func(t *testing.T) {
-		e := NewError("foo", nil)
-		println(e.fourBytes.Hex())
-		originalErr := &mockError{data: hexutil.MustHexToBytes("0xc2985578")}
-		result := e.HandleError(originalErr)
-		assert.IsType(t, CustomError{}, result)
+
+	// Not a byte slice
+	t.Run("not a byte slice", func(t *testing.T) {
+		callErr := &mockError{data: "not a byte slice"}
+		require.Equal(t, callErr, e.HandleError(callErr))
+	})
+
+	// Not a RPC call error
+	t.Run("not a RPC call error", func(t *testing.T) {
+		require.Equal(t, errors.New("not a RPC call error"), e.HandleError(errors.New("not a RPC call error")))
 	})
 }

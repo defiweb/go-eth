@@ -1,6 +1,7 @@
 package abi
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -105,19 +106,84 @@ func TestContract_ToError(t *testing.T) {
 	require.NoError(t, err)
 
 	// Revert
-	revertErr := c.ToError(hexutil.MustHexToBytes("0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003666f6f0000000000000000000000000000000000000000000000000000000000"))
-	require.NotNil(t, revertErr)
-	assert.Equal(t, "revert: foo", revertErr.Error())
+	t.Run("revert", func(t *testing.T) {
+		revertErr := c.ToError(hexutil.MustHexToBytes("0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003666f6f0000000000000000000000000000000000000000000000000000000000"))
+		require.NotNil(t, revertErr)
+		assert.Equal(t, "revert: foo", revertErr.Error())
+	})
 
 	// Panic
-	panicErr := c.ToError(hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000020"))
-	require.NotNil(t, panicErr)
-	assert.Equal(t, "panic: 32", panicErr.Error())
+	t.Run("panic", func(t *testing.T) {
+		panicErr := c.ToError(hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000020"))
+		require.NotNil(t, panicErr)
+		assert.Equal(t, "panic: 32", panicErr.Error())
+	})
 
 	// Custom error
-	customErr := c.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
-	require.NotNil(t, customErr)
-	assert.Equal(t, "error: foo", customErr.Error())
+	t.Run("custom error", func(t *testing.T) {
+		customErr := c.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
+		require.NotNil(t, customErr)
+		assert.Equal(t, "error: foo", customErr.Error())
+	})
+
+	// Unknown error
+	t.Run("unknown error", func(t *testing.T) {
+		unkErr := c.ToError(hexutil.MustHexToBytes("0x112233440000000000000000000000000000000000000000000000000000000000000000"))
+		require.Nil(t, unkErr)
+	})
+}
+
+func TestContract_HandleError(t *testing.T) {
+	c, err := ParseSignatures("error foo(uint256)")
+	require.NoError(t, err)
+
+	// Revert
+	t.Run("revert", func(t *testing.T) {
+		callErr := &mockError{data: hexutil.MustHexToBytes("0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003666f6f0000000000000000000000000000000000000000000000000000000000")}
+		revertErr := c.HandleError(callErr)
+		require.NotNil(t, revertErr)
+		assert.Equal(t, "revert: foo", revertErr.Error())
+	})
+
+	// Panic
+	t.Run("panic", func(t *testing.T) {
+		callErr := &mockError{data: hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000020")}
+		panicErr := c.HandleError(callErr)
+		require.NotNil(t, panicErr)
+		assert.Equal(t, "panic: 32", panicErr.Error())
+	})
+
+	// Custom error
+	t.Run("custom error", func(t *testing.T) {
+		callErr := &mockError{data: hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c")}
+		customErr := c.HandleError(callErr)
+		require.NotNil(t, customErr)
+		assert.Equal(t, "error: foo", customErr.Error())
+	})
+
+	// Unknown error
+	t.Run("unknown error", func(t *testing.T) {
+		callErr := &mockError{data: hexutil.MustHexToBytes("0x112233440000000000000000000000000000000000000000000000000000000000000000")}
+		unkErr := c.HandleError(callErr)
+		require.NotNil(t, unkErr)
+		assert.Equal(t, callErr, unkErr)
+	})
+
+	// Nil
+	t.Run("unknown error", func(t *testing.T) {
+		require.Nil(t, c.HandleError(nil))
+	})
+
+	// Not a byte slice
+	t.Run("not a byte slice", func(t *testing.T) {
+		callErr := &mockError{data: "not a byte slice"}
+		require.Equal(t, callErr, c.HandleError(callErr))
+	})
+
+	// Not a RPC call error
+	t.Run("not a RPC call error", func(t *testing.T) {
+		require.Equal(t, errors.New("not a RPC call error"), c.HandleError(errors.New("not a RPC call error")))
+	})
 }
 
 func TestContract_RegisterTypes(t *testing.T) {

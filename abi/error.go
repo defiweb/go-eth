@@ -177,7 +177,10 @@ func (e *Error) HandleError(err error) error {
 	if !ok {
 		return err
 	}
-	return e.ToError(data)
+	if err := e.ToError(data); err != nil {
+		return err
+	}
+	return err
 }
 
 // String returns the human-readable signature of the error.
