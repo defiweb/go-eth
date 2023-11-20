@@ -208,6 +208,9 @@ func (a *ABI) MustParseJSON(data []byte) *Contract {
 // ParseSignatures parses list of signatures and returns a Contract instance.
 // Signatures must be prefixed with the kind, e.g. "constructor" or "event".
 // For functions, the "function" prefix can be omitted.
+//
+// In case of duplicate function, event or error names, a counter will be
+// appended to the name starting from 2.
 func (a *ABI) ParseSignatures(signatures ...string) (*Contract, error) {
 	c := &Contract{
 		Methods:            make(map[string]*Method),
@@ -268,7 +271,7 @@ func (a *ABI) ParseSignatures(signatures ...string) (*Contract, error) {
 			if err != nil {
 				return nil, err
 			}
-			c.Methods[method.Name()] = method
+			appendWithCounter(c.Methods, method.Name(), method)
 			c.MethodsBySignature[method.Signature()] = method
 		case sigparser.EventSignatureInput:
 			sig, err := sigparser.ParseSignatureAs(sigparser.EventKind, s)
@@ -279,7 +282,7 @@ func (a *ABI) ParseSignatures(signatures ...string) (*Contract, error) {
 			if err != nil {
 				return nil, err
 			}
-			c.Events[event.Name()] = event
+			appendWithCounter(c.Events, event.Name(), event)
 		case sigparser.ErrorSignatureInput:
 			sig, err := sigparser.ParseSignatureAs(sigparser.ErrorKind, s)
 			if err != nil {
@@ -289,7 +292,7 @@ func (a *ABI) ParseSignatures(signatures ...string) (*Contract, error) {
 			if err != nil {
 				return nil, err
 			}
-			c.Errors[errsig.Name()] = errsig
+			appendWithCounter(c.Errors, errsig.Name(), errsig)
 		default:
 			return nil, fmt.Errorf("invalid signature: %s", s)
 		}
@@ -552,4 +555,17 @@ func parseInternalType(typ string) (int, string, string) {
 		intName, intNamespace = parts[1], parts[0]
 	}
 	return kind, intName, intNamespace
+}
+
+// appendWithCounter appends a value to a map. If the key already exists, it
+// will be suffixed with a number.
+func appendWithCounter[T any](m map[string]T, key string, value T) {
+	nextKey := key
+	for i := 0; ; i++ {
+		if _, ok := m[nextKey]; !ok {
+			m[nextKey] = value
+			return
+		}
+		nextKey = key + strconv.Itoa(i+2)
+	}
 }

@@ -59,6 +59,7 @@ func TestABI_ParseSignatures(t *testing.T) {
 		`constructor(CustomUint a)`,
 		`function Foo(CustomUint a) nonpayable returns (CustomUint)`,
 		`function Bar(Struct[2][2] a) nonpayable returns (uint8[2][2])`,
+		`function Bar()`, // Should be added as Bar2 because Bar already exists
 	)
 
 	require.NoError(t, err)
@@ -72,6 +73,7 @@ func TestABI_ParseSignatures(t *testing.T) {
 	require.NotNil(t, abi.Constructor)
 	require.NotNil(t, abi.Methods["Foo"])
 	require.NotNil(t, abi.Methods["Bar"])
+	require.NotNil(t, abi.Methods["Bar2"])
 
 	assert.Equal(t, "Status", abi.Types["Status"].String())
 	assert.Equal(t, "Struct", abi.Types["Struct"].String())
@@ -275,5 +277,31 @@ func Fuzz_parseArrays(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, typ string) {
 		_, _, _ = parseArrays(typ)
+	})
+}
+
+func Test_appendWithCounter(t *testing.T) {
+	t.Run("add same key", func(t *testing.T) {
+		m := make(map[string]int)
+
+		appendWithCounter(m, "test", 1)
+		appendWithCounter(m, "test", 2)
+		appendWithCounter(m, "test", 3)
+		assert.Equal(t, 3, len(m))
+		assert.Equal(t, 1, m["test"])
+		assert.Equal(t, 2, m["test2"])
+		assert.Equal(t, 3, m["test3"])
+	})
+
+	t.Run("add same key with number", func(t *testing.T) {
+		m := make(map[string]int)
+
+		appendWithCounter(m, "test", 1)
+		appendWithCounter(m, "test", 2)
+		appendWithCounter(m, "test2", 3)
+		assert.Equal(t, 3, len(m))
+		assert.Equal(t, 1, m["test"])
+		assert.Equal(t, 2, m["test2"])
+		assert.Equal(t, 3, m["test22"])
 	})
 }
