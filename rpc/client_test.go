@@ -157,3 +157,33 @@ func TestClient_Call(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, mockCallRequest, readBody(httpMock.Request))
 }
+
+func TestClient_EstimateGas(t *testing.T) {
+	httpMock := newHTTPMock()
+	client, _ := NewClient(
+		WithTransport(httpMock),
+		WithDefaultAddress(types.MustAddressFromHex("0x1111111111111111111111111111111111111111")),
+	)
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockEstimateGasResponse)),
+	}
+
+	to := types.MustAddressFromHex("0x2222222222222222222222222222222222222222")
+	gasLimit := uint64(30400)
+	_, err := client.EstimateGas(
+		context.Background(),
+		types.Call{
+			From:     nil,
+			To:       &to,
+			GasLimit: &gasLimit,
+			GasPrice: big.NewInt(10000000000000),
+			Value:    big.NewInt(10000000000),
+			Input:    hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
+		},
+		types.LatestBlockNumber,
+	)
+	require.NoError(t, err)
+	assert.JSONEq(t, mockEstimateGasRequest, readBody(httpMock.Request))
+}

@@ -216,6 +216,16 @@ func (c *Client) Call(ctx context.Context, call types.Call, block types.BlockNum
 	return c.baseClient.Call(ctx, *callCpy, block)
 }
 
+// EstimateGas implements the RPC interface.
+func (c *Client) EstimateGas(ctx context.Context, call types.Call, block types.BlockNumber) (uint64, error) {
+	callCpy := call.Copy()
+	if callCpy.From == nil && c.defaultAddr != nil {
+		defaultAddr := *c.defaultAddr
+		callCpy.From = &defaultAddr
+	}
+	return c.baseClient.EstimateGas(ctx, *callCpy, block)
+}
+
 // verifyTXChainID verifies that the transaction chain ID is set. If the client
 // has a chain ID set, it will also verify that the transaction chain ID matches
 // the client chain ID.
