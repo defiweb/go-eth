@@ -36,7 +36,7 @@ func main() {
 		SetInput(calldata)
 
 	// Call balanceOf.
-	b, _, err := c.Call(context.Background(), *call, types.LatestBlockNumber)
+	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}

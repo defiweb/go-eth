@@ -516,7 +516,7 @@ func TestBaseClient_SignTransaction(t *testing.T) {
 	chainID := uint64(1)
 	raw, tx, err := client.SignTransaction(
 		context.Background(),
-		types.Transaction{
+		&types.Transaction{
 			ChainID: &chainID,
 			Call: types.Call{
 				From:     &from,
@@ -585,7 +585,7 @@ func TestBaseClient_SendTransaction(t *testing.T) {
 	chainID := uint64(1)
 	txHash, tx, err := client.SendTransaction(
 		context.Background(),
-		types.Transaction{
+		&types.Transaction{
 			ChainID: &chainID,
 			Call: types.Call{
 				From:     &from,
@@ -689,7 +689,7 @@ func TestBaseClient_Call(t *testing.T) {
 	input := hexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333")
 	calldata, call, err := client.Call(
 		context.Background(),
-		types.Call{
+		&types.Call{
 			From:     from,
 			To:       to,
 			GasLimit: &gasLimit,
@@ -747,9 +747,9 @@ func TestBaseClient_EstimateGas(t *testing.T) {
 	}
 
 	gasLimit := uint64(30400)
-	gas, err := client.EstimateGas(
+	gas, _, err := client.EstimateGas(
 		context.Background(),
-		types.Call{
+		&types.Call{
 			From:     types.MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 			To:       types.MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 			GasLimit: &gasLimit,
@@ -1169,7 +1169,7 @@ func TestBaseClient_GetLogs(t *testing.T) {
 
 	from := types.MustBlockNumberFromHex("0x1")
 	to := types.MustBlockNumberFromHex("0x2")
-	logs, err := client.GetLogs(context.Background(), types.FilterLogsQuery{
+	logs, err := client.GetLogs(context.Background(), &types.FilterLogsQuery{
 		FromBlock: &from,
 		ToBlock:   &to,
 		Address:   []types.Address{types.MustAddressFromHex("0x3333333333333333333333333333333333333333")},
@@ -1245,7 +1245,7 @@ func TestBaseClient_SubscribeLogs(t *testing.T) {
 
 	// Mock subscribe response
 	rawCh := make(chan json.RawMessage)
-	query := types.FilterLogsQuery{
+	query := &types.FilterLogsQuery{
 		FromBlock: types.BlockNumberFromUint64Ptr(1),
 		ToBlock:   types.BlockNumberFromUint64Ptr(2),
 		Address:   []types.Address{types.MustAddressFromHex("0x3333333333333333333333333333333333333333")},

@@ -78,7 +78,7 @@ func main() {
 		SetInput(calldata)
 
 	// Call the contract.
-	b, _, err := c.Call(context.Background(), *call, types.LatestBlockNumber)
+	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}

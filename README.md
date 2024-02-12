@@ -49,6 +49,7 @@ Some of key features include:
 
 ## Installation
 
+
 ```bash
 go get -u github.com/defiweb/go-eth
 ```
@@ -147,7 +148,7 @@ func main() {
 		SetInput(calldata)
 
 	// Call balanceOf.
-	b, _, err := c.Call(context.Background(), *call, types.LatestBlockNumber)
+	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}
@@ -249,7 +250,7 @@ func main() {
 		SetInput(calldata)
 
 	// Call the contract.
-	b, _, err := c.Call(context.Background(), *call, types.LatestBlockNumber)
+	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}
@@ -319,11 +320,7 @@ func main() {
 		// Specify a default address for SendTransaction when the transaction
 		// does not have a 'From' field set.
 		rpc.WithDefaultAddress(key.Address()),
-
-		// Specify a chain ID for SendTransaction when the transaction
-		// does not have a 'ChainID' field set.
-		rpc.WithChainID(1),
-
+		
 		// TX modifiers enable modifications to the transaction before signing
 		// and sending to the node. While not mandatory, without them, transaction
 		// parameters like gas limit, gas price, and nonce must be set manually.
@@ -345,6 +342,12 @@ func main() {
 			txmodifier.NewNonceProvider(txmodifier.NonceProviderOptions{
 				UsePendingBlock: false,
 			}),
+
+			// ChainIDProvider automatically sets the chain ID for the transaction.
+			txmodifier.NewChainIDProvider(txmodifier.ChainIDProviderOptions{
+				Replace: false,
+				Cache:   true,
+			}),
 		),
 	)
 	if err != nil {
@@ -362,7 +365,7 @@ func main() {
 		SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).
 		SetInput(calldata)
 
-	txHash, _, err := c.SendTransaction(context.Background(), *tx)
+	txHash, _, err := c.SendTransaction(context.Background(), tx)
 	if err != nil {
 		panic(err)
 	}
@@ -422,7 +425,7 @@ func main() {
 		SetTopics([]types.Hash{transfer.Topic0()})
 
 	// Fetch logs for WETH transfer events.
-	logs, err := c.SubscribeLogs(ctx, *query)
+	logs, err := c.SubscribeLogs(ctx, query)
 	if err != nil {
 		panic(err)
 	}
@@ -828,7 +831,7 @@ func main() {
 		SetTopics([]types.Hash{transfer.Topic0()})
 
 	// Fetch logs for WETH transfer events.
-	logs, err := c.GetLogs(context.Background(), *query)
+	logs, err := c.GetLogs(context.Background(), query)
 	if err != nil {
 		panic(err)
 	}

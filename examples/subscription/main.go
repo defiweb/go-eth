@@ -41,7 +41,7 @@ func main() {
 		SetTopics([]types.Hash{transfer.Topic0()})
 
 	// Fetch logs for WETH transfer events.
-	logs, err := c.SubscribeLogs(ctx, *query)
+	logs, err := c.SubscribeLogs(ctx, query)
 	if err != nil {
 		panic(err)
 	}

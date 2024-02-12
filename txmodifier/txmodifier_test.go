@@ -15,9 +15,14 @@ type mockRPC struct {
 	mock.Mock
 }
 
-func (m *mockRPC) EstimateGas(ctx context.Context, call types.Call, block types.BlockNumber) (uint64, error) {
-	args := m.Called(ctx, call, block)
+func (m *mockRPC) ChainID(ctx context.Context) (uint64, error) {
+	args := m.Called(ctx)
 	return args.Get(0).(uint64), args.Error(1)
+}
+
+func (m *mockRPC) EstimateGas(ctx context.Context, call *types.Call, block types.BlockNumber) (uint64, *types.Call, error) {
+	args := m.Called(ctx, call, block)
+	return args.Get(0).(uint64), call, args.Error(2)
 }
 
 func (m *mockRPC) GasPrice(ctx context.Context) (*big.Int, error) {

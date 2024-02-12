@@ -13,9 +13,8 @@ import (
 type Client struct {
 	baseClient
 
-	keys        []wallet.Key
+	keys        map[types.Address]wallet.Key
 	defaultAddr *types.Address
-	chainID     *uint64
 	txModifiers []TXModifier
 }
 
@@ -42,8 +41,7 @@ func WithTransport(transport transport.Transport) ClientOptions {
 }
 
 // WithKeys allows to set keys that will be used to sign data.
-// It allows to emulate the behavior of the RPC methods that require a key
-// to be available in the node.
+// It allows to emulate the behavior of the RPC methods that require a key.
 //
 // The following methods are affected:
 //   - Accounts - returns the addresses of the provided keys
@@ -53,7 +51,9 @@ func WithTransport(transport transport.Transport) ClientOptions {
 //     using SendRawTransaction
 func WithKeys(keys ...wallet.Key) ClientOptions {
 	return func(c *Client) error {
-		c.keys = keys
+		for _, k := range keys {
+			c.keys[k.Address()] = k
+		}
 		return nil
 	}
 }
@@ -65,20 +65,6 @@ func WithKeys(keys ...wallet.Key) ClientOptions {
 func WithDefaultAddress(addr types.Address) ClientOptions {
 	return func(c *Client) error {
 		c.defaultAddr = &addr
-		return nil
-	}
-}
-
-// WithChainID sets the transaction.ChainID if it is not set in the following
-// methods:
-// - SignTransaction
-// - SendTransaction
-//
-// If the transaction has a ChainID set, it will return an error if it does not
-// match the provided chain ID.
-func WithChainID(chainID uint64) ClientOptions {
-	return func(c *Client) error {
-		c.chainID = &chainID
 		return nil
 	}
 }
@@ -97,7 +83,7 @@ func WithTXModifiers(modifiers ...TXModifier) ClientOptions {
 // NewClient creates a new RPC client.
 // The WithTransport option is required.
 func NewClient(opts ...ClientOptions) (*Client, error) {
-	c := &Client{}
+	c := &Client{keys: make(map[types.Address]wallet.Key)}
 	for _, opt := range opts {
 		if err := opt(c); err != nil {
 			return nil, err
@@ -133,67 +119,41 @@ func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (
 }
 
 // SignTransaction implements the RPC interface.
-func (c *Client) SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error) {
-	txCpy := tx.Copy()
-	if txCpy.ChainID == nil && c.chainID != nil {
-		chainID := *c.chainID
-		txCpy.ChainID = &chainID
-	}
-	if txCpy.Call.From == nil && c.defaultAddr != nil {
-		defaultAddr := *c.defaultAddr
-		txCpy.Call.From = &defaultAddr
-	}
-	if err := c.verifyTXChainID(txCpy); err != nil {
+func (c *Client) SignTransaction(ctx context.Context, tx *types.Transaction) ([]byte, *types.Transaction, error) {
+	tx, err := c.PrepareTransaction(ctx, tx)
+	if err != nil {
 		return nil, nil, err
 	}
-	for _, modifier := range c.txModifiers {
-		if err := modifier.Modify(ctx, c, txCpy); err != nil {
-			return nil, nil, err
-		}
-	}
 	if len(c.keys) == 0 {
-		return c.baseClient.SignTransaction(ctx, *txCpy)
+		return c.baseClient.SignTransaction(ctx, tx)
 	}
-	if key := c.findKey(txCpy.Call.From); key != nil {
-		if err := key.SignTransaction(txCpy); err != nil {
+	if key := c.findKey(tx.Call.From); key != nil {
+		if err := key.SignTransaction(tx); err != nil {
 			return nil, nil, err
 		}
-		raw, err := txCpy.Raw()
+		raw, err := tx.Raw()
 		if err != nil {
 			return nil, nil, err
 		}
-		return raw, txCpy, nil
+		return raw, tx, nil
 	}
 	return nil, nil, fmt.Errorf("rpc client: no key found for address %s", tx.Call.From)
 }
 
 // SendTransaction implements the RPC interface.
-func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, *types.Transaction, error) {
-	txCpy := tx.Copy()
-	if txCpy.ChainID == nil && c.chainID != nil {
-		chainID := *c.chainID
-		txCpy.ChainID = &chainID
-	}
-	if txCpy.Call.From == nil && c.defaultAddr != nil {
-		defaultAddr := *c.defaultAddr
-		txCpy.Call.From = &defaultAddr
-	}
-	if err := c.verifyTXChainID(txCpy); err != nil {
+func (c *Client) SendTransaction(ctx context.Context, tx *types.Transaction) (*types.Hash, *types.Transaction, error) {
+	tx, err := c.PrepareTransaction(ctx, tx)
+	if err != nil {
 		return nil, nil, err
 	}
-	for _, modifier := range c.txModifiers {
-		if err := modifier.Modify(ctx, c, txCpy); err != nil {
-			return nil, nil, err
-		}
-	}
 	if len(c.keys) == 0 {
-		return c.baseClient.SendTransaction(ctx, *txCpy)
+		return c.baseClient.SendTransaction(ctx, tx)
 	}
-	if key := c.findKey(txCpy.Call.From); key != nil {
-		if err := key.SignTransaction(txCpy); err != nil {
+	if key := c.findKey(tx.Call.From); key != nil {
+		if err := key.SignTransaction(tx); err != nil {
 			return nil, nil, err
 		}
-		raw, err := txCpy.Raw()
+		raw, err := tx.Raw()
 		if err != nil {
 			return nil, nil, err
 		}
@@ -201,42 +161,56 @@ func (c *Client) SendTransaction(ctx context.Context, tx types.Transaction) (*ty
 		if err != nil {
 			return nil, nil, err
 		}
-		return txHash, txCpy, nil
+		return txHash, tx, nil
 	}
 	return nil, nil, fmt.Errorf("rpc client: no key found for address %s", tx.Call.From)
 }
 
+// PrepareTransaction prepares the transaction by applying transaction
+// modifiers and setting the default address if it is not set.
+//
+// A copy of the modified transaction is returned.
+func (c *Client) PrepareTransaction(ctx context.Context, tx *types.Transaction) (*types.Transaction, error) {
+	if tx == nil {
+		return nil, fmt.Errorf("rpc client: transaction is nil")
+	}
+	txCpy := tx.Copy()
+	if txCpy.Call.From == nil && c.defaultAddr != nil {
+		defaultAddr := *c.defaultAddr
+		txCpy.Call.From = &defaultAddr
+	}
+	for _, modifier := range c.txModifiers {
+		if err := modifier.Modify(ctx, c, txCpy); err != nil {
+			return nil, err
+		}
+	}
+	return txCpy, nil
+}
+
 // Call implements the RPC interface.
-func (c *Client) Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, *types.Call, error) {
+func (c *Client) Call(ctx context.Context, call *types.Call, block types.BlockNumber) ([]byte, *types.Call, error) {
+	if call == nil {
+		return nil, nil, fmt.Errorf("rpc client: call is nil")
+	}
 	callCpy := call.Copy()
 	if callCpy.From == nil && c.defaultAddr != nil {
 		defaultAddr := *c.defaultAddr
 		callCpy.From = &defaultAddr
 	}
-	return c.baseClient.Call(ctx, *callCpy, block)
+	return c.baseClient.Call(ctx, callCpy, block)
 }
 
 // EstimateGas implements the RPC interface.
-func (c *Client) EstimateGas(ctx context.Context, call types.Call, block types.BlockNumber) (uint64, error) {
+func (c *Client) EstimateGas(ctx context.Context, call *types.Call, block types.BlockNumber) (uint64, *types.Call, error) {
+	if call == nil {
+		return 0, nil, fmt.Errorf("rpc client: call is nil")
+	}
 	callCpy := call.Copy()
 	if callCpy.From == nil && c.defaultAddr != nil {
 		defaultAddr := *c.defaultAddr
 		callCpy.From = &defaultAddr
 	}
-	return c.baseClient.EstimateGas(ctx, *callCpy, block)
-}
-
-// verifyTXChainID verifies that the transaction chain ID is set. If the client
-// has a chain ID set, it will also verify that the transaction chain ID matches
-// the client chain ID.
-func (c *Client) verifyTXChainID(tx *types.Transaction) error {
-	if tx.ChainID == nil {
-		return fmt.Errorf("rpc client: transaction chain ID is not set")
-	}
-	if c.chainID != nil && *tx.ChainID != *c.chainID {
-		return fmt.Errorf("rpc client: transaction chain ID does not match")
-	}
-	return nil
+	return c.baseClient.EstimateGas(ctx, callCpy, block)
 }
 
 // findKey finds a key by address.
@@ -244,10 +218,8 @@ func (c *Client) findKey(addr *types.Address) wallet.Key {
 	if addr == nil {
 		return nil
 	}
-	for _, key := range c.keys {
-		if key.Address() == *addr {
-			return key
-		}
+	if key, ok := c.keys[*addr]; ok {
+		return key
 	}
 	return nil
 }

@@ -91,14 +91,14 @@ type RPC interface {
 	// It signs the given transaction.
 	//
 	// If transaction was internally mutated, the mutated call is returned.
-	SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error)
+	SignTransaction(ctx context.Context, tx *types.Transaction) ([]byte, *types.Transaction, error)
 
 	// SendTransaction performs eth_sendTransaction RPC call.
 	//
 	// It sends a transaction to the network.
 	//
 	// If transaction was internally mutated, the mutated call is returned.
-	SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, *types.Transaction, error)
+	SendTransaction(ctx context.Context, tx *types.Transaction) (*types.Hash, *types.Transaction, error)
 
 	// SendRawTransaction performs eth_sendRawTransaction RPC call.
 	//
@@ -111,12 +111,14 @@ type RPC interface {
 	// transaction on the blockchain.
 	//
 	// If call was internally mutated, the mutated call is returned.
-	Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, *types.Call, error)
+	Call(ctx context.Context, call *types.Call, block types.BlockNumber) ([]byte, *types.Call, error)
 
 	// EstimateGas performs eth_estimateGas RPC call.
 	//
 	// It estimates the gas necessary to execute a specific transaction.
-	EstimateGas(ctx context.Context, call types.Call, block types.BlockNumber) (uint64, error)
+	//
+	// If call was internally mutated, the mutated call is returned.
+	EstimateGas(ctx context.Context, call *types.Call, block types.BlockNumber) (uint64, *types.Call, error)
 
 	// BlockByHash performs eth_getBlockByHash RPC call.
 	//
@@ -164,7 +166,7 @@ type RPC interface {
 	// GetLogs performs eth_getLogs RPC call.
 	//
 	// It returns logs that match the given query.
-	GetLogs(ctx context.Context, query types.FilterLogsQuery) ([]types.Log, error)
+	GetLogs(ctx context.Context, query *types.FilterLogsQuery) ([]types.Log, error)
 
 	// TODO: eth_getWork
 	// TODO: eth_submitWork
@@ -181,7 +183,7 @@ type RPC interface {
 	// It creates a subscription that will send logs that match the given query.
 	//
 	// Subscription channel will be closed when the context is canceled.
-	SubscribeLogs(ctx context.Context, query types.FilterLogsQuery) (chan types.Log, error)
+	SubscribeLogs(ctx context.Context, query *types.FilterLogsQuery) (chan types.Log, error)
 
 	// SubscribeNewHeads performs eth_subscribe RPC call with "newHeads"
 	// subscription type.
