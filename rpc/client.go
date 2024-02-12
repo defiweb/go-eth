@@ -113,7 +113,7 @@ func (c *Client) Sign(ctx context.Context, account types.Address, data []byte) (
 		return c.baseClient.Sign(ctx, account, data)
 	}
 	if key := c.findKey(&account); key != nil {
-		return key.SignMessage(data)
+		return key.SignMessage(ctx, data)
 	}
 	return nil, fmt.Errorf("rpc client: no key found for address %s", account)
 }
@@ -128,7 +128,7 @@ func (c *Client) SignTransaction(ctx context.Context, tx *types.Transaction) ([]
 		return c.baseClient.SignTransaction(ctx, tx)
 	}
 	if key := c.findKey(tx.Call.From); key != nil {
-		if err := key.SignTransaction(tx); err != nil {
+		if err := key.SignTransaction(ctx, tx); err != nil {
 			return nil, nil, err
 		}
 		raw, err := tx.Raw()
@@ -150,7 +150,7 @@ func (c *Client) SendTransaction(ctx context.Context, tx *types.Transaction) (*t
 		return c.baseClient.SendTransaction(ctx, tx)
 	}
 	if key := c.findKey(tx.Call.From); key != nil {
-		if err := key.SignTransaction(tx); err != nil {
+		if err := key.SignTransaction(ctx, tx); err != nil {
 			return nil, nil, err
 		}
 		raw, err := tx.Raw()

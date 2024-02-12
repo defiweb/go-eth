@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/json"
@@ -71,23 +72,23 @@ func (k *PrivateKey) Address() types.Address {
 	return k.address
 }
 
-// SignHash implements the Key interface.
-func (k *PrivateKey) SignHash(hash types.Hash) (*types.Signature, error) {
+// SignHash implements the KeyWithHashSigner interface.
+func (k *PrivateKey) SignHash(_ context.Context, hash types.Hash) (*types.Signature, error) {
 	return k.sign.SignHash(hash)
 }
 
 // SignMessage implements the Key interface.
-func (k *PrivateKey) SignMessage(data []byte) (*types.Signature, error) {
+func (k *PrivateKey) SignMessage(_ context.Context, data []byte) (*types.Signature, error) {
 	return k.sign.SignMessage(data)
 }
 
 // SignTransaction implements the Key interface.
-func (k *PrivateKey) SignTransaction(tx *types.Transaction) error {
+func (k *PrivateKey) SignTransaction(_ context.Context, tx *types.Transaction) error {
 	return k.sign.SignTransaction(tx)
 }
 
-// VerifyHash implements the Key interface.
-func (k *PrivateKey) VerifyHash(hash types.Hash, sig types.Signature) bool {
+// VerifyHash implements the KeyWithHashSigner interface.
+func (k *PrivateKey) VerifyHash(_ context.Context, hash types.Hash, sig types.Signature) bool {
 	addr, err := k.recover.RecoverHash(hash, sig)
 	if err != nil {
 		return false
@@ -96,7 +97,7 @@ func (k *PrivateKey) VerifyHash(hash types.Hash, sig types.Signature) bool {
 }
 
 // VerifyMessage implements the Key interface.
-func (k *PrivateKey) VerifyMessage(data []byte, sig types.Signature) bool {
+func (k *PrivateKey) VerifyMessage(_ context.Context, data []byte, sig types.Signature) bool {
 	addr, err := k.recover.RecoverMessage(data, sig)
 	if err != nil {
 		return false
