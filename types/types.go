@@ -719,6 +719,33 @@ func (s Signature) IsZero() bool {
 	return true
 }
 
+// Equal returns true if the signature is equal to the given signature.
+//
+// Nil values are considered as zero.
+func (s Signature) Equal(c Signature) bool {
+	sv, sr, ss := s.V, s.R, s.S
+	cv, cr, cs := c.V, c.R, c.S
+	if sv == nil {
+		sv = new(big.Int)
+	}
+	if sr == nil {
+		sr = new(big.Int)
+	}
+	if ss == nil {
+		ss = new(big.Int)
+	}
+	if cv == nil {
+		cv = new(big.Int)
+	}
+	if cr == nil {
+		cr = new(big.Int)
+	}
+	if cs == nil {
+		cs = new(big.Int)
+	}
+	return sv.Cmp(cv) == 0 && sr.Cmp(cr) == 0 && ss.Cmp(cs) == 0
+}
+
 func (s Signature) Copy() *Signature {
 	cpy := &Signature{}
 	if s.V != nil {

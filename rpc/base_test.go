@@ -1118,6 +1118,76 @@ func TestBaseClient_GetTransactionReceipt(t *testing.T) {
 	assert.Equal(t, false, receipt.Logs[0].Removed)
 }
 
+const mockGetBlockReceiptsRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_getBlockReceipts",
+	  "params": [
+		"0x1"
+	  ]
+	}
+`
+
+const mockGetBlockReceiptsResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": [
+		{
+		  "blockHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+		  "blockNumber": "0x2222",
+		  "contractAddress": null,
+		  "cumulativeGasUsed": "0x33333",
+		  "effectiveGasPrice": "0x4444444444",
+		  "from": "0x5555555555555555555555555555555555555555",
+		  "gasUsed": "0x66666",
+		  "logs": [
+			{
+			  "address": "0x7777777777777777777777777777777777777777",
+			  "blockHash": "0x1111111111111111111111111111111111111111111111111111111111111111",
+			  "blockNumber": "0x2222",
+			  "data": "0x000000000000000000000000398137383b3d25c92898c656696e41950e47316b00000000000000000000000000000000000000000000000000000000000cee6100000000000000000000000000000000000000000000000000000000000ac3e100000000000000000000000000000000000000000000000000000000005baf35",
+			  "logIndex": "0x8",
+			  "removed": false,
+			  "topics": [
+				"0x9999999999999999999999999999999999999999999999999999999999999999"
+			  ],
+			  "transactionHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			  "transactionIndex": "0x11"
+			}
+		  ],
+		  "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000800000200000000000000000000000000000",
+		  "status": "0x1",
+		  "to": "0x7777777777777777777777777777777777777777",
+		  "transactionHash": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		  "transactionIndex": "0x11",
+		  "type": "0x0"
+		}
+	  ]
+	}
+`
+
+func TestBaseClient_GetBlockReceipts(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetBlockReceiptsResponse)),
+	}
+
+	receipts, err := client.GetBlockReceipts(
+		context.Background(),
+		types.MustBlockNumberFromHex("0x1"),
+	)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockGetBlockReceiptsRequest, readBody(httpMock.Request))
+	require.Len(t, receipts, 1)
+	assert.Equal(t, types.MustHashFromHex("0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", types.PadNone), receipts[0].TransactionHash)
+}
+
 const mockGetUncleByBlockHashAndIndexRequest = `
 	{
 	  "jsonrpc": "2.0",
