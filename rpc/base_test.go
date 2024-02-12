@@ -1118,6 +1118,70 @@ func TestBaseClient_GetTransactionReceipt(t *testing.T) {
 	assert.Equal(t, false, receipt.Logs[0].Removed)
 }
 
+const mockGetUncleByBlockHashAndIndexRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_getUncleByBlockHashAndIndex",
+	  "params": [
+		"0x1111111111111111111111111111111111111111111111111111111111111111",
+		"0x0"
+	  ]
+	}
+`
+
+func TestBaseClient_GetUncleByBlockHashAndIndex(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
+	}
+
+	block, err := client.GetUncleByBlockHashAndIndex(
+		context.Background(),
+		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
+		0,
+	)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockGetUncleByBlockHashAndIndexRequest, readBody(httpMock.Request))
+	assert.Equal(t, types.MustHashFromHex("0x2222222222222222222222222222222222222222222222222222222222222222", types.PadNone), block.Hash)
+}
+
+const mockGetUncleByBlockNumberAndIndexRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_getUncleByBlockNumberAndIndex",
+	  "params": [
+		"0x1",
+		"0x2"
+	  ]
+	}
+`
+
+func TestBaseClient_GetUncleByBlockNumberAndIndex(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockBlockByNumberResponse)),
+	}
+
+	block, err := client.GetUncleByBlockNumberAndIndex(
+		context.Background(),
+		types.MustBlockNumberFromHex("0x1"),
+		2,
+	)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockGetUncleByBlockNumberAndIndexRequest, readBody(httpMock.Request))
+	assert.Equal(t, types.MustHashFromHex("0x2222222222222222222222222222222222222222222222222222222222222222", types.PadNone), block.Hash)
+}
+
 const mockGetLogsRequest = `
 	{
 	  "jsonrpc": "2.0",

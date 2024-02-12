@@ -150,12 +150,16 @@ type RPC interface {
 	// It returns the receipt of a transaction by transaction hash.
 	GetTransactionReceipt(ctx context.Context, hash types.Hash) (*types.TransactionReceipt, error)
 
-	// TODO: eth_getUncleByBlockHashAndIndex
-	// TODO: eth_getUncleByBlockNumberAndIndex
-	// TODO: eth_getCompilers
-	// TODO: eth_compileSolidity
-	// TODO: eth_compileLLL
-	// TODO: eth_compileSerpent
+	// GetUncleByBlockHashAndIndex performs eth_getUncleByBlockNumberAndIndex RPC call.
+	//
+	// It returns information about an uncle of a block by number and uncle index position.
+	GetUncleByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.Block, error)
+
+	// GetUncleByBlockNumberAndIndex performs eth_getUncleByBlockNumberAndIndex RPC call.
+	//
+	// It returns information about an uncle of a block by hash and uncle index position.
+	GetUncleByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.Block, error)
+
 	// TODO: eth_newFilter
 	// TODO: eth_newBlockFilter
 	// TODO: eth_newPendingTransactionFilter
@@ -167,10 +171,6 @@ type RPC interface {
 	//
 	// It returns logs that match the given query.
 	GetLogs(ctx context.Context, query *types.FilterLogsQuery) ([]types.Log, error)
-
-	// TODO: eth_getWork
-	// TODO: eth_submitWork
-	// TODO: eth_submitHashrate
 
 	// MaxPriorityFeePerGas performs eth_maxPriorityFeePerGas RPC call.
 	//
