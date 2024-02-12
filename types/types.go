@@ -1011,6 +1011,17 @@ func (b *Bytes) UnmarshalText(input []byte) error {
 }
 
 //
+// SyncStatus type:
+//
+
+// SyncStatus represents the sync status of a node.
+type SyncStatus struct {
+	StartingBlock BlockNumber `json:"startingBlock"`
+	CurrentBlock  BlockNumber `json:"currentBlock"`
+	HighestBlock  BlockNumber `json:"highestBlock"`
+}
+
+//
 // Internal types:
 //
 

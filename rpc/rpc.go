@@ -9,16 +9,35 @@ import (
 
 // RPC is an RPC client for the Ethereum-compatible nodes.
 type RPC interface {
-	// TODO: web3_clientVersion
-	// TODO: web3_sha3
-	// TODO: net_version
-	// TODO: net_listening
-	// TODO: net_peerCount
-	// TODO: eth_protocolVersion
-	// TODO: eth_syncing
-	// TODO: eth_coinbase
-	// TODO: eth_mining
-	// TODO: eth_hashrate
+	// ClientVersion performs web3_clientVersion RPC call.
+	//
+	// It returns the current client version.
+	ClientVersion(ctx context.Context) (string, error)
+
+	// Listening performs net_listening RPC call.
+	//
+	// It returns true if the client is actively listening for network.
+	Listening(ctx context.Context) (bool, error)
+
+	// PeerCount performs net_peerCount RPC call.
+	//
+	// It returns the number of connected peers.
+	PeerCount(ctx context.Context) (uint64, error)
+
+	// ProtocolVersion performs eth_protocolVersion RPC call.
+	//
+	// It returns the current Ethereum protocol version.
+	ProtocolVersion(ctx context.Context) (uint64, error)
+
+	// Syncing performs eth_syncing RPC call.
+	//
+	// It returns an object with data about the sync status or false.
+	Syncing(ctx context.Context) (*types.SyncStatus, error)
+
+	// NetworkID performs net_version RPC call.
+	//
+	// It returns the current network ID.
+	NetworkID(ctx context.Context) (uint64, error)
 
 	// ChainID performs eth_chainId RPC call.
 	//

@@ -17,6 +17,206 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+const mockClientVersionRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "web3_clientVersion",
+	  "params": []
+	}
+`
+
+const mockClientVersionResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "Geth/v1.9.25-unstable-3f0b5e4e-20201014/linux-amd64/go1.15.2"
+	}
+`
+
+func TestBaseClient_ClientVersion(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockClientVersionResponse)),
+	}
+
+	clientVersion, err := client.ClientVersion(context.Background())
+	require.NoError(t, err)
+	assert.JSONEq(t, mockClientVersionRequest, readBody(httpMock.Request))
+	assert.Equal(t, "Geth/v1.9.25-unstable-3f0b5e4e-20201014/linux-amd64/go1.15.2", clientVersion)
+}
+
+const mockListeningRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "net_listening",
+	  "params": []
+	}
+`
+
+const mockListeningResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": true
+	}
+`
+
+func TestBaseClient_Listening(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockListeningResponse)),
+	}
+
+	listening, err := client.Listening(context.Background())
+	require.NoError(t, err)
+	assert.JSONEq(t, mockListeningRequest, readBody(httpMock.Request))
+	assert.True(t, listening)
+}
+
+const mockPeerCountRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "net_peerCount",
+	  "params": []
+	}
+`
+
+const mockPeerCountResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1"
+	}
+`
+
+func TestBaseClient_PeerCount(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockPeerCountResponse)),
+	}
+
+	peerCount, err := client.PeerCount(context.Background())
+	require.NoError(t, err)
+	assert.JSONEq(t, mockPeerCountRequest, readBody(httpMock.Request))
+	assert.Equal(t, uint64(1), peerCount)
+}
+
+const mockProtocolVersionRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_protocolVersion",
+	  "params": []
+	}
+`
+
+const mockProtocolVersionResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1"
+	}
+`
+
+func TestBaseClient_ProtocolVersion(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockProtocolVersionResponse)),
+	}
+
+	protocolVersion, err := client.ProtocolVersion(context.Background())
+	require.NoError(t, err)
+	assert.JSONEq(t, mockProtocolVersionRequest, readBody(httpMock.Request))
+	assert.Equal(t, uint64(1), protocolVersion)
+}
+
+const mockSyncingRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_syncing",
+	  "params": []
+	}
+`
+
+const mockSyncingResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+		"startingBlock": "0x384",
+		"currentBlock": "0x386",
+		"highestBlock": "0x454"
+	  }
+	}
+`
+
+func TestBaseClient_Syncing(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockSyncingResponse)),
+	}
+
+	syncing, err := client.Syncing(context.Background())
+	require.NoError(t, err)
+	assert.JSONEq(t, mockSyncingRequest, readBody(httpMock.Request))
+	assert.Equal(t, &types.SyncStatus{
+		StartingBlock: types.MustBlockNumberFromHex("0x384"),
+		CurrentBlock:  types.MustBlockNumberFromHex("0x386"),
+		HighestBlock:  types.MustBlockNumberFromHex("0x454"),
+	}, syncing)
+}
+
+const mockNetworkIDRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "net_version",
+	  "params": []
+	}
+`
+
+const mockNetworkIDResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1"
+	}
+`
+
+func TestBaseClient_NetworkID(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockNetworkIDResponse)),
+	}
+
+	networkID, err := client.NetworkID(context.Background())
+	require.NoError(t, err)
+	assert.JSONEq(t, mockNetworkIDRequest, readBody(httpMock.Request))
+	assert.Equal(t, uint64(1), networkID)
+}
+
 const mockChanIDRequest = `
 	{
 	  "jsonrpc": "2.0",

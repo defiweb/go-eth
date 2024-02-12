@@ -17,6 +17,60 @@ type baseClient struct {
 	transport transport.Transport
 }
 
+// ClientVersion implements the RPC interface.
+func (c *baseClient) ClientVersion(ctx context.Context) (string, error) {
+	var res string
+	if err := c.transport.Call(ctx, &res, "web3_clientVersion"); err != nil {
+		return "", err
+	}
+	return res, nil
+}
+
+// Listening implements the RPC interface.
+func (c *baseClient) Listening(ctx context.Context) (bool, error) {
+	var res bool
+	if err := c.transport.Call(ctx, &res, "net_listening"); err != nil {
+		return false, err
+	}
+	return res, nil
+}
+
+// PeerCount implements the RPC interface.
+func (c *baseClient) PeerCount(ctx context.Context) (uint64, error) {
+	var res types.Number
+	if err := c.transport.Call(ctx, &res, "net_peerCount"); err != nil {
+		return 0, err
+	}
+	return res.Big().Uint64(), nil
+}
+
+// ProtocolVersion implements the RPC interface.
+func (c *baseClient) ProtocolVersion(ctx context.Context) (uint64, error) {
+	var res types.Number
+	if err := c.transport.Call(ctx, &res, "eth_protocolVersion"); err != nil {
+		return 0, err
+	}
+	return res.Big().Uint64(), nil
+}
+
+// Syncing implements the RPC interface.
+func (c *baseClient) Syncing(ctx context.Context) (*types.SyncStatus, error) {
+	var res types.SyncStatus
+	if err := c.transport.Call(ctx, &res, "eth_syncing"); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// NetworkID implements the RPC interface.
+func (c *baseClient) NetworkID(ctx context.Context) (uint64, error) {
+	var res types.Number
+	if err := c.transport.Call(ctx, &res, "net_version"); err != nil {
+		return 0, err
+	}
+	return res.Big().Uint64(), nil
+}
+
 // ChainID implements the RPC interface.
 func (c *baseClient) ChainID(ctx context.Context) (uint64, error) {
 	var res types.Number
