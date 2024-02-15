@@ -184,12 +184,44 @@ type RPC interface {
 	// It returns information about an uncle of a block by hash and uncle index position.
 	GetUncleByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.Block, error)
 
-	// TODO: eth_newFilter
-	// TODO: eth_newBlockFilter
-	// TODO: eth_newPendingTransactionFilter
-	// TODO: eth_uninstallFilter
-	// TODO: eth_getFilterChanges
-	// TODO: eth_getFilterLogs
+	// NewFilter performs eth_newFilter RPC call.
+	//
+	// It creates a filter object based on the given filter options. To check
+	// if the state has changed, use GetFilterChanges.
+	NewFilter(ctx context.Context, query *types.FilterLogsQuery) (*big.Int, error)
+
+	// NewBlockFilter performs eth_newBlockFilter RPC call.
+	//
+	// It creates a filter in the node, to notify when a new block arrives. To
+	// check if the state has changed, use GetBlockFilterChanges.
+	NewBlockFilter(ctx context.Context) (*big.Int, error)
+
+	// NewPendingTransactionFilter performs eth_newPendingTransactionFilter RPC call.
+	//
+	// It creates a filter in the node, to notify when new pending transactions
+	// arrive. To check if the state has changed, use GetFilterChanges.
+	NewPendingTransactionFilter(ctx context.Context) (*big.Int, error)
+
+	// UninstallFilter performs eth_uninstallFilter RPC call.
+	//
+	// It uninstalls a filter with given ID. Should always be called when watch
+	// is no longer needed.
+	UninstallFilter(ctx context.Context, id *big.Int) (bool, error)
+
+	// GetFilterChanges performs eth_getFilterChanges RPC call.
+	//
+	// It returns an array of logs that occurred since the given filter ID.
+	GetFilterChanges(ctx context.Context, id *big.Int) ([]types.Log, error)
+
+	// GetBlockFilterChanges performs eth_getFilterChanges RPC call.
+	//
+	// It returns an array of block hashes that occurred since the given filter ID.
+	GetBlockFilterChanges(ctx context.Context, id *big.Int) ([]types.Hash, error)
+
+	// GetFilterLogs performs eth_getFilterLogs RPC call.
+	//
+	// It returns an array of all logs matching filter with given ID.
+	GetFilterLogs(ctx context.Context, id *big.Int) ([]types.Log, error)
 
 	// GetLogs performs eth_getLogs RPC call.
 	//

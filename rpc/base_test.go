@@ -1452,6 +1452,300 @@ func TestBaseClient_GetUncleByBlockNumberAndIndex(t *testing.T) {
 	assert.Equal(t, types.MustHashFromHex("0x2222222222222222222222222222222222222222222222222222222222222222", types.PadNone), block.Hash)
 }
 
+const mockNewFilterRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_newFilter",
+	  "params": [
+		{
+		  "fromBlock": "0x1",
+		  "toBlock": "0x2",
+		  "address": "0x3333333333333333333333333333333333333333",
+		  "topics": ["0x4444444444444444444444444444444444444444444444444444444444444444"]
+		}
+	  ]
+	}
+`
+
+const mockNewFilterResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1"
+	}
+`
+
+func TestBaseClient_NewFilter(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockNewFilterResponse)),
+	}
+
+	from := types.MustBlockNumberFromHex("0x1")
+	to := types.MustBlockNumberFromHex("0x2")
+	filterID, err := client.NewFilter(context.Background(), &types.FilterLogsQuery{
+		FromBlock: &from,
+		ToBlock:   &to,
+		Address:   []types.Address{types.MustAddressFromHex("0x3333333333333333333333333333333333333333")},
+		Topics: [][]types.Hash{
+			{types.MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", types.PadNone)},
+		},
+	})
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockNewFilterRequest, readBody(httpMock.Request))
+	assert.Equal(t, big.NewInt(1), filterID)
+}
+
+const mockNewBlockFilterRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_newBlockFilter",
+	  "params": []
+	}
+`
+
+const mockNewBlockFilterResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1"
+	}
+`
+
+func TestBaseClient_NewBlockFilter(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockNewBlockFilterResponse)),
+	}
+
+	filterID, err := client.NewBlockFilter(context.Background())
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockNewBlockFilterRequest, readBody(httpMock.Request))
+	assert.Equal(t, big.NewInt(1), filterID)
+}
+
+const mockNewPendingTransactionFilterRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_newPendingTransactionFilter",
+	  "params": []
+	}
+`
+
+const mockNewPendingTransactionFilterResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1"
+	}
+`
+
+func TestBaseClient_NewPendingTransactionFilter(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockNewPendingTransactionFilterResponse)),
+	}
+
+	filterID, err := client.NewPendingTransactionFilter(context.Background())
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockNewPendingTransactionFilterRequest, readBody(httpMock.Request))
+	assert.Equal(t, big.NewInt(1), filterID)
+}
+
+const mockUninstallFilterRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_uninstallFilter",
+	  "params": ["0x1"]
+	}
+`
+
+const mockUninstallFilterResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": true
+	}
+`
+
+func TestBaseClient_UninstallFilter(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockUninstallFilterResponse)),
+	}
+
+	filterID := big.NewInt(1)
+	success, err := client.UninstallFilter(context.Background(), filterID)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockUninstallFilterRequest, readBody(httpMock.Request))
+	assert.True(t, success)
+}
+
+const mockGetFilterChangesRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_getFilterChanges",
+	  "params": ["0x1"]
+	}
+`
+
+const mockGetFilterChangesResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": [
+		{
+		  "address": "0x1111111111111111111111111111111111111111",
+		  "topics": ["0x2222222222222222222222222222222222222222222222222222222222222222"],
+		  "data": "0x3333333333333333333333333333333333333333333333333333333333333333",
+		  "blockNumber": "0x44444",
+		  "transactionHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+		  "transactionIndex": "0x66",
+		  "blockHash": "0x7777777777777777777777777777777777777777777777777777777777777777",
+		  "logIndex": "0x88",
+		  "removed": false
+		}
+	  ]
+	}
+`
+
+func TestBaseClient_GetFilterChanges(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetFilterChangesResponse)),
+	}
+
+	filterID := big.NewInt(1)
+	logs, err := client.GetFilterChanges(context.Background(), filterID)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockGetFilterChangesRequest, readBody(httpMock.Request))
+	assert.Len(t, logs, 1)
+	assert.Equal(t, types.MustAddressFromHex("0x1111111111111111111111111111111111111111"), logs[0].Address)
+	assert.Equal(t, []types.Hash{types.MustHashFromHex("0x2222222222222222222222222222222222222222222222222222222222222222", types.PadNone)}, logs[0].Topics)
+	assert.Equal(t, hexutil.MustHexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333"), logs[0].Data)
+	assert.Equal(t, types.MustBlockNumberFromHexPtr("0x44444").Big(), logs[0].BlockNumber)
+	assert.Equal(t, types.MustHashFromHexPtr("0x5555555555555555555555555555555555555555555555555555555555555555", types.PadNone), logs[0].TransactionHash)
+	assert.Equal(t, uint64(0x66), *logs[0].TransactionIndex)
+	assert.Equal(t, types.MustHashFromHexPtr("0x7777777777777777777777777777777777777777777777777777777777777777", types.PadNone), logs[0].BlockHash)
+	assert.Equal(t, uint64(0x88), *logs[0].LogIndex)
+	assert.False(t, logs[0].Removed)
+}
+
+const mockGetBlockFilterChangesRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_getFilterChanges",
+	  "params": ["0x1"]
+	}
+`
+
+const mockGetBlockFilterChangesResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": ["0x1111111111111111111111111111111111111111111111111111111111111111"]
+	}
+`
+
+func TestBaseClient_GetBlockFilterChanges(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetBlockFilterChangesResponse)),
+	}
+
+	filterID := big.NewInt(1)
+	blockHashes, err := client.GetBlockFilterChanges(context.Background(), filterID)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockGetBlockFilterChangesRequest, readBody(httpMock.Request))
+	assert.Len(t, blockHashes, 1)
+	assert.Equal(t, types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), blockHashes[0])
+}
+
+const mockGetFilterLogsRequest = `
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "eth_getFilterLogs",
+  "params": ["0x1"]
+}
+`
+
+const mockGetFilterLogsResponse = `
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": [
+    {
+      "address": "0x1111111111111111111111111111111111111111",
+      "topics": ["0x2222222222222222222222222222222222222222222222222222222222222222"],
+      "data": "0x3333333333333333333333333333333333333333333333333333333333333333",
+      "blockNumber": "0x1",
+      "transactionHash": "0x5555555555555555555555555555555555555555555555555555555555555555",
+      "transactionIndex": "0x0",
+      "blockHash": "0x7777777777777777777777777777777777777777777777777777777777777777",
+      "logIndex": "0x1",
+      "removed": false
+    }
+  ]
+}
+`
+
+func TestBaseClient_GetFilterLogs(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &baseClient{transport: httpMock}
+
+	httpMock.ResponseMock = &http.Response{
+		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewBufferString(mockGetFilterLogsResponse)),
+	}
+
+	filterID := big.NewInt(1)
+	logs, err := client.GetFilterLogs(context.Background(), filterID)
+
+	require.NoError(t, err)
+	assert.JSONEq(t, mockGetFilterLogsRequest, readBody(httpMock.Request))
+	assert.Len(t, logs, 1)
+	assert.Equal(t, types.MustAddressFromHex("0x1111111111111111111111111111111111111111"), logs[0].Address)
+	assert.Equal(t, []types.Hash{types.MustHashFromHex("0x2222222222222222222222222222222222222222222222222222222222222222", types.PadNone)}, logs[0].Topics)
+	assert.Equal(t, hexutil.MustHexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333"), logs[0].Data)
+	assert.Equal(t, big.NewInt(1), logs[0].BlockNumber)
+	assert.Equal(t, types.MustHashFromHexPtr("0x5555555555555555555555555555555555555555555555555555555555555555", types.PadNone), logs[0].TransactionHash)
+	assert.Equal(t, uint64(0), *logs[0].TransactionIndex)
+	assert.Equal(t, types.MustHashFromHexPtr("0x7777777777777777777777777777777777777777777777777777777777777777", types.PadNone), logs[0].BlockHash)
+	assert.Equal(t, uint64(1), *logs[0].LogIndex)
+	assert.False(t, logs[0].Removed)
+}
+
 const mockGetLogsRequest = `
 	{
 	  "jsonrpc": "2.0",

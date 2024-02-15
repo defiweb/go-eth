@@ -347,6 +347,70 @@ func (c *baseClient) GetUncleByBlockNumberAndIndex(ctx context.Context, number t
 	return &res, nil
 }
 
+// NewFilter implements the RPC interface.
+func (c *baseClient) NewFilter(ctx context.Context, query *types.FilterLogsQuery) (*big.Int, error) {
+	var res *types.Number
+	if err := c.transport.Call(ctx, &res, "eth_newFilter", query); err != nil {
+		return nil, err
+	}
+	return res.Big(), nil
+}
+
+// NewBlockFilter implements the RPC interface.
+func (c *baseClient) NewBlockFilter(ctx context.Context) (*big.Int, error) {
+	var res *types.Number
+	if err := c.transport.Call(ctx, &res, "eth_newBlockFilter"); err != nil {
+		return nil, err
+	}
+	return res.Big(), nil
+
+}
+
+// NewPendingTransactionFilter implements the RPC interface.
+func (c *baseClient) NewPendingTransactionFilter(ctx context.Context) (*big.Int, error) {
+	var res *types.Number
+	if err := c.transport.Call(ctx, &res, "eth_newPendingTransactionFilter"); err != nil {
+		return nil, err
+	}
+	return res.Big(), nil
+}
+
+// UninstallFilter implements the RPC interface.
+func (c *baseClient) UninstallFilter(ctx context.Context, id *big.Int) (bool, error) {
+	var res bool
+	if err := c.transport.Call(ctx, &res, "eth_uninstallFilter", types.NumberFromBigInt(id)); err != nil {
+		return false, err
+	}
+	return res, nil
+}
+
+// GetFilterChanges implements the RPC interface.
+func (c *baseClient) GetFilterChanges(ctx context.Context, id *big.Int) ([]types.Log, error) {
+	var res []types.Log
+	if err := c.transport.Call(ctx, &res, "eth_getFilterChanges", types.NumberFromBigInt(id)); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetFilterLogs implements the RPC interface.
+func (c *baseClient) GetFilterLogs(ctx context.Context, id *big.Int) ([]types.Log, error) {
+	var res []types.Log
+	if err := c.transport.Call(ctx, &res, "eth_getFilterLogs", types.NumberFromBigInt(id)); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetBlockFilterChanges implements the RPC interface.
+func (c *baseClient) GetBlockFilterChanges(ctx context.Context, id *big.Int) ([]types.Hash, error) {
+	var res []types.Hash
+	if err := c.transport.Call(ctx, &res, "eth_getFilterChanges", types.NumberFromBigInt(id)); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // GetLogs implements the RPC interface.
 func (c *baseClient) GetLogs(ctx context.Context, query *types.FilterLogsQuery) ([]types.Log, error) {
 	var res []types.Log

@@ -58,10 +58,12 @@ func WithKeys(keys ...wallet.Key) ClientOptions {
 	}
 }
 
-// WithDefaultAddress sets the transaction.From address if it is not set
-// in the following methods:
-// - SignTransaction
-// - SendTransaction
+// WithDefaultAddress sets the call "from" address if it is not set in the
+// following methods:
+//   - SignTransaction
+//   - SendTransaction
+//   - Call
+//   - EstimateGas
 func WithDefaultAddress(addr types.Address) ClientOptions {
 	return func(c *Client) error {
 		c.defaultAddr = &addr
