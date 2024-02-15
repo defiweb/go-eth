@@ -317,13 +317,15 @@ func Test_AddressesType_Marshal(t *testing.T) {
 
 func Test_BlockNumberType_Unmarshal(t *testing.T) {
 	tests := []struct {
-		arg        string
-		want       BlockNumber
-		wantErr    bool
-		isTag      bool
-		isEarliest bool
-		isLatest   bool
-		isPending  bool
+		arg         string
+		want        BlockNumber
+		wantErr     bool
+		isTag       bool
+		isEarliest  bool
+		isLatest    bool
+		isPending   bool
+		isSafe      bool
+		isFinalized bool
 	}{
 		{arg: `"0x0"`, want: BlockNumberFromUint64(0)},
 		{arg: `"0xF"`, want: BlockNumberFromUint64(15)},
@@ -332,6 +334,8 @@ func Test_BlockNumberType_Unmarshal(t *testing.T) {
 		{arg: `"earliest"`, want: EarliestBlockNumber, isTag: true, isEarliest: true},
 		{arg: `"latest"`, want: LatestBlockNumber, isTag: true, isLatest: true},
 		{arg: `"pending"`, want: PendingBlockNumber, isTag: true, isPending: true},
+		{arg: `"safe"`, want: SafeBlockNumber, isTag: true, isSafe: true},
+		{arg: `"finalized"`, want: FinalizedBlockNumber, isTag: true, isFinalized: true},
 		{arg: `"foo"`, wantErr: true},
 		{arg: `"0xZ"`, wantErr: true},
 	}
@@ -348,6 +352,8 @@ func Test_BlockNumberType_Unmarshal(t *testing.T) {
 				assert.Equal(t, tt.isEarliest, v.IsEarliest())
 				assert.Equal(t, tt.isLatest, v.IsLatest())
 				assert.Equal(t, tt.isPending, v.IsPending())
+				assert.Equal(t, tt.isSafe, v.IsSafe())
+				assert.Equal(t, tt.isFinalized, v.IsFinalized())
 			}
 		})
 	}
@@ -363,6 +369,8 @@ func Test_BlockNumberType_Marshal(t *testing.T) {
 		{arg: EarliestBlockNumber, want: `"earliest"`},
 		{arg: LatestBlockNumber, want: `"latest"`},
 		{arg: PendingBlockNumber, want: `"pending"`},
+		{arg: SafeBlockNumber, want: `"safe"`},
+		{arg: FinalizedBlockNumber, want: `"finalized"`},
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {

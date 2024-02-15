@@ -393,20 +393,24 @@ func (t *Hash) DecodeRLP(data []byte) (int, error) {
 type BlockNumber struct{ x big.Int }
 
 const (
-	earliestBlockNumber = -1
-	latestBlockNumber   = -2
-	pendingBlockNumber  = -3
+	earliestBlockNumber  = -1
+	latestBlockNumber    = -2
+	pendingBlockNumber   = -3
+	safeBlockNumber      = -4
+	finalizedBlockNumber = -5
 )
 
 var (
-	EarliestBlockNumber = BlockNumber{x: *new(big.Int).SetInt64(earliestBlockNumber)}
-	LatestBlockNumber   = BlockNumber{x: *new(big.Int).SetInt64(latestBlockNumber)}
-	PendingBlockNumber  = BlockNumber{x: *new(big.Int).SetInt64(pendingBlockNumber)}
+	EarliestBlockNumber  = BlockNumber{x: *new(big.Int).SetInt64(earliestBlockNumber)}
+	LatestBlockNumber    = BlockNumber{x: *new(big.Int).SetInt64(latestBlockNumber)}
+	PendingBlockNumber   = BlockNumber{x: *new(big.Int).SetInt64(pendingBlockNumber)}
+	SafeBlockNumber      = BlockNumber{x: *new(big.Int).SetInt64(safeBlockNumber)}
+	FinalizedBlockNumber = BlockNumber{x: *new(big.Int).SetInt64(finalizedBlockNumber)}
 )
 
 // BlockNumberFromHex converts a string to a BlockNumber type.
 // The string can be a hex number or one of the following strings:
-// "earliest", "latest", "pending".
+// "earliest", "latest", "safe", "finalized", "pending".
 // If the string is not a valid block number, it returns an error.
 func BlockNumberFromHex(h string) (BlockNumber, error) {
 	b := &BlockNumber{}
@@ -416,7 +420,7 @@ func BlockNumberFromHex(h string) (BlockNumber, error) {
 
 // BlockNumberFromHexPtr converts a string to a *BlockNumber type.
 // The string can be a hex number or one of the following strings:
-// "earliest", "latest", "pending".
+// "earliest", "latest", "safe", "finalized", "pending".
 // If the string is not a valid block number, it returns nil.
 func BlockNumberFromHexPtr(h string) *BlockNumber {
 	b, err := BlockNumberFromHex(h)
@@ -428,7 +432,7 @@ func BlockNumberFromHexPtr(h string) *BlockNumber {
 
 // MustBlockNumberFromHex converts a string to a BlockNumber type.
 // The string can be a hex number or one of the following strings:
-// "earliest", "latest", "pending".
+// "earliest", "latest", "safe", "finalized", "pending".
 // It panics if the string is not a valid block number.
 func MustBlockNumberFromHex(h string) BlockNumber {
 	b, err := BlockNumberFromHex(h)
@@ -440,7 +444,7 @@ func MustBlockNumberFromHex(h string) BlockNumber {
 
 // MustBlockNumberFromHexPtr converts a string to a *BlockNumber type.
 // The string can be a hex number or one of the following strings:
-// "earliest", "latest", "pending".
+// "earliest", "latest", "safe", "finalized", "pending".
 // It panics if the string is not a valid block number.
 func MustBlockNumberFromHexPtr(h string) *BlockNumber {
 	b := MustBlockNumberFromHex(h)
@@ -487,6 +491,16 @@ func (t *BlockNumber) IsPending() bool {
 	return t.Big().Int64() == pendingBlockNumber
 }
 
+// IsSafe returns true if the block tag is "safe".
+func (t *BlockNumber) IsSafe() bool {
+	return t.Big().Int64() == safeBlockNumber
+}
+
+// IsFinalized returns true if the block tag is "finalized".
+func (t *BlockNumber) IsFinalized() bool {
+	return t.Big().Int64() == finalizedBlockNumber
+}
+
 // IsTag returns true if the block tag is used.
 func (t *BlockNumber) IsTag() bool {
 	return t.Big().Sign() < 0
@@ -506,6 +520,10 @@ func (t *BlockNumber) String() string {
 		return "latest"
 	case t.IsPending():
 		return "pending"
+	case t.IsSafe():
+		return "safe"
+	case t.IsFinalized():
+		return "finalized"
 	default:
 		return "0x" + t.x.Text(16)
 	}
@@ -531,6 +549,10 @@ func (t BlockNumber) MarshalText() ([]byte, error) {
 		return []byte("latest"), nil
 	case t.IsPending():
 		return []byte("pending"), nil
+	case t.IsSafe():
+		return []byte("safe"), nil
+	case t.IsFinalized():
+		return []byte("finalized"), nil
 	default:
 		return []byte(hexutil.BigIntToHex(&t.x)), nil
 	}
@@ -546,6 +568,12 @@ func (t *BlockNumber) UnmarshalText(input []byte) error {
 		return nil
 	case "pending":
 		*t = BlockNumber{x: *new(big.Int).SetInt64(pendingBlockNumber)}
+		return nil
+	case "safe":
+		*t = BlockNumber{x: *new(big.Int).SetInt64(safeBlockNumber)}
+		return nil
+	case "finalized":
+		*t = BlockNumber{x: *new(big.Int).SetInt64(finalizedBlockNumber)}
 		return nil
 	default:
 		u, err := hexutil.HexToBigInt(string(input))
