@@ -430,17 +430,17 @@ func (c *baseClient) MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error)
 }
 
 // SubscribeLogs implements the RPC interface.
-func (c *baseClient) SubscribeLogs(ctx context.Context, query *types.FilterLogsQuery) (chan types.Log, error) {
+func (c *baseClient) SubscribeLogs(ctx context.Context, query *types.FilterLogsQuery) (<-chan types.Log, error) {
 	return subscribe[types.Log](ctx, c.transport, "logs", query)
 }
 
 // SubscribeNewHeads implements the RPC interface.
-func (c *baseClient) SubscribeNewHeads(ctx context.Context) (chan types.Block, error) {
+func (c *baseClient) SubscribeNewHeads(ctx context.Context) (<-chan types.Block, error) {
 	return subscribe[types.Block](ctx, c.transport, "newHeads")
 }
 
 // SubscribeNewPendingTransactions implements the RPC interface.
-func (c *baseClient) SubscribeNewPendingTransactions(ctx context.Context) (chan types.Hash, error) {
+func (c *baseClient) SubscribeNewPendingTransactions(ctx context.Context) (<-chan types.Hash, error) {
 	return subscribe[types.Hash](ctx, c.transport, "newPendingTransactions")
 }
 
