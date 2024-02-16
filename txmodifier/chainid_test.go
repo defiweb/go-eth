@@ -13,7 +13,19 @@ func TestChainIDSetter_Modify(t *testing.T) {
 	ctx := context.Background()
 	fromAddress := types.MustAddressFromHex("0x1234567890abcdef1234567890abcdef12345678")
 
-	t.Run("set chain ID", func(t *testing.T) {
+	t.Run("cache chain ID", func(t *testing.T) {
+		tx := &types.Transaction{Call: types.Call{From: &fromAddress}}
+		rpcMock := new(mockRPC)
+
+		provider := NewChainIDProvider(ChainIDProviderOptions{
+			ChainID: 1,
+		})
+		_ = provider.Modify(ctx, rpcMock, tx)
+
+		assert.Equal(t, uint64(1), *tx.ChainID)
+	})
+
+	t.Run("query RPC node", func(t *testing.T) {
 		tx := &types.Transaction{Call: types.Call{From: &fromAddress}}
 		rpcMock := new(mockRPC)
 		rpcMock.On("ChainID", ctx).Return(uint64(1), nil)
