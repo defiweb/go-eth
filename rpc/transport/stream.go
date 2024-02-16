@@ -53,15 +53,17 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 		return fmt.Errorf("failed to create RPC request: %w", err)
 	}
 
+	// Prepare the channel for the response.
+	ch := make(chan rpcResponse)
+	s.addCallCh(id, ch)
+	defer s.delCallCh(id)
+
 	// Send the request.
 	s.writerCh <- req
 
 	// Wait for the response.
 	// The response is handled by the streamRoutine. It will send the response
 	// to the ch channel.
-	ch := make(chan rpcResponse)
-	s.addCallCh(id, ch)
-	defer s.delCallCh(id)
 	select {
 	case res := <-ch:
 		if res.Error != nil {
