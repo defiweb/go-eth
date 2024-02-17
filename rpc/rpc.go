@@ -9,16 +9,35 @@ import (
 
 // RPC is an RPC client for the Ethereum-compatible nodes.
 type RPC interface {
-	// TODO: web3_clientVersion
-	// TODO: web3_sha3
-	// TODO: net_version
-	// TODO: net_listening
-	// TODO: net_peerCount
-	// TODO: eth_protocolVersion
-	// TODO: eth_syncing
-	// TODO: eth_coinbase
-	// TODO: eth_mining
-	// TODO: eth_hashrate
+	// ClientVersion performs web3_clientVersion RPC call.
+	//
+	// It returns the current client version.
+	ClientVersion(ctx context.Context) (string, error)
+
+	// Listening performs net_listening RPC call.
+	//
+	// It returns true if the client is actively listening for network.
+	Listening(ctx context.Context) (bool, error)
+
+	// PeerCount performs net_peerCount RPC call.
+	//
+	// It returns the number of connected peers.
+	PeerCount(ctx context.Context) (uint64, error)
+
+	// ProtocolVersion performs eth_protocolVersion RPC call.
+	//
+	// It returns the current Ethereum protocol version.
+	ProtocolVersion(ctx context.Context) (uint64, error)
+
+	// Syncing performs eth_syncing RPC call.
+	//
+	// It returns an object with data about the sync status or false.
+	Syncing(ctx context.Context) (*types.SyncStatus, error)
+
+	// NetworkID performs net_version RPC call.
+	//
+	// It returns the current network ID.
+	NetworkID(ctx context.Context) (uint64, error)
 
 	// ChainID performs eth_chainId RPC call.
 	//
@@ -91,14 +110,14 @@ type RPC interface {
 	// It signs the given transaction.
 	//
 	// If transaction was internally mutated, the mutated call is returned.
-	SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error)
+	SignTransaction(ctx context.Context, tx *types.Transaction) ([]byte, *types.Transaction, error)
 
 	// SendTransaction performs eth_sendTransaction RPC call.
 	//
 	// It sends a transaction to the network.
 	//
 	// If transaction was internally mutated, the mutated call is returned.
-	SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, *types.Transaction, error)
+	SendTransaction(ctx context.Context, tx *types.Transaction) (*types.Hash, *types.Transaction, error)
 
 	// SendRawTransaction performs eth_sendRawTransaction RPC call.
 	//
@@ -111,12 +130,14 @@ type RPC interface {
 	// transaction on the blockchain.
 	//
 	// If call was internally mutated, the mutated call is returned.
-	Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, *types.Call, error)
+	Call(ctx context.Context, call *types.Call, block types.BlockNumber) ([]byte, *types.Call, error)
 
 	// EstimateGas performs eth_estimateGas RPC call.
 	//
 	// It estimates the gas necessary to execute a specific transaction.
-	EstimateGas(ctx context.Context, call types.Call, block types.BlockNumber) (uint64, error)
+	//
+	// If call was internally mutated, the mutated call is returned.
+	EstimateGas(ctx context.Context, call *types.Call, block types.BlockNumber) (uint64, *types.Call, error)
 
 	// BlockByHash performs eth_getBlockByHash RPC call.
 	//
@@ -148,27 +169,64 @@ type RPC interface {
 	// It returns the receipt of a transaction by transaction hash.
 	GetTransactionReceipt(ctx context.Context, hash types.Hash) (*types.TransactionReceipt, error)
 
-	// TODO: eth_getUncleByBlockHashAndIndex
-	// TODO: eth_getUncleByBlockNumberAndIndex
-	// TODO: eth_getCompilers
-	// TODO: eth_compileSolidity
-	// TODO: eth_compileLLL
-	// TODO: eth_compileSerpent
-	// TODO: eth_newFilter
-	// TODO: eth_newBlockFilter
-	// TODO: eth_newPendingTransactionFilter
-	// TODO: eth_uninstallFilter
-	// TODO: eth_getFilterChanges
-	// TODO: eth_getFilterLogs
+	// GetBlockReceipts performs eth_getBlockReceipts RPC call.
+	//
+	// It returns all transaction receipts for a given block hash or number.
+	GetBlockReceipts(ctx context.Context, block types.BlockNumber) ([]*types.TransactionReceipt, error)
+
+	// GetUncleByBlockHashAndIndex performs eth_getUncleByBlockNumberAndIndex RPC call.
+	//
+	// It returns information about an uncle of a block by number and uncle index position.
+	GetUncleByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.Block, error)
+
+	// GetUncleByBlockNumberAndIndex performs eth_getUncleByBlockNumberAndIndex RPC call.
+	//
+	// It returns information about an uncle of a block by hash and uncle index position.
+	GetUncleByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.Block, error)
+
+	// NewFilter performs eth_newFilter RPC call.
+	//
+	// It creates a filter object based on the given filter options. To check
+	// if the state has changed, use GetFilterChanges.
+	NewFilter(ctx context.Context, query *types.FilterLogsQuery) (*big.Int, error)
+
+	// NewBlockFilter performs eth_newBlockFilter RPC call.
+	//
+	// It creates a filter in the node, to notify when a new block arrives. To
+	// check if the state has changed, use GetBlockFilterChanges.
+	NewBlockFilter(ctx context.Context) (*big.Int, error)
+
+	// NewPendingTransactionFilter performs eth_newPendingTransactionFilter RPC call.
+	//
+	// It creates a filter in the node, to notify when new pending transactions
+	// arrive. To check if the state has changed, use GetFilterChanges.
+	NewPendingTransactionFilter(ctx context.Context) (*big.Int, error)
+
+	// UninstallFilter performs eth_uninstallFilter RPC call.
+	//
+	// It uninstalls a filter with given ID. Should always be called when watch
+	// is no longer needed.
+	UninstallFilter(ctx context.Context, id *big.Int) (bool, error)
+
+	// GetFilterChanges performs eth_getFilterChanges RPC call.
+	//
+	// It returns an array of logs that occurred since the given filter ID.
+	GetFilterChanges(ctx context.Context, id *big.Int) ([]types.Log, error)
+
+	// GetBlockFilterChanges performs eth_getFilterChanges RPC call.
+	//
+	// It returns an array of block hashes that occurred since the given filter ID.
+	GetBlockFilterChanges(ctx context.Context, id *big.Int) ([]types.Hash, error)
+
+	// GetFilterLogs performs eth_getFilterLogs RPC call.
+	//
+	// It returns an array of all logs matching filter with given ID.
+	GetFilterLogs(ctx context.Context, id *big.Int) ([]types.Log, error)
 
 	// GetLogs performs eth_getLogs RPC call.
 	//
 	// It returns logs that match the given query.
-	GetLogs(ctx context.Context, query types.FilterLogsQuery) ([]types.Log, error)
-
-	// TODO: eth_getWork
-	// TODO: eth_submitWork
-	// TODO: eth_submitHashrate
+	GetLogs(ctx context.Context, query *types.FilterLogsQuery) ([]types.Log, error)
 
 	// MaxPriorityFeePerGas performs eth_maxPriorityFeePerGas RPC call.
 	//
@@ -181,7 +239,7 @@ type RPC interface {
 	// It creates a subscription that will send logs that match the given query.
 	//
 	// Subscription channel will be closed when the context is canceled.
-	SubscribeLogs(ctx context.Context, query types.FilterLogsQuery) (chan types.Log, error)
+	SubscribeLogs(ctx context.Context, query *types.FilterLogsQuery) (<-chan types.Log, error)
 
 	// SubscribeNewHeads performs eth_subscribe RPC call with "newHeads"
 	// subscription type.
@@ -189,7 +247,7 @@ type RPC interface {
 	// It creates a subscription that will send new block headers.
 	//
 	// Subscription channel will be closed when the context is canceled.
-	SubscribeNewHeads(ctx context.Context) (chan types.Block, error)
+	SubscribeNewHeads(ctx context.Context) (<-chan types.Block, error)
 
 	// SubscribeNewPendingTransactions performs eth_subscribe RPC call with
 	// "newPendingTransactions" subscription type.
@@ -197,5 +255,5 @@ type RPC interface {
 	// It creates a subscription that will send new pending transactions.
 	//
 	// Subscription channel will be closed when the context is canceled.
-	SubscribeNewPendingTransactions(ctx context.Context) (chan types.Hash, error)
+	SubscribeNewPendingTransactions(ctx context.Context) (<-chan types.Hash, error)
 }

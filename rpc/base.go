@@ -17,6 +17,60 @@ type baseClient struct {
 	transport transport.Transport
 }
 
+// ClientVersion implements the RPC interface.
+func (c *baseClient) ClientVersion(ctx context.Context) (string, error) {
+	var res string
+	if err := c.transport.Call(ctx, &res, "web3_clientVersion"); err != nil {
+		return "", err
+	}
+	return res, nil
+}
+
+// Listening implements the RPC interface.
+func (c *baseClient) Listening(ctx context.Context) (bool, error) {
+	var res bool
+	if err := c.transport.Call(ctx, &res, "net_listening"); err != nil {
+		return false, err
+	}
+	return res, nil
+}
+
+// PeerCount implements the RPC interface.
+func (c *baseClient) PeerCount(ctx context.Context) (uint64, error) {
+	var res types.Number
+	if err := c.transport.Call(ctx, &res, "net_peerCount"); err != nil {
+		return 0, err
+	}
+	return res.Big().Uint64(), nil
+}
+
+// ProtocolVersion implements the RPC interface.
+func (c *baseClient) ProtocolVersion(ctx context.Context) (uint64, error) {
+	var res types.Number
+	if err := c.transport.Call(ctx, &res, "eth_protocolVersion"); err != nil {
+		return 0, err
+	}
+	return res.Big().Uint64(), nil
+}
+
+// Syncing implements the RPC interface.
+func (c *baseClient) Syncing(ctx context.Context) (*types.SyncStatus, error) {
+	var res types.SyncStatus
+	if err := c.transport.Call(ctx, &res, "eth_syncing"); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// NetworkID implements the RPC interface.
+func (c *baseClient) NetworkID(ctx context.Context) (uint64, error) {
+	var res types.Number
+	if err := c.transport.Call(ctx, &res, "net_version"); err != nil {
+		return 0, err
+	}
+	return res.Big().Uint64(), nil
+}
+
 // ChainID implements the RPC interface.
 func (c *baseClient) ChainID(ctx context.Context) (uint64, error) {
 	var res types.Number
@@ -153,7 +207,10 @@ func (c *baseClient) Sign(ctx context.Context, account types.Address, data []byt
 }
 
 // SignTransaction implements the RPC interface.
-func (c *baseClient) SignTransaction(ctx context.Context, tx types.Transaction) ([]byte, *types.Transaction, error) {
+func (c *baseClient) SignTransaction(ctx context.Context, tx *types.Transaction) ([]byte, *types.Transaction, error) {
+	if tx == nil {
+		return nil, nil, errors.New("rpc client: transaction is nil")
+	}
 	var res signTransactionResult
 	if err := c.transport.Call(ctx, &res, "eth_signTransaction", tx); err != nil {
 		return nil, nil, err
@@ -162,12 +219,15 @@ func (c *baseClient) SignTransaction(ctx context.Context, tx types.Transaction) 
 }
 
 // SendTransaction implements the RPC interface.
-func (c *baseClient) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, *types.Transaction, error) {
+func (c *baseClient) SendTransaction(ctx context.Context, tx *types.Transaction) (*types.Hash, *types.Transaction, error) {
+	if tx == nil {
+		return nil, nil, errors.New("rpc client: transaction is nil")
+	}
 	var res types.Hash
 	if err := c.transport.Call(ctx, &res, "eth_sendTransaction", tx); err != nil {
 		return nil, nil, err
 	}
-	return &res, &tx, nil
+	return &res, tx, nil
 }
 
 // SendRawTransaction implements the RPC interface.
@@ -180,24 +240,30 @@ func (c *baseClient) SendRawTransaction(ctx context.Context, data []byte) (*type
 }
 
 // Call implements the RPC interface.
-func (c *baseClient) Call(ctx context.Context, call types.Call, block types.BlockNumber) ([]byte, *types.Call, error) {
+func (c *baseClient) Call(ctx context.Context, call *types.Call, block types.BlockNumber) ([]byte, *types.Call, error) {
+	if call == nil {
+		return nil, nil, errors.New("rpc client: call is nil")
+	}
 	var res types.Bytes
 	if err := c.transport.Call(ctx, &res, "eth_call", call, block); err != nil {
 		return nil, nil, err
 	}
-	return res, &call, nil
+	return res, call, nil
 }
 
 // EstimateGas implements the RPC interface.
-func (c *baseClient) EstimateGas(ctx context.Context, call types.Call, block types.BlockNumber) (uint64, error) {
+func (c *baseClient) EstimateGas(ctx context.Context, call *types.Call, block types.BlockNumber) (uint64, *types.Call, error) {
+	if call == nil {
+		return 0, nil, errors.New("rpc client: call is nil")
+	}
 	var res types.Number
 	if err := c.transport.Call(ctx, &res, "eth_estimateGas", call, block); err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	if !res.Big().IsUint64() {
-		return 0, errors.New("gas estimate is too big")
+		return 0, nil, errors.New("gas estimate is too big")
 	}
-	return res.Big().Uint64(), nil
+	return res.Big().Uint64(), call, nil
 }
 
 // BlockByHash implements the RPC interface.
@@ -254,8 +320,99 @@ func (c *baseClient) GetTransactionReceipt(ctx context.Context, hash types.Hash)
 	return &res, nil
 }
 
+// GetBlockReceipts implements the RPC interface.
+func (c *baseClient) GetBlockReceipts(ctx context.Context, block types.BlockNumber) ([]*types.TransactionReceipt, error) {
+	var res []*types.TransactionReceipt
+	if err := c.transport.Call(ctx, &res, "eth_getBlockReceipts", block); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetUncleByBlockHashAndIndex implements the RPC interface.
+func (c *baseClient) GetUncleByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.Block, error) {
+	var res types.Block
+	if err := c.transport.Call(ctx, &res, "eth_getUncleByBlockHashAndIndex", hash, types.NumberFromUint64(index)); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// GetUncleByBlockNumberAndIndex implements the RPC interface.
+func (c *baseClient) GetUncleByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.Block, error) {
+	var res types.Block
+	if err := c.transport.Call(ctx, &res, "eth_getUncleByBlockNumberAndIndex", number, types.NumberFromUint64(index)); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// NewFilter implements the RPC interface.
+func (c *baseClient) NewFilter(ctx context.Context, query *types.FilterLogsQuery) (*big.Int, error) {
+	var res *types.Number
+	if err := c.transport.Call(ctx, &res, "eth_newFilter", query); err != nil {
+		return nil, err
+	}
+	return res.Big(), nil
+}
+
+// NewBlockFilter implements the RPC interface.
+func (c *baseClient) NewBlockFilter(ctx context.Context) (*big.Int, error) {
+	var res *types.Number
+	if err := c.transport.Call(ctx, &res, "eth_newBlockFilter"); err != nil {
+		return nil, err
+	}
+	return res.Big(), nil
+
+}
+
+// NewPendingTransactionFilter implements the RPC interface.
+func (c *baseClient) NewPendingTransactionFilter(ctx context.Context) (*big.Int, error) {
+	var res *types.Number
+	if err := c.transport.Call(ctx, &res, "eth_newPendingTransactionFilter"); err != nil {
+		return nil, err
+	}
+	return res.Big(), nil
+}
+
+// UninstallFilter implements the RPC interface.
+func (c *baseClient) UninstallFilter(ctx context.Context, id *big.Int) (bool, error) {
+	var res bool
+	if err := c.transport.Call(ctx, &res, "eth_uninstallFilter", types.NumberFromBigInt(id)); err != nil {
+		return false, err
+	}
+	return res, nil
+}
+
+// GetFilterChanges implements the RPC interface.
+func (c *baseClient) GetFilterChanges(ctx context.Context, id *big.Int) ([]types.Log, error) {
+	var res []types.Log
+	if err := c.transport.Call(ctx, &res, "eth_getFilterChanges", types.NumberFromBigInt(id)); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetFilterLogs implements the RPC interface.
+func (c *baseClient) GetFilterLogs(ctx context.Context, id *big.Int) ([]types.Log, error) {
+	var res []types.Log
+	if err := c.transport.Call(ctx, &res, "eth_getFilterLogs", types.NumberFromBigInt(id)); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// GetBlockFilterChanges implements the RPC interface.
+func (c *baseClient) GetBlockFilterChanges(ctx context.Context, id *big.Int) ([]types.Hash, error) {
+	var res []types.Hash
+	if err := c.transport.Call(ctx, &res, "eth_getFilterChanges", types.NumberFromBigInt(id)); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
 // GetLogs implements the RPC interface.
-func (c *baseClient) GetLogs(ctx context.Context, query types.FilterLogsQuery) ([]types.Log, error) {
+func (c *baseClient) GetLogs(ctx context.Context, query *types.FilterLogsQuery) ([]types.Log, error) {
 	var res []types.Log
 	if err := c.transport.Call(ctx, &res, "eth_getLogs", query); err != nil {
 		return nil, err
@@ -273,17 +430,17 @@ func (c *baseClient) MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error)
 }
 
 // SubscribeLogs implements the RPC interface.
-func (c *baseClient) SubscribeLogs(ctx context.Context, query types.FilterLogsQuery) (chan types.Log, error) {
+func (c *baseClient) SubscribeLogs(ctx context.Context, query *types.FilterLogsQuery) (<-chan types.Log, error) {
 	return subscribe[types.Log](ctx, c.transport, "logs", query)
 }
 
 // SubscribeNewHeads implements the RPC interface.
-func (c *baseClient) SubscribeNewHeads(ctx context.Context) (chan types.Block, error) {
+func (c *baseClient) SubscribeNewHeads(ctx context.Context) (<-chan types.Block, error) {
 	return subscribe[types.Block](ctx, c.transport, "newHeads")
 }
 
 // SubscribeNewPendingTransactions implements the RPC interface.
-func (c *baseClient) SubscribeNewPendingTransactions(ctx context.Context) (chan types.Hash, error) {
+func (c *baseClient) SubscribeNewPendingTransactions(ctx context.Context) (<-chan types.Hash, error) {
 	return subscribe[types.Hash](ctx, c.transport, "newPendingTransactions")
 }
 

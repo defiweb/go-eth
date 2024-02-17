@@ -317,13 +317,15 @@ func Test_AddressesType_Marshal(t *testing.T) {
 
 func Test_BlockNumberType_Unmarshal(t *testing.T) {
 	tests := []struct {
-		arg        string
-		want       BlockNumber
-		wantErr    bool
-		isTag      bool
-		isEarliest bool
-		isLatest   bool
-		isPending  bool
+		arg         string
+		want        BlockNumber
+		wantErr     bool
+		isTag       bool
+		isEarliest  bool
+		isLatest    bool
+		isPending   bool
+		isSafe      bool
+		isFinalized bool
 	}{
 		{arg: `"0x0"`, want: BlockNumberFromUint64(0)},
 		{arg: `"0xF"`, want: BlockNumberFromUint64(15)},
@@ -332,6 +334,8 @@ func Test_BlockNumberType_Unmarshal(t *testing.T) {
 		{arg: `"earliest"`, want: EarliestBlockNumber, isTag: true, isEarliest: true},
 		{arg: `"latest"`, want: LatestBlockNumber, isTag: true, isLatest: true},
 		{arg: `"pending"`, want: PendingBlockNumber, isTag: true, isPending: true},
+		{arg: `"safe"`, want: SafeBlockNumber, isTag: true, isSafe: true},
+		{arg: `"finalized"`, want: FinalizedBlockNumber, isTag: true, isFinalized: true},
 		{arg: `"foo"`, wantErr: true},
 		{arg: `"0xZ"`, wantErr: true},
 	}
@@ -348,6 +352,8 @@ func Test_BlockNumberType_Unmarshal(t *testing.T) {
 				assert.Equal(t, tt.isEarliest, v.IsEarliest())
 				assert.Equal(t, tt.isLatest, v.IsLatest())
 				assert.Equal(t, tt.isPending, v.IsPending())
+				assert.Equal(t, tt.isSafe, v.IsSafe())
+				assert.Equal(t, tt.isFinalized, v.IsFinalized())
 			}
 		})
 	}
@@ -363,12 +369,161 @@ func Test_BlockNumberType_Marshal(t *testing.T) {
 		{arg: EarliestBlockNumber, want: `"earliest"`},
 		{arg: LatestBlockNumber, want: `"latest"`},
 		{arg: PendingBlockNumber, want: `"pending"`},
+		{arg: SafeBlockNumber, want: `"safe"`},
+		{arg: FinalizedBlockNumber, want: `"finalized"`},
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
 			j, err := tt.arg.MarshalJSON()
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, string(j))
+		})
+	}
+}
+
+func Test_SignatureType_Unmarshal(t *testing.T) {
+	tests := []struct {
+		arg     string
+		want    Signature
+		wantErr bool
+	}{
+		{
+			arg: `"0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"`,
+			want: Signature{
+				V: big.NewInt(0),
+				R: big.NewInt(0),
+				S: big.NewInt(0),
+			},
+		},
+		{
+			arg: `"0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"`,
+			want: Signature{
+				V: big.NewInt(0),
+				R: big.NewInt(0),
+				S: big.NewInt(0),
+			},
+		},
+		{
+			arg: `"0x000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000021b"`,
+			want: Signature{
+				V: big.NewInt(27),
+				R: big.NewInt(1),
+				S: big.NewInt(2),
+			},
+		},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			v := &Signature{}
+			err := v.UnmarshalJSON([]byte(tt.arg))
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.True(t, tt.want.Equal(*v))
+			}
+		})
+	}
+}
+
+func Test_SignatureType_Marshal(t *testing.T) {
+	tests := []struct {
+		signature Signature
+		want      string
+		wantErr   bool
+	}{
+		{
+			signature: Signature{},
+			want:      `"0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"`,
+		},
+		{
+			signature: Signature{
+				V: big.NewInt(0),
+				R: big.NewInt(0),
+				S: big.NewInt(0),
+			},
+			want: `"0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"`,
+		},
+		{
+			signature: Signature{
+				V: big.NewInt(27),
+				R: big.NewInt(1),
+				S: big.NewInt(2),
+			},
+			want: `"0x000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000021b"`,
+		},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			j, err := tt.signature.MarshalJSON()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, string(j))
+		})
+	}
+}
+
+func Test_SignatureType_Equal(t *testing.T) {
+	tests := []struct {
+		a, b Signature
+		want bool
+	}{
+		{
+			a:    Signature{},
+			b:    Signature{},
+			want: true,
+		},
+		{
+			a: Signature{},
+			b: Signature{
+				V: big.NewInt(0),
+				R: big.NewInt(0),
+				S: big.NewInt(0),
+			},
+			want: true,
+		},
+		{
+			a: Signature{
+				V: big.NewInt(0),
+				R: nil,
+				S: big.NewInt(0),
+			},
+			b: Signature{
+				V: nil,
+				R: big.NewInt(0),
+				S: big.NewInt(0),
+			},
+			want: true,
+		},
+		{
+			a: Signature{
+				V: big.NewInt(27),
+				R: big.NewInt(1),
+				S: big.NewInt(2),
+			},
+			b: Signature{
+				V: big.NewInt(27),
+				R: big.NewInt(1),
+				S: big.NewInt(2),
+			},
+			want: true,
+		},
+		{
+			a: Signature{
+				V: big.NewInt(27),
+				R: nil,
+				S: big.NewInt(2),
+			},
+			b: Signature{
+				V: nil,
+				R: big.NewInt(2),
+				S: big.NewInt(2),
+			},
+			want: false,
+		},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.a.Equal(tt.b))
 		})
 	}
 }

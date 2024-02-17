@@ -32,12 +32,12 @@ Some of key features include:
             * [Decoding method return values](#decoding-method-return-values)
         * [Events / Logs](#events--logs)
             * [Decoding events](#decoding-events)
-        * [Errors](#errors)
-        * [Reverts](#reverts)
-        * [Panics](#panics)
         * [Contract ABI](#contract-abi)
             * [JSON-ABI](#json-abi)
             * [Human-Readable ABI](#human-readable-abi)
+        * [Errors](#errors)
+        * [Reverts](#reverts)
+        * [Panics](#panics)
         * [Signature parser syntax](#signature-parser-syntax)
         * [Custom types](#custom-types)
             * [Simple types](#simple-types)
@@ -147,7 +147,7 @@ func main() {
 		SetInput(calldata)
 
 	// Call balanceOf.
-	b, _, err := c.Call(context.Background(), *call, types.LatestBlockNumber)
+	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}
@@ -249,7 +249,7 @@ func main() {
 		SetInput(calldata)
 
 	// Call the contract.
-	b, _, err := c.Call(context.Background(), *call, types.LatestBlockNumber)
+	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}
@@ -320,10 +320,6 @@ func main() {
 		// does not have a 'From' field set.
 		rpc.WithDefaultAddress(key.Address()),
 
-		// Specify a chain ID for SendTransaction when the transaction
-		// does not have a 'ChainID' field set.
-		rpc.WithChainID(1),
-
 		// TX modifiers enable modifications to the transaction before signing
 		// and sending to the node. While not mandatory, without them, transaction
 		// parameters like gas limit, gas price, and nonce must be set manually.
@@ -345,6 +341,12 @@ func main() {
 			txmodifier.NewNonceProvider(txmodifier.NonceProviderOptions{
 				UsePendingBlock: false,
 			}),
+
+			// ChainIDProvider automatically sets the chain ID for the transaction.
+			txmodifier.NewChainIDProvider(txmodifier.ChainIDProviderOptions{
+				Replace: false,
+				Cache:   true,
+			}),
 		),
 	)
 	if err != nil {
@@ -362,7 +364,7 @@ func main() {
 		SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).
 		SetInput(calldata)
 
-	txHash, _, err := c.SendTransaction(context.Background(), *tx)
+	txHash, _, err := c.SendTransaction(context.Background(), tx)
 	if err != nil {
 		panic(err)
 	}
@@ -422,7 +424,7 @@ func main() {
 		SetTopics([]types.Hash{transfer.Topic0()})
 
 	// Fetch logs for WETH transfer events.
-	logs, err := c.SubscribeLogs(ctx, *query)
+	logs, err := c.SubscribeLogs(ctx, query)
 	if err != nil {
 		panic(err)
 	}
@@ -445,15 +447,15 @@ func main() {
 To connect to a node, it is necessary to choose a suitable transport method. The transport is responsible for executing
 a low-level communication protocol with the node. The `go-eth` package offers the following transport options:
 
-| Transport | Description                                                                                 | Subscriptions   |
-|-----------|---------------------------------------------------------------------------------------------|-----------------|
-| HTTP      | Connects to a node using the HTTP protocol.                                                 | No              |
-| WebSocket | Connects to a node using the WebSocket protocol.                                            | Yes             |
-| IPC       | Connects to a node using the IPC protocol.                                                  | Yes             |
-| Retry     | Wraps a transport and retries requests in case of an error.                                 | Yes<sup>2</sup> |
-| Combined  | Wraps two transports and uses one for requests and the other for subscriptions.<sup>1</sup> | Yes             |
+| Transport | Description                                                                                | Subscriptions   |
+|-----------|--------------------------------------------------------------------------------------------|-----------------|
+| HTTP      | Connects to a node using the HTTP protocol.                                                | No              |
+| WebSocket | Connects to a node using the WebSocket protocol.                                           | Yes             |
+| IPC       | Connects to a node using the IPC protocol.                                                 | Yes             |
+| Retry     | Wraps a transport and retries requests in case of an error.                                | Yes<sup>2</sup> |
+| Combined  | Wraps two transports and uses one for methods and the other for subscriptions.<sup>1</sup> | Yes             |
 
-1. It is recommended by some RPC providers to use HTTP for requests and WebSocket for subscriptions.
+1. It is recommended by some RPC providers to use HTTP for methods and WebSocket for subscriptions.
 2. Only if the underlying transport supports subscriptions.
 
 Transports can be created using the `transport.New*` functions. It is also possible to create custom transport by
@@ -470,6 +472,7 @@ The `go-eth` package provides support for the following wallet types:
 | JSON key file<sup>1</sup>    | `key, err := wallet.NewKeyFromJSON(path, password)`                         |
 | JSON key content<sup>1</sup> | `key, err := wallet.NewKeyFromJSONContent(jsonContent, password)`           |
 | Mnemonic                     | `key, err := wallet.NewKeyFromMnemonic(mnemonic, password, account, index)` |
+| Remote RPC                   | `key := wallet.NewKeyRPC(client, address)`                                  |
 
 1. Only V3 JSON keys are supported.
 
@@ -562,8 +565,7 @@ func main() {
 
 In the example above, data is encoded and decoded using a struct. The `abi` tags map the struct fields to the
 corresponding tuple or struct fields. These tags are optional. If absent, fields are mapped by name, with the first
-consecutive uppercase letters converted to lowercase. For instance, the `Number` struct field maps to the `number`
-field, and the `DAPPName` field maps to the `dappName` field.
+consecutive uppercase letters converted to lowercase.
 
 It is also possible to encode and decode values to a separate variables:
 
@@ -602,8 +604,8 @@ func main() {
 }
 ```
 
-Note that in both examples above, similarly named functions are used to encode and decode data. The only difference is
-that the second example uses the plural form of the function. The plural form is used to encode and decode data from
+**Note that in both examples above, similarly named functions are used to encode and decode data. The only difference is
+that the second example uses the plural form of the function.** The plural form is used to encode and decode data from
 separate variables, while the singular form is used for structs or maps. This is a common pattern in the `go-eth`
 package.
 
@@ -680,8 +682,8 @@ When mapping between Go and Solidity types, the following rules apply:
 * ✓ - Supported
 * ✗ - Not supported
 
-1. Destination type must be able to hold the value of the source type. For example, `uint16` can be mapped to `uint8`,
-   but only if the value is less than 256.
+1. Destination type must be able to hold the value of the source type. Otherwise, the mapping will result in an error.
+   For example, `uint16` can be mapped to `uint8`, but only if the value is less than 256.
 2. Mapping of negative values is supported only if both types support negative values.
 3. Only mapping from/to `bytes32` is supported.
 4. Only mapping from/to `bytes20` is supported.
@@ -783,8 +785,7 @@ func main() {
 To decode contract events, the `abi.Event` structure needs to be created. Events may be created using different methods:
 
 - `abi.ParseEvent` / `abi.MustParseEvent` - creates a new event by parsing an event signature.
--
-    - `abi.NewEvent(name, inputs)` - creates a new event using provided arguments.
+- `abi.NewEvent(name, inputs)` - creates a new event using provided arguments.
 - Using the `abi.Contract` struct (see [Contract ABI](#contract-abi) section).
 
 #### Decoding events
@@ -828,7 +829,7 @@ func main() {
 		SetTopics([]types.Hash{transfer.Topic0()})
 
 	// Fetch logs for WETH transfer events.
-	logs, err := c.GetLogs(context.Background(), *query)
+	logs, err := c.GetLogs(context.Background(), query)
 	if err != nil {
 		panic(err)
 	}
@@ -843,40 +844,17 @@ func main() {
 }
 ```
 
-### Errors
-
-To decode custom contract errors, first a `abi.Error` struct must be created. Errors may be created using different
-methods:
-
-- `abi.ParseError` / `abi.MustParseError` - creates a new error by parsing an error signature.
-- `abi.NewError(name, inputs)` - creates a new error using provided arguments.
-- Using the `abi.Contract` struct (see [Contract ABI](#contract-abi) section).
-
-Custom errors may be decoded from errors returned by the `Call` function using the `abi.Error.HandleError` method.
-
-When using a `abi.Contract`, errors may be decoded from call errors using the `abi.Contract.HandleError` method. This
-method will try to decode the error using all errors defined in the contract, also including reverts and panics.
-
-### Reverts
-
-Reverts are special errors returned by the EVM when a contract call fails. Reverts are ABI-encoded errors with
-the `Error(string)` signature. The `abi.DecodeRevert` function can be used to decode reverts. Optionally, the `abi`
-package provides `abi.Revert`, a predefined error type that can be used to decode reverts.
-
-To verify if an error is a revert, use the `abi.IsRevert` function.
-
-### Panics
-
-Similar to reverts, panics are special errors returned by the EVM when a contract call fails. Panics are ABI-encoded
-errors with the `Panic(uint256)` signature. The `abi.DecodePanic` function can be used to decode panics. Optionally, the
-`abi` package also provides `abi.Panic`, a predefined error type that can be used to decode panics.
-
-To verify if an error is a panic, use the `abi.IsPanic` function.
-
 ### Contract ABI
 
 The `abi.Contract` structure is a utility that provides an interface to a contract. It can be created using a JSON-ABI
 file or by supplying a list of signatures (also known as a Human-Readable ABI).
+
+To create a contract struct, the following methods may be used:
+
+- `abi.LoadJSON` / `abi.MustLoadJSON` - creates a new contract by loading a JSON-ABI file.
+- `abi.ParseJSON` / `abi.MustParseJSON` - creates a new contract by parsing a JSON-ABI string.
+- `abi.ParseSignatures` / `abi.MustParseSignatures` - creates a new contract by parsing a list of signatures (
+  Human-Readable ABI).
 
 #### JSON-ABI
 
@@ -956,6 +934,36 @@ func main() {
 }
 ```
 
+### Errors
+
+To decode custom contract errors, first a `abi.Error` struct must be created. Errors may be created using different
+methods:
+
+- `abi.ParseError` / `abi.MustParseError` - creates a new error by parsing an error signature.
+- `abi.NewError(name, inputs)` - creates a new error using provided arguments.
+- Using the `abi.Contract` struct (see [Contract ABI](#contract-abi) section).
+
+Custom errors may be decoded from errors returned by the `Call` function using the `abi.Error.HandleError` method.
+
+When using a `abi.Contract`, errors may be decoded from call errors using the `abi.Contract.HandleError` method. This
+method will try to decode the error using all errors defined in the contract, also including reverts and panics.
+
+### Reverts
+
+Reverts are special errors returned by the EVM when a contract call fails. Reverts are ABI-encoded errors with
+the `Error(string)` signature. The `abi.DecodeRevert` function can be used to decode reverts. Optionally, the `abi`
+package provides `abi.Revert`, a predefined error type that can be used to decode reverts.
+
+To verify if an error is a revert, use the `abi.IsRevert` function.
+
+### Panics
+
+Similar to reverts, panics are special errors returned by the EVM when a contract call fails. Panics are ABI-encoded
+errors with the `Panic(uint256)` signature. The `abi.DecodePanic` function can be used to decode panics. Optionally, the
+`abi` package also provides `abi.Panic`, a predefined error type that can be used to decode panics.
+
+To verify if an error is a panic, use the `abi.IsPanic` function.
+
 ### Signature parser syntax
 
 The parser is based on Solidity grammar, but it allows for the omission of argument names, as well as the `returns`
@@ -974,7 +982,8 @@ Examples of signatures that are accepted by the parser:
 
 ### Custom types
 
-It is possible to add custom types to the `abi` package.
+The `go-eth` package allows for the creation of custom types that can be used with the ABI encoder and decoder and with
+the signature parser.
 
 #### Simple types
 

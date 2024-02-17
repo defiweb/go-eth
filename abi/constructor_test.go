@@ -44,14 +44,14 @@ func TestConstructor_EncodeArgs(t *testing.T) {
 		arg       []any
 		expected  string
 	}{
-		{signature: "constructor()", arg: nil, expected: ""},
-		{signature: "constructor(uint256)", arg: []any{1}, expected: "0000000000000000000000000000000000000000000000000000000000000001"},
+		{signature: "constructor()", arg: nil, expected: "aabb"},
+		{signature: "constructor(uint256)", arg: []any{1}, expected: "aabb0000000000000000000000000000000000000000000000000000000000000001"},
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
 			c, err := ParseConstructor(tt.signature)
 			require.NoError(t, err)
-			enc, err := c.EncodeArgs(tt.arg...)
+			enc, err := c.EncodeArgs([]byte{0xAA, 0xBB}, tt.arg...)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, hex.EncodeToString(enc))
 		})

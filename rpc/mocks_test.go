@@ -99,22 +99,22 @@ func (k *keyMock) Address() types.Address {
 	return k.addressCallback()
 }
 
-func (k *keyMock) SignHash(hash types.Hash) (*types.Signature, error) {
+func (k *keyMock) SignHash(ctx context.Context, hash types.Hash) (*types.Signature, error) {
 	return k.signHashCallback(hash)
 }
 
-func (k *keyMock) SignMessage(data []byte) (*types.Signature, error) {
+func (k *keyMock) SignMessage(ctx context.Context, data []byte) (*types.Signature, error) {
 	return k.signMessageCallback(data)
 }
 
-func (k *keyMock) SignTransaction(tx *types.Transaction) error {
+func (k *keyMock) SignTransaction(ctx context.Context, tx *types.Transaction) error {
 	return k.signTransactionCallback(tx)
 }
 
-func (k *keyMock) VerifyHash(hash types.Hash, sig types.Signature) bool {
+func (k *keyMock) VerifyHash(ctx context.Context, hash types.Hash, sig types.Signature) bool {
 	return false
 }
 
-func (k keyMock) VerifyMessage(data []byte, sig types.Signature) bool {
+func (k keyMock) VerifyMessage(ctx context.Context, data []byte, sig types.Signature) bool {
 	return false
 }

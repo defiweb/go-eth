@@ -44,7 +44,7 @@ func (e *GasLimitEstimator) Modify(ctx context.Context, client rpc.RPC, tx *type
 	if !e.replace && tx.GasLimit != nil {
 		return nil
 	}
-	gasLimit, err := client.EstimateGas(ctx, tx.Call, types.LatestBlockNumber)
+	gasLimit, _, err := client.EstimateGas(ctx, &tx.Call, types.LatestBlockNumber)
 	if err != nil {
 		return fmt.Errorf("gas limit estimator: failed to estimate gas limit: %w", err)
 	}

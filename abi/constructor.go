@@ -70,38 +70,46 @@ func (m *Constructor) Inputs() *TupleType {
 	return m.inputs
 }
 
-// EncodeArg encodes arguments for a constructor call using a provided map or
-// structure. The map or structure must have fields with the same names as
-// the constructor arguments.
-func (m *Constructor) EncodeArg(arg any) ([]byte, error) {
+// EncodeArg encodes an argument for a contract deployment.
+// The map or structure must have fields with the same names as the
+// constructor arguments.
+func (m *Constructor) EncodeArg(code []byte, arg any) ([]byte, error) {
 	encoded, err := m.abi.EncodeValue(m.inputs, arg)
 	if err != nil {
 		return nil, err
 	}
-	return encoded, nil
+	input := make([]byte, len(code)+len(encoded))
+	copy(input, code)
+	copy(input[len(code):], encoded)
+	return input, nil
 }
 
 // MustEncodeArg is like EncodeArg but panics on error.
-func (m *Constructor) MustEncodeArg(arg any) []byte {
-	encoded, err := m.EncodeArg(arg)
+func (m *Constructor) MustEncodeArg(code []byte, arg any) []byte {
+	encoded, err := m.EncodeArg(code, arg)
 	if err != nil {
 		panic(err)
 	}
 	return encoded
 }
 
-// EncodeArgs encodes arguments for a constructor call.
-func (m *Constructor) EncodeArgs(args ...any) ([]byte, error) {
+// EncodeArgs encodes arguments for a contract deployment.
+// The map or structure must have fields with the same names as the
+// constructor arguments.
+func (m *Constructor) EncodeArgs(code []byte, args ...any) ([]byte, error) {
 	encoded, err := m.abi.EncodeValues(m.inputs, args...)
 	if err != nil {
 		return nil, err
 	}
-	return encoded, nil
+	input := make([]byte, len(code)+len(encoded))
+	copy(input, code)
+	copy(input[len(code):], encoded)
+	return input, nil
 }
 
 // MustEncodeArgs is like EncodeArgs but panics on error.
-func (m *Constructor) MustEncodeArgs(args ...any) []byte {
-	encoded, err := m.EncodeArgs(args...)
+func (m *Constructor) MustEncodeArgs(code []byte, args ...any) []byte {
+	encoded, err := m.EncodeArgs(code, args...)
 	if err != nil {
 		panic(err)
 	}

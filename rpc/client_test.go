@@ -17,14 +17,14 @@ import (
 func TestClient_Sign(t *testing.T) {
 	httpMock := newHTTPMock()
 	keyMock := &keyMock{}
-	client, _ := NewClient(WithTransport(httpMock), WithKeys(keyMock))
-
 	keyMock.addressCallback = func() types.Address {
 		return types.MustAddressFromHex("0x1111111111111111111111111111111111111111")
 	}
 	keyMock.signMessageCallback = func(message []byte) (*types.Signature, error) {
 		return types.MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"), nil
 	}
+
+	client, _ := NewClient(WithTransport(httpMock), WithKeys(keyMock))
 
 	signature, err := client.Sign(
 		context.Background(),
@@ -38,8 +38,6 @@ func TestClient_Sign(t *testing.T) {
 func TestClient_SignTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
 	keyMock := &keyMock{}
-	client, _ := NewClient(WithTransport(httpMock), WithKeys(keyMock))
-
 	keyMock.addressCallback = func() types.Address {
 		return types.MustAddressFromHex("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
 	}
@@ -48,13 +46,15 @@ func TestClient_SignTransaction(t *testing.T) {
 		return nil
 	}
 
+	client, _ := NewClient(WithTransport(httpMock), WithKeys(keyMock))
+
 	from := types.MustAddressFromHex("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
 	to := types.MustAddressFromHex("0xd46e8dd67c5d32be8058bb8eb970870f07244567")
 	gasLimit := uint64(30400)
 	chainID := uint64(1)
 	raw, tx, err := client.SignTransaction(
 		context.Background(),
-		types.Transaction{
+		&types.Transaction{
 			ChainID: &chainID,
 			Call: types.Call{
 				From:     &from,
@@ -82,8 +82,6 @@ func TestClient_SignTransaction(t *testing.T) {
 func TestClient_SendTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
 	keyMock := &keyMock{}
-	client, _ := NewClient(WithTransport(httpMock), WithKeys(keyMock))
-
 	keyMock.addressCallback = func() types.Address {
 		return types.MustAddressFromHex("0xb60e8dd61c5d32be8058bb8eb970870f07233155")
 	}
@@ -91,6 +89,8 @@ func TestClient_SendTransaction(t *testing.T) {
 		tx.Signature = types.MustSignatureFromHexPtr("0x2222222222222222222222222222222222222222222222222222222222222222333333333333333333333333333333333333333333333333333333333333333311")
 		return nil
 	}
+
+	client, _ := NewClient(WithTransport(httpMock), WithKeys(keyMock))
 
 	httpMock.ResponseMock = &http.Response{
 		StatusCode: 200,
@@ -106,7 +106,7 @@ func TestClient_SendTransaction(t *testing.T) {
 	chainID := uint64(1)
 	txHash, tx, err := client.SendTransaction(
 		context.Background(),
-		types.Transaction{
+		&types.Transaction{
 			ChainID: &chainID,
 			Call: types.Call{
 				From:     &from,
@@ -144,7 +144,7 @@ func TestClient_Call(t *testing.T) {
 	gasLimit := uint64(30400)
 	_, _, err := client.Call(
 		context.Background(),
-		types.Call{
+		&types.Call{
 			From:     nil,
 			To:       &to,
 			GasLimit: &gasLimit,
@@ -172,9 +172,9 @@ func TestClient_EstimateGas(t *testing.T) {
 
 	to := types.MustAddressFromHex("0x2222222222222222222222222222222222222222")
 	gasLimit := uint64(30400)
-	_, err := client.EstimateGas(
+	_, _, err := client.EstimateGas(
 		context.Background(),
-		types.Call{
+		&types.Call{
 			From:     nil,
 			To:       &to,
 			GasLimit: &gasLimit,
