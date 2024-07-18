@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"net/url"
 	"reflect"
 
 	"github.com/defiweb/go-eth/hexutil"
@@ -324,6 +325,13 @@ func (s *StringValue) MapFrom(m Mapper, src any) error {
 		}
 	case reflect.String:
 		*s = StringValue(srcRef.String())
+	case reflect.Struct:
+		switch u := src.(type) {
+		case url.URL:
+			*s = StringValue(u.String())
+		default:
+			return fmt.Errorf("abi: cannot map %T struct to string", u)
+		}
 	default:
 		return fmt.Errorf("abi: cannot map %s to string", srcRef.Type())
 	}
@@ -345,6 +353,17 @@ func (s *StringValue) MapTo(m Mapper, dst any) error {
 		dstRef.SetString(string(*s))
 	case reflect.Interface:
 		dstRef.Set(reflect.ValueOf(string(*s)))
+	case reflect.Struct:
+		switch dst.(type) {
+		case *url.URL:
+			u, err := url.Parse(string(*s))
+			if err != nil {
+				return fmt.Errorf("abi: cannot map string to %T: %w", dst, err)
+			}
+			dstRef.Set(reflect.ValueOf(*u))
+		default:
+			return fmt.Errorf("abi: cannot map string to %T struct", dst)
+		}
 	default:
 		return fmt.Errorf("abi: cannot map string to %s", dstRef.Type())
 	}
