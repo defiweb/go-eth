@@ -16,20 +16,6 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-const (
-	hasMonotonic = 1 << 63
-	maxWall      = wallToInternal + (1<<33 - 1) // year 2157
-	minWall      = wallToInternal               // year 1885
-	nsecMask     = 1<<nsecShift - 1
-	nsecShift    = 30
-
-	wallToInternal int64 = (1884*365 + 1884/4 - 1884/100 + 1884/400) * secondsPerDay
-
-	secondsPerMinute = 60
-	secondsPerHour   = 60 * secondsPerMinute
-	secondsPerDay    = 24 * secondsPerHour
-)
-
 func TestEncodeABI(t *testing.T) {
 	tests := []struct {
 		name    string
