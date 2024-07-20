@@ -678,14 +678,6 @@ func (u *UintValue) MapFrom(_ Mapper, src any) error {
 		u.Int.SetUint64(srcRef.Uint())
 	default:
 		switch srcTyp := srcRef.Interface().(type) {
-		case time.Time:
-			if srcTyp.Before(time.Unix(0, 0)) {
-				return fmt.Errorf("abi: cannot map %s to uint%d: negative value", srcRef.Type(), u.Size)
-			}
-			if srcTyp.After(time.Unix(math.MaxInt64, 999999999)) {
-				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), u.Size)
-			}
-			u.Int.SetInt64(srcTyp.Unix())
 		case big.Int:
 			if srcTyp.Sign() < 0 {
 				return fmt.Errorf("abi: cannot map %s to uint%d: negative value", srcRef.Type(), u.Size)
@@ -705,6 +697,15 @@ func (u *UintValue) MapFrom(_ Mapper, src any) error {
 			u.Int = *bn
 		case types.BlockNumber:
 			bn := srcTyp.Big()
+			if bn.Sign() < 0 {
+				return fmt.Errorf("abi: cannot map %s to uint%d: negative value", srcRef.Type(), u.Size)
+			}
+			if bn.BitLen() > u.Size {
+				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), u.Size)
+			}
+			u.Int = *bn
+		case time.Time:
+			bn := new(big.Int).SetInt64(srcTyp.Unix())
 			if bn.Sign() < 0 {
 				return fmt.Errorf("abi: cannot map %s to uint%d: negative value", srcRef.Type(), u.Size)
 			}
@@ -836,6 +837,12 @@ func (i *IntValue) MapFrom(_ Mapper, src any) error {
 				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), i.Size)
 			}
 			i.Int = *bn
+		case time.Time:
+			bn := new(big.Int).SetInt64(srcTyp.Unix())
+			if signedBitLen(bn) > i.Size {
+				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), i.Size)
+			}
+			i.Int = *bn
 		default:
 			return fmt.Errorf("abi: cannot map %s to uint%d", srcRef.Type(), i.Size)
 		}
@@ -866,6 +873,8 @@ func (i *IntValue) MapTo(_ Mapper, dst any) error {
 		dstRef.Set(reflect.ValueOf(&i.Int))
 	default:
 		switch dstRef.Interface().(type) {
+		case time.Time:
+			dstRef.Set(reflect.ValueOf(time.Unix(i.Int.Int64(), 0)))
 		case big.Int:
 			dstRef.Set(reflect.ValueOf(i.Int))
 		case types.Number:

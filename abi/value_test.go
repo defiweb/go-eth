@@ -2,15 +2,32 @@ package abi
 
 import (
 	"bytes"
+	"math"
 	"math/big"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
+)
+
+const (
+	hasMonotonic = 1 << 63
+	maxWall      = wallToInternal + (1<<33 - 1) // year 2157
+	minWall      = wallToInternal               // year 1885
+	nsecMask     = 1<<nsecShift - 1
+	nsecShift    = 30
+
+	wallToInternal int64 = (1884*365 + 1884/4 - 1884/100 + 1884/400) * secondsPerDay
+
+	secondsPerMinute = 60
+	secondsPerHour   = 60 * secondsPerMinute
+	secondsPerDay    = 24 * secondsPerHour
 )
 
 func TestEncodeABI(t *testing.T) {
@@ -207,6 +224,15 @@ func TestEncodeABI(t *testing.T) {
 				padR("61"), // data
 			},
 		},
+		{
+			name: "string#url",
+			val:  new(StringValue),
+			arg:  must(url.Parse("http://example.com")),
+			want: Words{
+				padL("12"), // length
+				padR("687474703a2f2f6578616d706c652e636f6d"), // data
+			},
+		},
 		// FixedBytesValue:
 		{
 			name: "fixed#bytes-empty",
@@ -234,10 +260,22 @@ func TestEncodeABI(t *testing.T) {
 			want: Words{padL("00")},
 		},
 		{
-			name: "uint256#MaxUint256",
-			val:  &UintValue{Size: 256},
-			arg:  new(big.Int).Set(MaxUint[256]),
-			want: Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")},
+			name: "uint256#time.Unix-0",
+			val:  &UintValue{Size: 64},
+			arg:  time.Unix(0, 0),
+			want: Words{padL("00")},
+		},
+		{
+			name: "uint256#time.Unix-max-min",
+			val:  &UintValue{Size: 64},
+			arg:  time.Unix(math.MaxInt64, math.MinInt64),
+			want: Words{padL("7ffffffdda3e82fa")},
+		},
+		{
+			name: "uint256#time.Unix-min-min",
+			val:  &UintValue{Size: 64},
+			arg:  time.Unix(math.MinInt64, math.MinInt64),
+			want: Words{padL("7ffffffdda3e82fb")},
 		},
 		// IntValue:
 		{
@@ -288,6 +326,36 @@ func TestEncodeABI(t *testing.T) {
 			arg:  big.NewInt(-128),
 			want: Words{padR("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80")},
 		},
+		{
+			name: "int256#time.Unix-0",
+			val:  &IntValue{Size: 256},
+			arg:  time.Unix(0, 0),
+			want: Words{padL("00")},
+		},
+		{
+			name: "int256#time.Unix-max-min",
+			val:  &IntValue{Size: 256},
+			arg:  time.Unix(math.MaxInt64, math.MinInt64),
+			want: Words{padL("7ffffffdda3e82fa")},
+		},
+		{
+			name: "int256#time.Unix-min-min",
+			val:  &IntValue{Size: 256},
+			arg:  time.Unix(math.MinInt64, math.MinInt64),
+			want: Words{padL("7ffffffdda3e82fb")},
+		},
+		{
+			name: "int256#time.Unix-min-max",
+			val:  &IntValue{Size: 256},
+			arg:  time.Unix(math.MinInt64, math.MaxInt64),
+			want: Words{Word{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x02, 0x25, 0xc1, 0x7d, 0x04}},
+		},
+		{
+			name: "int256#time.Unix-max-max",
+			val:  &IntValue{Size: 256},
+			arg:  time.Unix(math.MaxInt64, math.MaxInt64),
+			want: Words{Word{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x02, 0x25, 0xc1, 0x7d, 0x03}},
+		},
 		// BoolValue:
 		{
 			name: "bool#true",
@@ -327,6 +395,13 @@ func TestEncodeABI(t *testing.T) {
 			}
 		})
 	}
+}
+
+func must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
 func TestDecodeABI(t *testing.T) {
@@ -773,6 +848,15 @@ func TestMapFrom(t *testing.T) {
 			},
 		},
 		{
+			name: "url.URL->string",
+			val:  new(StringValue),
+			data: must(url.Parse("http://example.com")),
+			want: Words{
+				padL("12"), // length
+				padR("687474703a2f2f6578616d706c652e636f6d"), // data
+			},
+		},
+		{
 			name:    "array->string",
 			val:     new(StringValue),
 			data:    [3]byte{1, 2, 3},
@@ -1203,6 +1287,50 @@ func TestMapFrom(t *testing.T) {
 				padL("2a"),
 			},
 		},
+		{
+			name: "time.Time->int256",
+			val:  &IntValue{Size: 256},
+			data: time.Unix(0, 0),
+			want: Words{padL("00")},
+		},
+		{
+			name: "time.Unix(math.MaxInt64, math.MinInt64)->int256",
+			val:  &IntValue{Size: 256},
+			data: time.Unix(math.MaxInt64, math.MinInt64),
+			want: Words{padL("7ffffffdda3e82fa")},
+		},
+		{
+			name: "time.Unix(math.MinInt64, math.MinInt64)->int256",
+			val:  &IntValue{Size: 256},
+			data: time.Unix(math.MinInt64, math.MinInt64),
+			want: Words{padL("7ffffffdda3e82fb")},
+		},
+		{
+			name:    "time.Unix(math.MinInt64, math.MinInt64)->int32",
+			val:     &IntValue{Size: 32},
+			data:    time.Unix(math.MinInt64, math.MinInt64),
+			wantErr: true,
+		},
+		{
+			name: "time.Unix(math.MinInt64, math.MinInt64)->int64",
+			val:  &IntValue{Size: 64},
+			data: time.Unix(math.MinInt64, math.MinInt64),
+			want: Words{padL("7ffffffdda3e82fb")},
+		},
+		{
+			name: "time.Unix(math.MinInt64, math.MaxInt64)->int256",
+			val:  &IntValue{Size: 256},
+			data: time.Unix(math.MinInt64, math.MaxInt64),
+			// want: Words{padLFF("8000000025c17d04")},
+			want: Words{Word{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x02, 0x25, 0xc1, 0x7d, 0x04}},
+		},
+		{
+			name: "time.Unix(math.MaxInt64, math.MaxInt64)->int256",
+			val:  &IntValue{Size: 256},
+			data: time.Unix(math.MaxInt64, math.MaxInt64),
+			// want: Words{padLFF("8000000025c17d03")},
+			want: Words{Word{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x00, 0x00, 0x02, 0x25, 0xc1, 0x7d, 0x03}},
+		},
 		// BoolValue:
 		{
 			name: "bool->bool",
@@ -1377,6 +1505,18 @@ func TestMapTo(t *testing.T) {
 			arg:  new([]byte),
 			val:  func() Value { s := StringValue("foo"); return &s }(),
 			want: func() *[]byte { b := []byte("foo"); return &b }(),
+		},
+		{
+			name: "string->url.URL",
+			arg:  new(url.URL),
+			val:  func() Value { s := StringValue("http://example.com"); return &s }(),
+			want: func() *url.URL { return must(url.Parse("http://example.com")) }(),
+		},
+		{
+			name:    "string->url.URL(bad)",
+			arg:     new(url.URL),
+			val:     func() Value { s := StringValue("http://example.com:XXX"); return &s }(),
+			wantErr: true,
 		},
 		{
 			name:    "string->array",
@@ -1594,8 +1734,7 @@ func TestMapTo(t *testing.T) {
 			want: func() *int8 { i := int8(42); return &i }(),
 		},
 		{
-			name: "uint16->int8#overflow",
-
+			name:    "uint16->int8#overflow",
 			arg:     new(int8),
 			val:     func() Value { i := &UintValue{Size: 16}; i.SetUint64(128); return i }(),
 			wantErr: true,
@@ -1623,6 +1762,12 @@ func TestMapTo(t *testing.T) {
 			arg:  new(types.Number),
 			val:  func() Value { i := &UintValue{Size: 256}; i.SetUint64(42); return i }(),
 			want: types.MustNumberFromHexPtr("0x2a"),
+		},
+		{
+			name: "uint256->time.Time",
+			arg:  new(time.Time),
+			val:  func() Value { i := &UintValue{Size: 256}; i.SetInt64(math.MaxInt64); return i }(),
+			want: func() *time.Time { t := time.Unix(math.MaxInt64, 0); return &t }(),
 		},
 		// IntValue:
 		{
@@ -1708,6 +1853,12 @@ func TestMapTo(t *testing.T) {
 			arg:  new(types.Number),
 			val:  func() Value { i := &IntValue{Size: 256}; i.SetUint64(42); return i }(),
 			want: types.MustNumberFromHexPtr("0x2a"),
+		},
+		{
+			name: "int256->time.Time",
+			arg:  new(time.Time),
+			val:  func() Value { i := &IntValue{Size: 256}; i.SetInt64(math.MaxInt64); return i }(),
+			want: func() *time.Time { t := time.Unix(math.MaxInt64, 0); return &t }(),
 		},
 		// BoolValue:
 		{
