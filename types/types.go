@@ -204,7 +204,6 @@ func HashFromHex(h string, pad Pad) (Hash, error) {
 }
 
 // HashFromHexPtr parses a hash in hex format and returns a *Hash type.
-// If hash is longer than 32 bytes, it returns an error.
 // It returns nil if the hash is invalid.
 func HashFromHexPtr(h string, pad Pad) *Hash {
 	hash, err := HashFromHex(h, pad)
@@ -215,7 +214,6 @@ func HashFromHexPtr(h string, pad Pad) *Hash {
 }
 
 // MustHashFromHex parses a hash in hex format and returns a Hash type.
-// If hash is longer than 32 bytes, it returns an error.
 // It panics if the hash is invalid.
 func MustHashFromHex(h string, pad Pad) Hash {
 	hash, err := HashFromHex(h, pad)
@@ -226,7 +224,6 @@ func MustHashFromHex(h string, pad Pad) Hash {
 }
 
 // MustHashFromHexPtr parses a hash in hex format and returns a *Hash type.
-// If hash is longer than 32 bytes, it returns an error.
 // It panics if the hash is invalid.
 func MustHashFromHexPtr(h string, pad Pad) *Hash {
 	hash := MustHashFromHex(h, pad)
@@ -255,7 +252,6 @@ func HashFromBytes(b []byte, pad Pad) (Hash, error) {
 }
 
 // HashFromBytesPtr converts a byte slice to a *Hash type.
-// If bytes is longer than 32 bytes, it returns an error.
 // It returns nil if the hash is invalid.
 func HashFromBytesPtr(b []byte, pad Pad) *Hash {
 	h, err := HashFromBytes(b, pad)
@@ -266,7 +262,6 @@ func HashFromBytesPtr(b []byte, pad Pad) *Hash {
 }
 
 // MustHashFromBytes converts a byte slice to a Hash type.
-// If bytes is longer than 32 bytes, it returns an error.
 // It panics if the hash is invalid.
 func MustHashFromBytes(b []byte, pad Pad) Hash {
 	h, err := HashFromBytes(b, pad)
@@ -277,7 +272,6 @@ func MustHashFromBytes(b []byte, pad Pad) Hash {
 }
 
 // MustHashFromBytesPtr converts a byte slice to a *Hash type.
-// If bytes is longer than 32 bytes, it returns an error.
 // It panics if the hash is invalid.
 func MustHashFromBytesPtr(b []byte, pad Pad) *Hash {
 	h := MustHashFromBytes(b, pad)
