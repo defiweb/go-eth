@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/defiweb/go-rlp"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/defiweb/go-eth/hexutil"
 )
@@ -114,7 +115,15 @@ func (t Address) Bytes() []byte {
 
 // String returns the hex representation of the address.
 func (t Address) String() string {
-	return hexutil.BytesToHex(t[:])
+	keccak := func(data ...[]byte) Hash {
+		h := sha3.NewLegacyKeccak256()
+		for _, i := range data {
+			h.Write(i)
+		}
+		return MustHashFromBytes(h.Sum(nil), PadNone)
+	}
+
+	return t.Checksum(keccak)
 }
 
 // Checksum returns the address with the checksum calculated according to
