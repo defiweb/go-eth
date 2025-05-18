@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
@@ -13,7 +14,15 @@ import (
 	"github.com/defiweb/go-eth/crypto/kzg4844"
 )
 
-// AccessList is an EIP-2930 access list.
+// AccessList represents an Ethereum access list as defined in EIP-2930.
+//
+// EIP-2930 introduced a new transaction type that includes an optional
+// access list, which specifies a list of addresses and storage keys that the
+// transaction plans to access. By declaring these accesses upfront,
+// transactions can benefit from reduced gas costs for cold accesses, as
+// the specified addresses and storage slots are warmed up ahead of execution.
+//
+// https://eips.ethereum.org/EIPS/eip-2930
 type AccessList []AccessTuple
 
 // AccessTuple is the element type of access list.
@@ -22,6 +31,7 @@ type AccessTuple struct {
 	StorageKeys []Hash  `json:"storageKeys"`
 }
 
+// Copy creates a deep copy of the access list.
 func (a *AccessList) Copy() AccessList {
 	if a == nil {
 		return nil
@@ -33,6 +43,7 @@ func (a *AccessList) Copy() AccessList {
 	return c
 }
 
+// EncodeRLP implements the rlp.Encoder interface.
 func (a AccessList) EncodeRLP() ([]byte, error) {
 	l := rlp.List{}
 	for _, tuple := range a {
@@ -42,6 +53,7 @@ func (a AccessList) EncodeRLP() ([]byte, error) {
 	return rlp.Encode(l)
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
 func (a *AccessList) DecodeRLP(data []byte) (int, error) {
 	d, n, err := rlp.DecodeLazy(data)
 	if err != nil {
@@ -61,6 +73,7 @@ func (a *AccessList) DecodeRLP(data []byte) (int, error) {
 	return n, nil
 }
 
+// Copy creates a deep copy of the access tuple.
 func (a *AccessTuple) Copy() AccessTuple {
 	keys := make([]Hash, len(a.StorageKeys))
 	copy(keys, a.StorageKeys)
@@ -70,6 +83,7 @@ func (a *AccessTuple) Copy() AccessTuple {
 	}
 }
 
+// EncodeRLP implements the rlp.Encoder interface.
 func (a AccessTuple) EncodeRLP() ([]byte, error) {
 	h := rlp.List{}
 	for _, hash := range a.StorageKeys {
@@ -79,6 +93,7 @@ func (a AccessTuple) EncodeRLP() ([]byte, error) {
 	return rlp.Encode(rlp.List{a.Address, h})
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
 func (a *AccessTuple) DecodeRLP(data []byte) (int, error) {
 	d, n, err := rlp.DecodeLazy(data)
 	if err != nil {
@@ -108,42 +123,26 @@ func (a *AccessTuple) DecodeRLP(data []byte) (int, error) {
 	return n, nil
 }
 
-// Blob is an EIP-4844 blob for blob-carrying transactions.
-type Blob struct {
-	Hash    Hash         // Hash is the hash of the blob.
-	Sidecar *BlobSidecar // Sidecar is an optional sidecar for the blob.
+// BlobInfo represents the information of an EIP-4844 blob carried in a
+// transaction.
+//
+// EIP-4844 introduces "blob-carrying transactions" to Ethereum, which include
+// a new type of data called "blobs". These blobs are large binary objects that
+// are not directly accessible by the EVM but are committed to the consensus
+// layer.
+//
+// https://eips.ethereum.org/EIPS/eip-4844
+type BlobInfo struct {
+	Hash    Hash         // Hash of the blob.
+	Sidecar *BlobSidecar // Optional sidecar containing blob components.
 }
 
-// BlobSidecar is part of the blob that is stored by the consensus layer.
+// BlobSidecar contains the components of the blob stored by the consensus
+// layer.
 type BlobSidecar struct {
-	Blob       kzg4844.Blob       // Blob needed by the blob pool
-	Commitment kzg4844.Commitment // Commitment needed by the blob pool
-	Proof      kzg4844.Proof      // Proof needed by the blob pool
-}
-
-func NewBlob(data []byte) (Blob, error) {
-	if len(data) > kzg4844.BlobLength {
-		return Blob{}, fmt.Errorf("blob length exceeds maximum length of %d", kzg4844.BlobLength)
-	}
-	b := &kzg4844.Blob{}
-	copy(b[:], data)
-	c, err := crypto.KZGBlobToCommitment(b)
-	if err != nil {
-		return Blob{}, err
-	}
-	p, err := crypto.KZGComputeBlobProof(b, c)
-	if err != nil {
-		return Blob{}, err
-	}
-	s := &BlobSidecar{
-		Blob:       *b,
-		Commitment: c,
-		Proof:      p,
-	}
-	return Blob{
-		Hash:    s.ComputeHash(),
-		Sidecar: s,
-	}, nil
+	Blob       kzg4844.Blob       // The actual blob data.
+	Commitment kzg4844.Commitment // Commitment for the blob.
+	Proof      kzg4844.Proof      // Proof for the blob.
 }
 
 // ComputeHash computes the blob hash of the given blob sidecar.
@@ -151,6 +150,42 @@ func (sc *BlobSidecar) ComputeHash() Hash {
 	return crypto.KZGComputeBlobHashV1(sc.Commitment)
 }
 
+// NewBlobInfo creates a new EIP-4844 BlobInfo from the given blob, computing
+// its hash, commitment, and proof.
+//
+// The provided blob must not be nil and must be a valid EIP-4844 blob
+// of length 131072 bytes (4096 field elements of 32 bytes each).
+// Each field element is a 32-byte big-endian integer not exceeding the
+// BLS12-381 field modulus specified in EIP-4844.
+//
+// NewBlobInfo does not perform any encoding on the provided data.
+//
+// Returns an error if the blob is nil or if the commitment/proof computation
+// fails.
+func NewBlobInfo(b *kzg4844.Blob) (BlobInfo, error) {
+	if b == nil {
+		return BlobInfo{}, errors.New("blob is nil")
+	}
+	c, err := crypto.KZGBlobToCommitment(b)
+	if err != nil {
+		return BlobInfo{}, err
+	}
+	p, err := crypto.KZGComputeBlobProof(b, c)
+	if err != nil {
+		return BlobInfo{}, err
+	}
+	s := &BlobSidecar{
+		Blob:       *b,
+		Commitment: c,
+		Proof:      p,
+	}
+	return BlobInfo{
+		Hash:    s.ComputeHash(),
+		Sidecar: s,
+	}, nil
+}
+
+// TransactionOnChain represents a transaction on the blockchain.
 type TransactionOnChain struct {
 	Decoder          JSONTransactionDecoder // Decoder is an optional transaction decoder, if nil, the default decoder is used.
 	Transaction      Transaction            // Transaction is the transaction data.
@@ -160,6 +195,7 @@ type TransactionOnChain struct {
 	TransactionIndex *uint64                // TransactionIndex is the index of the transaction in the block.
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionOnChain) MarshalJSON() ([]byte, error) {
 	ocd := &jsonOnChainTransaction{}
 	ocd.Hash = t.Hash
@@ -174,6 +210,7 @@ func (t *TransactionOnChain) MarshalJSON() ([]byte, error) {
 	)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *TransactionOnChain) UnmarshalJSON(data []byte) error {
 	ocd := &jsonOnChainTransaction{}
 	if err := json.Unmarshal(data, ocd); err != nil {
@@ -223,6 +260,7 @@ type TransactionReceipt struct {
 	Status            *uint64  // Status is the status of the transaction.
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t TransactionReceipt) MarshalJSON() ([]byte, error) {
 	receipt := &jsonTransactionReceipt{
 		TransactionHash:   t.TransactionHash,
@@ -246,6 +284,7 @@ func (t TransactionReceipt) MarshalJSON() ([]byte, error) {
 	return json.Marshal(receipt)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *TransactionReceipt) UnmarshalJSON(data []byte) error {
 	receipt := &jsonTransactionReceipt{}
 	if err := json.Unmarshal(data, receipt); err != nil {
@@ -277,7 +316,7 @@ type jsonTransactionReceipt struct {
 	BlockHash         Hash     `json:"blockHash"`
 	BlockNumber       Number   `json:"blockNumber"`
 	From              Address  `json:"from"`
-	To                Address  `json:"To"`
+	To                Address  `json:"to"`
 	CumulativeGasUsed Number   `json:"cumulativeGasUsed"`
 	EffectiveGasPrice Number   `json:"effectiveGasPrice"`
 	GasUsed           Number   `json:"gasUsed"`
@@ -288,6 +327,7 @@ type jsonTransactionReceipt struct {
 	Status            *Number  `json:"status"`
 }
 
+// Block represents a block on the blockchain.
 type Block struct {
 	Number            *big.Int             // Block is the block number.
 	Hash              Hash                 // Hash is the hash of the block.
@@ -312,6 +352,7 @@ type Block struct {
 	ExtraData         []byte               // ExtraData is the "extra data" field of this block.
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (b Block) MarshalJSON() ([]byte, error) {
 	block := &jsonBlock{
 		Number:           NumberFromBigInt(b.Number),
@@ -343,6 +384,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(block)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (b *Block) UnmarshalJSON(data []byte) error {
 	block := &jsonBlock{}
 	if err := json.Unmarshal(data, block); err != nil {
@@ -417,7 +459,8 @@ func (b *jsonBlockTransactions) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &b.Hashes)
 }
 
-// FeeHistory represents the result of the feeHistory Client call.
+// FeeHistory contains information about the fee structure and gas usage
+// over a range of blocks.
 type FeeHistory struct {
 	OldestBlock   uint64       // OldestBlock is the oldest block number for which the base fee and gas used are returned.
 	Reward        [][]*big.Int // Reward is the reward for each block in the range [OldestBlock, LatestBlock].
@@ -425,6 +468,7 @@ type FeeHistory struct {
 	GasUsedRatio  []float64    // GasUsedRatio is the gas used ratio for each block in the range [OldestBlock, LatestBlock].
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (f FeeHistory) MarshalJSON() ([]byte, error) {
 	feeHistory := &jsonFeeHistory{
 		OldestBlock:  NumberFromUint64(f.OldestBlock),
@@ -448,6 +492,7 @@ func (f FeeHistory) MarshalJSON() ([]byte, error) {
 	return json.Marshal(feeHistory)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (f *FeeHistory) UnmarshalJSON(input []byte) error {
 	feeHistory := &jsonFeeHistory{}
 	if err := json.Unmarshal(input, feeHistory); err != nil {
@@ -490,6 +535,7 @@ type Log struct {
 	Removed          bool     // Removed is true if the log was reverted due to a chain reorganization. False if unknown.
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (l Log) MarshalJSON() ([]byte, error) {
 	j := &jsonLog{}
 	j.Address = l.Address
@@ -510,6 +556,7 @@ func (l Log) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (l *Log) UnmarshalJSON(input []byte) error {
 	log := &jsonLog{}
 	if err := json.Unmarshal(input, log); err != nil {
@@ -556,38 +603,47 @@ type FilterLogsQuery struct {
 	BlockHash *Hash
 }
 
+// NewFilterLogsQuery creates a new FilterLogsQuery.
 func NewFilterLogsQuery() *FilterLogsQuery {
 	return &FilterLogsQuery{}
 }
 
+// SetAddresses sets the addresses to filter logs.
 func (q *FilterLogsQuery) SetAddresses(addresses ...Address) {
 	q.Address = addresses
 }
 
+// AddAddresses adds addresses to filter logs.
 func (q *FilterLogsQuery) AddAddresses(addresses ...Address) {
 	q.Address = append(q.Address, addresses...)
 }
 
+// SetFromBlock sets the starting block number to filter logs.
 func (q *FilterLogsQuery) SetFromBlock(fromBlock *BlockNumber) {
 	q.FromBlock = fromBlock
 }
 
+// SetToBlock sets the ending block number to filter logs.
 func (q *FilterLogsQuery) SetToBlock(toBlock *BlockNumber) {
 	q.ToBlock = toBlock
 }
 
+// SetTopics sets the topics to filter logs.
 func (q *FilterLogsQuery) SetTopics(topics ...[]Hash) {
 	q.Topics = topics
 }
 
+// AddTopics adds topics to filter logs.
 func (q *FilterLogsQuery) AddTopics(topics ...[]Hash) {
 	q.Topics = append(q.Topics, topics...)
 }
 
+// SetBlockHash sets the block hash to filter logs.
 func (q *FilterLogsQuery) SetBlockHash(blockHash *Hash) {
 	q.BlockHash = blockHash
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (q FilterLogsQuery) MarshalJSON() ([]byte, error) {
 	logsQuery := &jsonFilterLogsQuery{
 		FromBlock: q.FromBlock,
@@ -599,7 +655,7 @@ func (q FilterLogsQuery) MarshalJSON() ([]byte, error) {
 		copy(logsQuery.Address, q.Address)
 	}
 	if len(q.Topics) > 0 {
-		logsQuery.Topics = make([]hashList, len(q.Topics))
+		logsQuery.Topics = make([]oneOrList[Hash], len(q.Topics))
 		for i, t := range q.Topics {
 			logsQuery.Topics[i] = make([]Hash, len(t))
 			copy(logsQuery.Topics[i], t)
@@ -608,6 +664,7 @@ func (q FilterLogsQuery) MarshalJSON() ([]byte, error) {
 	return json.Marshal(logsQuery)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (q *FilterLogsQuery) UnmarshalJSON(input []byte) error {
 	logsQuery := &jsonFilterLogsQuery{}
 	if err := json.Unmarshal(input, logsQuery); err != nil {
@@ -631,11 +688,11 @@ func (q *FilterLogsQuery) UnmarshalJSON(input []byte) error {
 }
 
 type jsonFilterLogsQuery struct {
-	Address   addressList  `json:"address"`
-	FromBlock *BlockNumber `json:"fromBlock,omitempty"`
-	ToBlock   *BlockNumber `json:"toBlock,omitempty"`
-	Topics    []hashList   `json:"topics"`
-	BlockHash *Hash        `json:"blockhash,omitempty"`
+	Address   oneOrList[Address] `json:"address"`
+	FromBlock *BlockNumber       `json:"fromBlock,omitempty"`
+	ToBlock   *BlockNumber       `json:"toBlock,omitempty"`
+	Topics    []oneOrList[Hash]  `json:"topics"`
+	BlockHash *Hash              `json:"blockhash,omitempty"`
 }
 
 // SyncStatus represents the sync status of a node.

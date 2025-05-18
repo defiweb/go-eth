@@ -137,43 +137,49 @@ func (t Address) IsZero() bool {
 	return t == ZeroAddress
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t Address) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *Address) UnmarshalJSON(input []byte) error {
 	return fixedBytesUnmarshalJSON(input, t[:])
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (t Address) MarshalText() ([]byte, error) {
 	return bytesMarshalText(t[:]), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (t *Address) UnmarshalText(input []byte) error {
 	return fixedBytesUnmarshalText(input, t[:])
 }
 
+// EncodeRLP implements the rlp.Encoder interface.
 func (t Address) EncodeRLP() ([]byte, error) {
 	return rlp.Encode(rlp.Bytes(t[:]))
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
 func (t *Address) DecodeRLP(data []byte) (int, error) {
 	r, n, err := rlp.DecodeLazy(data)
 	if err != nil {
 		return 0, err
 	}
-	a, err := r.Bytes()
+	b, err := r.Bytes()
 	if err != nil {
 		return 0, err
 	}
-	if len(a) == 0 {
+	if len(b) == 0 {
 		*t = ZeroAddress
 		return n, nil
 	}
-	if len(a) != AddressLength {
-		return 0, fmt.Errorf("invalid address length %d", len(a))
+	if len(b) != AddressLength {
+		return 0, fmt.Errorf("invalid address length %d", len(b))
 	}
-	copy(t[:], a)
+	copy(t[:], b)
 	return n, nil
 }
 
@@ -291,11 +297,11 @@ func HashFromBigInt(i *big.Int) (Hash, error) {
 		x := new(big.Int).Set(i).And(i, m)
 		b = x.Bytes()
 		if len(b) != HashLength || b[0]&0x80 == 0 {
-			return Hash{}, fmt.Errorf("number too large To convert To hash")
+			return Hash{}, fmt.Errorf("number too large to convert to hash")
 		}
 	}
 	if len(b) > HashLength {
-		return Hash{}, fmt.Errorf("number too large To convert To hash")
+		return Hash{}, fmt.Errorf("number too large to convert to hash")
 	}
 	return HashFromBytes(b, PadLeft)
 }
@@ -345,26 +351,32 @@ func (t Hash) IsZero() bool {
 	return t == ZeroHash
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t Hash) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *Hash) UnmarshalJSON(input []byte) error {
 	return fixedBytesUnmarshalJSON(input, t[:])
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (t Hash) MarshalText() ([]byte, error) {
 	return bytesMarshalText(t[:]), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (t *Hash) UnmarshalText(input []byte) error {
 	return fixedBytesUnmarshalText(input, t[:])
 }
 
+// EncodeRLP implements the rlp.Encoder interface.
 func (t Hash) EncodeRLP() ([]byte, error) {
 	return rlp.Encode(rlp.Bytes(t[:]))
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
 func (t *Hash) DecodeRLP(data []byte) (int, error) {
 	r, n, err := rlp.DecodeLazy(data)
 	if err != nil {
@@ -373,6 +385,10 @@ func (t *Hash) DecodeRLP(data []byte) (int, error) {
 	b, err := r.Bytes()
 	if err != nil {
 		return 0, err
+	}
+	if len(b) == 0 {
+		*t = ZeroHash
+		return n, nil
 	}
 	if len(b) != HashLength {
 		return 0, fmt.Errorf("invalid hash length %d", len(t))
@@ -503,6 +519,12 @@ func (t *BlockNumber) IsTag() bool {
 }
 
 // Big returns the big.Int representation of the block number.
+// It returns a negative number if the block tag is used:
+//   - earliest: -1
+//   - latest: -2
+//   - pending: -3
+//   - safe: -4
+//   - finalized: -5
 func (t *BlockNumber) Big() *big.Int {
 	return new(big.Int).Set(&t.x)
 }
@@ -525,6 +547,7 @@ func (t *BlockNumber) String() string {
 	}
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t BlockNumber) MarshalJSON() ([]byte, error) {
 	b, err := t.MarshalText()
 	if err != nil {
@@ -533,10 +556,16 @@ func (t BlockNumber) MarshalJSON() ([]byte, error) {
 	return naiveQuote(b), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *BlockNumber) UnmarshalJSON(input []byte) error {
-	return t.UnmarshalText(naiveUnquote(input))
+	input, ok := naiveUnquote(input)
+	if !ok {
+		return fmt.Errorf("invalid JSON string: %s", input)
+	}
+	return t.UnmarshalText(input)
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (t BlockNumber) MarshalText() ([]byte, error) {
 	switch {
 	case t.IsEarliest():
@@ -554,6 +583,7 @@ func (t BlockNumber) MarshalText() ([]byte, error) {
 	}
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (t *BlockNumber) UnmarshalText(input []byte) error {
 	switch strings.ToLower(strings.TrimSpace(string(input))) {
 	case "earliest":
@@ -770,6 +800,7 @@ func (s Signature) Equal(c Signature) bool {
 	return sv.Cmp(cv) == 0 && sr.Cmp(cr) == 0 && ss.Cmp(cs) == 0
 }
 
+// Copy returns a deep copy of the signature.
 func (s Signature) Copy() *Signature {
 	cpy := &Signature{}
 	if s.V != nil {
@@ -784,10 +815,12 @@ func (s Signature) Copy() *Signature {
 	return cpy
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (s Signature) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(s.Bytes()), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (s *Signature) UnmarshalJSON(input []byte) error {
 	var b []byte
 	if err := bytesUnmarshalJSON(input, &b); err != nil {
@@ -801,10 +834,12 @@ func (s *Signature) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (s Signature) MarshalText() ([]byte, error) {
 	return bytesMarshalText(s.Bytes()), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (s *Signature) UnmarshalText(input []byte) error {
 	var b []byte
 	if err := bytesUnmarshalText(input, &b); err != nil {
@@ -906,7 +941,7 @@ func (t *Number) Big() *big.Int {
 	return new(big.Int).Set(&t.x)
 }
 
-// Bytes returns the byte representation of the number.
+// Bytes returns the absolute value of a number as a big-endian byte slice.
 func (t *Number) Bytes() []byte {
 	return t.x.Bytes()
 }
@@ -916,18 +951,22 @@ func (t *Number) String() string {
 	return hexutil.BigIntToHex(&t.x)
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t Number) MarshalJSON() ([]byte, error) {
 	return numberMarshalJSON(t.Big()), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *Number) UnmarshalJSON(input []byte) error {
 	return numberUnmarshalJSON(input, &t.x)
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (t Number) MarshalText() ([]byte, error) {
 	return numberMarshalText(t.Big()), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (t *Number) UnmarshalText(input []byte) error {
 	return numberUnmarshalText(input, &t.x)
 }
@@ -1018,18 +1057,22 @@ func (b *Bytes) String() string {
 	return hexutil.BytesToHex(*b)
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (b Bytes) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(b), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (b *Bytes) UnmarshalJSON(input []byte) error {
 	return bytesUnmarshalJSON(input, (*[]byte)(b))
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (b Bytes) MarshalText() ([]byte, error) {
 	return bytesMarshalText(b), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (b *Bytes) UnmarshalText(input []byte) error {
 	return bytesUnmarshalText(input, (*[]byte)(b))
 }
@@ -1043,15 +1086,31 @@ const (
 	nonceLength = 8
 )
 
-type (
-	kzgBlob       [kzg4844.BlobLength]byte
-	kzgCommitment [kzg4844.CommitmentLength]byte
-	kzgProof      [kzg4844.ProofLength]byte
-	bloom         [bloomLength]byte
-	nonce         [nonceLength]byte
-	hashList      []Hash
-	addressList   []Address
-)
+// oneOrList is a type that can marshal and unmarshal a single element or a list
+// of elements.
+type oneOrList[T any] []T
+
+func (l oneOrList[T]) MarshalJSON() ([]byte, error) {
+	if len(l) == 1 {
+		return json.Marshal(l[0])
+	}
+	return json.Marshal([]T(l))
+}
+
+func (l *oneOrList[T]) UnmarshalJSON(input []byte) error {
+	if len(input) >= 1 && input[0] == '[' || input[0] == '{' {
+		return json.Unmarshal(input, l)
+	}
+	var i T
+	if err := json.Unmarshal(input, &i); err != nil {
+		return err
+	}
+	*l = oneOrList[T]{i}
+	return nil
+}
+
+// kzgBlob is a fixed-length byte array used for KZG blob.
+type kzgBlob [kzg4844.BlobLength]byte
 
 func (t kzgBlob) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
@@ -1062,12 +1121,15 @@ func (t *kzgBlob) UnmarshalJSON(input []byte) error {
 }
 
 func (t kzgBlob) EncodeRLP() ([]byte, error) {
-	return fixedBytesEncodeRLP(t[:])
+	return rlp.Encode(rlp.Bytes(t[:]))
 }
 
 func (t *kzgBlob) DecodeRLP(data []byte) (int, error) {
 	return fixedBytesDecodeRLP(data, t[:])
 }
+
+// kzgCommitment is a fixed-length byte array used for KZG commitment.
+type kzgCommitment [kzg4844.CommitmentLength]byte
 
 func (t kzgCommitment) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
@@ -1078,12 +1140,15 @@ func (t *kzgCommitment) UnmarshalJSON(input []byte) error {
 }
 
 func (t kzgCommitment) EncodeRLP() ([]byte, error) {
-	return fixedBytesEncodeRLP(t[:])
+	return rlp.Encode(rlp.Bytes(t[:]))
 }
 
 func (t *kzgCommitment) DecodeRLP(data []byte) (int, error) {
 	return fixedBytesDecodeRLP(data, t[:])
 }
+
+// kzgProof is a fixed-length byte array used for KZG proof.
+type kzgProof [kzg4844.ProofLength]byte
 
 func (t kzgProof) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
@@ -1094,12 +1159,15 @@ func (t *kzgProof) UnmarshalJSON(input []byte) error {
 }
 
 func (t kzgProof) EncodeRLP() ([]byte, error) {
-	return fixedBytesEncodeRLP(t[:])
+	return rlp.Encode(rlp.Bytes(t[:]))
 }
 
 func (t *kzgProof) DecodeRLP(data []byte) (int, error) {
 	return fixedBytesDecodeRLP(data, t[:])
 }
+
+// bloom is a fixed-length byte array used for bloom filter.
+type bloom [bloomLength]byte
 
 func bloomFromBytes(x []byte) bloom {
 	var b [bloomLength]byte
@@ -1122,21 +1190,17 @@ func (t *bloom) UnmarshalJSON(input []byte) error {
 	return fixedBytesUnmarshalJSON(input, t[:])
 }
 
-func nonceFromBigInt(x *big.Int) nonce {
+func nonceFromBigInt(x *big.Int) (n nonce) {
 	if x == nil {
 		return nonce{}
 	}
-	return nonceFromBytes(x.Bytes())
-}
-
-func nonceFromBytes(x []byte) nonce {
-	var n nonce
-	if len(x) > len(n) {
-		return n
-	}
-	copy(n[nonceLength-len(x):], x)
+	b := x.Bytes()
+	copy(n[nonceLength-len(b):], b)
 	return n
 }
+
+// nonce is a fixed-length byte array used for nonce.
+type nonce [nonceLength]byte
 
 func (t *nonce) Big() *big.Int {
 	return new(big.Int).SetBytes(t[:])
@@ -1148,55 +1212,4 @@ func (t nonce) MarshalJSON() ([]byte, error) {
 
 func (t *nonce) UnmarshalJSON(input []byte) error {
 	return fixedBytesUnmarshalJSON(input, t[:])
-}
-
-func (b hashList) MarshalJSON() ([]byte, error) {
-	if len(b) == 1 {
-		return json.Marshal(b[0])
-	}
-	return json.Marshal([]Hash(b))
-}
-
-func (b *hashList) UnmarshalJSON(input []byte) error {
-	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
-		*b = hashList{{}}
-		return json.Unmarshal(input, &((*b)[0]))
-	}
-	return json.Unmarshal(input, (*[]Hash)(b))
-}
-
-func (b *hashList) EncodeRLP() ([]byte, error) {
-	l := make(rlp.TypedList[Hash], len(*b))
-	for n, _ := range *b {
-		l[n] = &(*b)[n]
-	}
-	return rlp.Encode(l)
-}
-
-func (b *hashList) DecodeRLP(data []byte) (int, error) {
-	l := make(rlp.TypedList[Hash], 0)
-	n, err := rlp.Decode(data, &l)
-	if err != nil {
-		return 0, err
-	}
-	*b = make(hashList, len(l))
-	for n, hash := range l {
-		(*b)[n] = *hash
-	}
-	return n, nil
-}
-
-func (t addressList) MarshalJSON() ([]byte, error) {
-	if len(t) == 1 {
-		return json.Marshal(t[0])
-	}
-	return json.Marshal([]Address(t))
-}
-
-func (t *addressList) UnmarshalJSON(input []byte) error {
-	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
-		*t = addressList{{}}
-		return json.Unmarshal(input, &((*t)[0]))
-	}
-	return json.Unmarshal(input, (*[]Address)(t))
 }

@@ -2,70 +2,45 @@ package types
 
 import "encoding/json"
 
+// CallLegacy represents a call corresponding to the legacy transaction type.
 type CallLegacy struct {
-	EmbedCallData
-	EmbedLegacyPriceData
+	CallFields
+	LegacyPriceField
 }
 
+// NewCallLegacy creates a new CallLegacy.
 func NewCallLegacy() *CallLegacy {
 	return &CallLegacy{}
 }
 
+// Copy creates a deep copy of the CallLegacy.
 func (c *CallLegacy) Copy() *CallLegacy {
 	if c == nil {
 		return nil
 	}
 	return &CallLegacy{
-		EmbedCallData:        *c.EmbedCallData.Copy(),
-		EmbedLegacyPriceData: *c.EmbedLegacyPriceData.Copy(),
+		CallFields:       *c.CallFields.Copy(),
+		LegacyPriceField: *c.LegacyPriceField.Copy(),
 	}
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (c CallLegacy) MarshalJSON() ([]byte, error) {
-	call := &jsonCallLegacy{
-		From: c.From,
-		To:   c.To,
-		Data: c.Input,
-	}
-	if c.GasLimit != nil {
-		call.GasLimit = NumberFromUint64Ptr(*c.GasLimit)
-	}
-	if c.GasPrice != nil {
-		call.GasPrice = NumberFromBigIntPtr(c.GasPrice)
-	}
-	if c.Value != nil {
-		value := NumberFromBigInt(c.Value)
-		call.Value = &value
-	}
-	return json.Marshal(call)
+	j := &jsonCall{}
+	c.CallFields.toJSON(j)
+	c.LegacyPriceField.toJSON(j)
+	return json.Marshal(j)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (c *CallLegacy) UnmarshalJSON(data []byte) error {
-	call := &jsonCallLegacy{}
-	if err := json.Unmarshal(data, call); err != nil {
+	j := &jsonCall{}
+	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	c.From = call.From
-	c.To = call.To
-	if call.GasLimit != nil {
-		gas := call.GasLimit.Big().Uint64()
-		c.GasLimit = &gas
-	}
-	if call.GasPrice != nil {
-		c.GasPrice = call.GasPrice.Big()
-	}
-	if call.Value != nil {
-		c.Value = call.Value.Big()
-	}
-	c.Input = call.Data
+	c.CallFields.fromJSON(j)
+	c.LegacyPriceField.fromJSON(j)
 	return nil
 }
 
-type jsonCallLegacy struct {
-	From     *Address `json:"from,omitempty"`
-	To       *Address `json:"to,omitempty"`
-	GasLimit *Number  `json:"gas,omitempty"`
-	GasPrice *Number  `json:"gasPrice,omitempty"`
-	Value    *Number  `json:"value,omitempty"`
-	Data     Bytes    `json:"data,omitempty"`
-}
+var _ Call = (*CallLegacy)(nil)

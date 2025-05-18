@@ -9,21 +9,40 @@ import (
 // TransactionType is the type of transaction.
 type TransactionType uint8
 
-// Transaction types.
 const (
+	// LegacyTxType represents the legacy transaction format (Type 0).
+	//
+	// This is the original transaction format used before EIP-2718.
 	LegacyTxType TransactionType = iota
+
+	// AccessListTxType represents the access list transaction format (Type 1).
+	//
+	// Introduced by EIP-2930, this transaction type includes an optional
+	// access list that specifies a list of addresses and storage keys the
+	// transaction plans to access.
 	AccessListTxType
+
+	// DynamicFeeTxType represents the dynamic fee transaction format (Type 2).
+	//
+	// Introduced by EIP-1559, this transaction type supports a new fee market
+	// mechanism with a base fee and a priority fee (tip).
 	DynamicFeeTxType
+
+	// BlobTxType represents the blob transaction format (Type 3).
+	//
+	// Introduced by EIP-4844, this transaction type adds support for
+	// blob-carrying transactions.
 	BlobTxType
 )
 
+// Transaction is an interface that represents a generic Ethereum transaction.
 type Transaction interface {
 	json.Marshaler
 	json.Unmarshaler
 	rlp.Encoder
 	rlp.Decoder
 
-	HasTransactionData
+	TransactionData
 
 	// Type returns the type of the transaction.
 	Type() TransactionType
@@ -33,33 +52,44 @@ type Transaction interface {
 	// create a call.
 	Call() Call
 
-	// CalculateHash calculates the hash of the transaction.
+	// CalculateHash computes and returns the hash of the transaction.
 	CalculateHash() (Hash, error)
 
-	// CalculateSigningHash calculates the signing hash of the transaction.
+	// CalculateSigningHash computes and returns the hash used for signing
+	// the transaction.
 	CalculateSigningHash() (Hash, error)
 }
 
-// TransactionDecoder is an interface that is used to decode transactions of
-// unknown types.
+// TransactionDecoder is an interface for decoding transactions from JSON or
+// RLP encoded data.
 //
 // Decoder may not set the From field of the transaction.
-// To get signer of the transaction, use the Recoverer interface.
+// To get signer of the transaction, use txsign.Recover function.
 type TransactionDecoder interface {
-	RPCTransactionDecoder
+	RLPTransactionDecoder
 	JSONTransactionDecoder
 }
 
-// RPCTransactionDecoder is an interface that is used to decode transactions
-// from RLP encoded data.
-type RPCTransactionDecoder interface {
+// RLPTransactionDecoder is an interface for decoding transactions from
+// RLP-encoded data.
+type RLPTransactionDecoder interface {
 	// DecodeRLP decodes the RLP encoded transaction data.
 	DecodeRLP(data []byte) (Transaction, error)
 }
 
-// JSONTransactionDecoder is an interface that is used to decode transactions
-// from JSON encoded data.
+// JSONTransactionDecoder is an interface for decoding transactions from
+// JSON-encoded data.
 type JSONTransactionDecoder interface {
 	// DecodeJSON decodes the JSON encoded transaction data.
 	DecodeJSON(data []byte) (Transaction, error)
+}
+
+type jsonTransaction struct {
+	ChainID *Number `json:"chainId,omitempty"`
+	Nonce   *Number `json:"nonce,omitempty"`
+	V       *Number `json:"v,omitempty"`
+	R       *Number `json:"r,omitempty"`
+	S       *Number `json:"s,omitempty"`
+
+	jsonCall
 }

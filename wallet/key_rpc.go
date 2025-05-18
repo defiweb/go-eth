@@ -21,7 +21,7 @@ type RPCSigningClient interface {
 type KeyRPC struct {
 	client  RPCSigningClient
 	address types.Address
-	decoder types.RPCTransactionDecoder
+	decoder types.RLPTransactionDecoder
 }
 
 // NewKeyRPC returns a new KeyRPC.
@@ -53,7 +53,7 @@ func (k *KeyRPC) SignTransaction(ctx context.Context, tx types.Transaction) erro
 	if err != nil {
 		return fmt.Errorf("failed to decode signed transaction: %w", err)
 	}
-	tx.SetTransactionData(stx.TransactionData())
+	tx.SetTransactionData(*stx.TransactionData())
 	addr, err := txsign.Recover(tx)
 	if err != nil {
 		return fmt.Errorf("failed to verify signed transaction: %w", err)

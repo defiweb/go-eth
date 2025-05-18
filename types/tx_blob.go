@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/defiweb/go-rlp"
 
@@ -11,31 +10,31 @@ import (
 	"github.com/defiweb/go-eth/crypto/kzg4844"
 )
 
+// TransactionBlob is the blob transaction type (Type 3).
+//
+// Introduced by EIP-4844, this transaction type adds support for blob-carrying
+// transactions.
 type TransactionBlob struct {
-	EmbedCallData
-	EmbedTransactionData
-	EmbedAccessListData
-	EmbedDynamicFeeData
-	EmbedBlobData
+	TransactionFields
+	CallBlob
 }
 
+// NewTransactionBlob creates a new blob transaction.
 func NewTransactionBlob() *TransactionBlob {
 	return &TransactionBlob{}
 }
 
+// Type implements the Transaction interface.
 func (t *TransactionBlob) Type() TransactionType {
 	return BlobTxType
 }
 
+// Call implements the Transaction interface.
 func (t *TransactionBlob) Call() Call {
-	return &CallBlob{
-		EmbedCallData:       *t.EmbedCallData.Copy(),
-		EmbedAccessListData: *t.EmbedAccessListData.Copy(),
-		EmbedDynamicFeeData: *t.EmbedDynamicFeeData.Copy(),
-		EmbedBlobData:       *t.EmbedBlobData.Copy(),
-	}
+	return t.CallBlob.Copy()
 }
 
+// CalculateHash implements the Transaction interface.
 func (t *TransactionBlob) CalculateHash() (Hash, error) {
 	raw, err := t.EncodeRLP()
 	if err != nil {
@@ -44,40 +43,41 @@ func (t *TransactionBlob) CalculateHash() (Hash, error) {
 	return Hash(crypto.Keccak256(raw)), nil
 }
 
+// CalculateSigningHash implements the Transaction interface.
 func (t *TransactionBlob) CalculateSigningHash() (Hash, error) {
 	var (
-		chainID              = uint64(0)
-		nonce                = uint64(0)
-		gasLimit             = uint64(0)
-		maxPriorityFeePerGas = big.NewInt(0)
-		maxFeePerGas         = big.NewInt(0)
-		to                   = ([]byte)(nil)
-		value                = big.NewInt(0)
-		input                = ([]byte)(nil)
+		chainID              = rlp.Uint(0)
+		nonce                = rlp.Uint(0)
+		gasLimit             = rlp.Uint(0)
+		maxPriorityFeePerGas = &rlp.BigInt{}
+		maxFeePerGas         = &rlp.BigInt{}
+		to                   = (rlp.Bytes)(nil)
+		value                = &rlp.BigInt{}
+		input                = (rlp.Bytes)(nil)
 		accessList           = (AccessList)(nil)
-		maxFeePerBlobGas     = big.NewInt(0)
-		blobHashes           = (hashList)(nil)
+		maxFeePerBlobGas     = &rlp.BigInt{}
+		blobHashes           = (rlp.TypedList[Hash])(nil)
 	)
 	if t.ChainID != nil {
-		chainID = *t.ChainID
+		chainID = rlp.Uint(*t.ChainID)
 	}
 	if t.Nonce != nil {
-		nonce = *t.Nonce
+		nonce = rlp.Uint(*t.Nonce)
 	}
 	if t.GasLimit != nil {
-		gasLimit = *t.GasLimit
+		gasLimit = rlp.Uint(*t.GasLimit)
 	}
 	if t.MaxPriorityFeePerGas != nil {
-		maxPriorityFeePerGas = t.MaxPriorityFeePerGas
+		maxPriorityFeePerGas = (*rlp.BigInt)(t.MaxPriorityFeePerGas)
 	}
 	if t.MaxFeePerGas != nil {
-		maxFeePerGas = t.MaxFeePerGas
+		maxFeePerGas = (*rlp.BigInt)(t.MaxFeePerGas)
 	}
 	if t.To != nil {
 		to = t.To[:]
 	}
 	if t.Value != nil {
-		value = t.Value
+		value = (*rlp.BigInt)(t.Value)
 	}
 	if t.Input != nil {
 		input = t.Input
@@ -86,79 +86,84 @@ func (t *TransactionBlob) CalculateSigningHash() (Hash, error) {
 		accessList = t.AccessList
 	}
 	if t.MaxFeePerBlobGas != nil {
-		maxFeePerBlobGas = t.MaxFeePerBlobGas
+		maxFeePerBlobGas = (*rlp.BigInt)(t.MaxFeePerBlobGas)
 	}
 	if len(t.Blobs) > 0 {
-		blobHashes = make(hashList, len(t.Blobs))
-		for i, blob := range t.Blobs {
-			if blob.Hash.IsZero() && blob.Sidecar != nil {
-				blobHashes[i] = blob.Sidecar.ComputeHash()
-				continue
-			}
-			blobHashes[i] = blob.Hash
+		blobHashes = make(rlp.TypedList[Hash], len(t.Blobs))
+		for i, _ := range t.Blobs {
+			blobHashes[i] = &t.Blobs[i].Hash
 		}
 	}
 	bin, err := rlp.List{
-		rlp.Uint(chainID),
-		rlp.Uint(nonce),
-		(*rlp.BigInt)(maxPriorityFeePerGas),
-		(*rlp.BigInt)(maxFeePerGas),
-		rlp.Uint(gasLimit),
-		rlp.Bytes(to),
-		(*rlp.BigInt)(value),
-		rlp.Bytes(input),
+		chainID,
+		nonce,
+		maxPriorityFeePerGas,
+		maxFeePerGas,
+		gasLimit,
+		to,
+		value,
+		input,
 		&accessList,
-		(*rlp.BigInt)(maxFeePerBlobGas),
+		maxFeePerBlobGas,
 		&blobHashes,
 	}.EncodeRLP()
 	if err != nil {
 		return ZeroHash, err
 	}
-	bin = append([]byte{byte(BlobTxType)}, bin...)
-	return Hash(crypto.Keccak256(bin)), nil
+	return Hash(crypto.Keccak256(append([]byte{byte(BlobTxType)}, bin...))), nil
 }
 
+// Copy creates a deep copy of the transaction.
+func (t *TransactionBlob) Copy() *TransactionBlob {
+	return &TransactionBlob{
+		TransactionFields: *t.TransactionFields.Copy(),
+		CallBlob:          *t.CallBlob.Copy(),
+	}
+}
+
+// EncodeRLP implements the rlp.Encoder interface.
+//
 //nolint:funlen
 func (t TransactionBlob) EncodeRLP() ([]byte, error) {
 	var (
-		chainID              = uint64(0)
-		nonce                = uint64(0)
-		gasLimit             = uint64(0)
-		maxPriorityFeePerGas = big.NewInt(0)
-		maxFeePerGas         = big.NewInt(0)
-		to                   = ([]byte)(nil)
-		value                = big.NewInt(0)
-		input                = ([]byte)(nil)
+		chainID              = rlp.Uint(0)
+		nonce                = rlp.Uint(0)
+		gasLimit             = rlp.Uint(0)
+		maxPriorityFeePerGas = &rlp.BigInt{}
+		maxFeePerGas         = &rlp.BigInt{}
+		to                   = (rlp.Bytes)(nil)
+		value                = &rlp.BigInt{}
+		input                = (rlp.Bytes)(nil)
 		accessList           = (AccessList)(nil)
-		maxFeePerBlobGas     = big.NewInt(0)
-		blobHashes           = (hashList)(nil)
-		blobs                = rlp.TypedList[kzgBlob]{}
-		commitments          = rlp.TypedList[kzgCommitment]{}
-		proofs               = rlp.TypedList[kzgProof]{}
-		v                    = big.NewInt(0)
-		r                    = big.NewInt(0)
-		s                    = big.NewInt(0)
+		maxFeePerBlobGas     = &rlp.BigInt{}
+		blobHashes           = (rlp.TypedList[Hash])(nil)
+		blobs                = (rlp.TypedList[kzgBlob])(nil)
+		commitments          = (rlp.TypedList[kzgCommitment])(nil)
+		proofs               = (rlp.TypedList[kzgProof])(nil)
+		v                    = &rlp.BigInt{}
+		r                    = &rlp.BigInt{}
+		s                    = &rlp.BigInt{}
 	)
 	if t.ChainID != nil {
-		chainID = *t.ChainID
+		chainID = rlp.Uint(*t.ChainID)
 	}
 	if t.Nonce != nil {
-		nonce = *t.Nonce
+		nonce = rlp.Uint(*t.Nonce)
 	}
 	if t.GasLimit != nil {
-		gasLimit = *t.GasLimit
+		gasLimit = rlp.Uint(*t.GasLimit)
 	}
 	if t.MaxPriorityFeePerGas != nil {
-		maxPriorityFeePerGas = t.MaxPriorityFeePerGas
+		maxPriorityFeePerGas = (*rlp.BigInt)(t.MaxPriorityFeePerGas)
 	}
 	if t.MaxFeePerGas != nil {
-		maxFeePerGas = t.MaxFeePerGas
+		maxFeePerGas = (*rlp.BigInt)(t.MaxFeePerGas)
 	}
 	if t.To != nil {
 		to = t.To[:]
 	}
 	if t.Value != nil {
-		value = t.Value
+		value = (*rlp.BigInt)(t.Value)
 	}
 	if t.Input != nil {
 		input = t.Input
@@ -167,16 +172,14 @@ func (t TransactionBlob) EncodeRLP() ([]byte, error) {
 		accessList = t.AccessList
 	}
 	if t.MaxFeePerBlobGas != nil {
-		maxFeePerBlobGas = t.MaxFeePerBlobGas
+		maxFeePerBlobGas = (*rlp.BigInt)(t.MaxFeePerBlobGas)
 	}
 	if len(t.Blobs) > 0 {
-		blobHashes = make(hashList, 0, len(t.Blobs))
-		for _, blob := range t.Blobs {
-			hash := blob.Hash
-			if hash.IsZero() && blob.Sidecar != nil {
-				hash = blob.Sidecar.ComputeHash()
-			}
-			blobHashes = append(blobHashes, hash)
+		blobHashes = make(rlp.TypedList[Hash], 0, len(t.Blobs))
+		for i, _ := range t.Blobs {
+			blob := t.Blobs[i]
+
+			blobHashes = append(blobHashes, &blob.Hash)
 			if blob.Sidecar != nil {
 				blobs.Add((*kzgBlob)(&blob.Sidecar.Blob))
 				commitments.Add((*kzgCommitment)(&blob.Sidecar.Commitment))
@@ -185,25 +188,25 @@ func (t TransactionBlob) EncodeRLP() ([]byte, error) {
 		}
 	}
 	if t.Signature != nil {
-		v = t.Signature.V
-		r = t.Signature.R
-		s = t.Signature.S
+		v = (*rlp.BigInt)(t.Signature.V)
+		r = (*rlp.BigInt)(t.Signature.R)
+		s = (*rlp.BigInt)(t.Signature.S)
 	}
 	tx := rlp.List{
-		rlp.Uint(chainID),
-		rlp.Uint(nonce),
-		(*rlp.BigInt)(maxPriorityFeePerGas),
-		(*rlp.BigInt)(maxFeePerGas),
-		rlp.Uint(gasLimit),
-		rlp.Bytes(to),
-		(*rlp.BigInt)(value),
-		rlp.Bytes(input),
+		chainID,
+		nonce,
+		maxPriorityFeePerGas,
+		maxFeePerGas,
+		gasLimit,
+		to,
+		value,
+		input,
 		&accessList,
-		(*rlp.BigInt)(maxFeePerBlobGas),
+		maxFeePerBlobGas,
 		&blobHashes,
-		(*rlp.BigInt)(v),
-		(*rlp.BigInt)(r),
-		(*rlp.BigInt)(s),
+		v,
+		r,
+		s,
 	}
 	if len(blobHashes) > 0 && len(blobHashes) == len(blobs) {
 		tx = rlp.List{
@@ -220,9 +223,10 @@ func (t TransactionBlob) EncodeRLP() ([]byte, error) {
 	return append([]byte{byte(BlobTxType)}, bin...), nil
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
+//
 //nolint:funlen
 func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
-	*t = TransactionBlob{}
 	if len(data) == 0 {
 		return 0, fmt.Errorf("empty data")
 	}
@@ -241,7 +245,7 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 		input                = new(rlp.Bytes)
 		accessList           = new(AccessList)
 		maxFeePerBlobGas     = new(rlp.BigInt)
-		blobHashes           = &hashList{}
+		blobHashes           = new(rlp.TypedList[Hash])
 		blobs                = new(rlp.TypedList[kzgBlob])
 		commitments          = new(rlp.TypedList[kzgCommitment])
 		proofs               = new(rlp.TypedList[kzgProof])
@@ -301,6 +305,7 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 	if err := dec.Decode(&list); err != nil {
 		return 0, err
 	}
+	*t = TransactionBlob{}
 	if chainID.Get() != 0 {
 		t.ChainID = chainID.Ptr()
 	}
@@ -332,9 +337,9 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 		t.MaxFeePerBlobGas = maxFeePerBlobGas.Ptr()
 	}
 	if len(*blobHashes) > 0 {
-		t.Blobs = make([]Blob, len(*blobHashes))
+		t.Blobs = make([]BlobInfo, len(*blobHashes))
 		for i, hash := range *blobHashes {
-			blob := Blob{Hash: hash}
+			blob := BlobInfo{Hash: *hash}
 			if i < len(*blobs) && i < len(*commitments) && i < len(*proofs) {
 				blob.Sidecar = &BlobSidecar{
 					Blob:       kzg4844.Blob(*(*blobs)[i]),
@@ -355,125 +360,29 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 	return len(data), nil
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionBlob) MarshalJSON() ([]byte, error) {
-	transaction := &jsonTransactionBlob{}
-	if t.ChainID != nil {
-		transaction.ChainID = NumberFromUint64Ptr(*t.ChainID)
-	}
-	transaction.To = t.To
-	transaction.From = t.From
-	if t.GasLimit != nil {
-		transaction.GasLimit = NumberFromUint64Ptr(*t.GasLimit)
-	}
-	if t.MaxFeePerGas != nil {
-		transaction.MaxFeePerGas = NumberFromBigIntPtr(t.MaxFeePerGas)
-	}
-	if t.MaxFeePerBlobGas != nil {
-		transaction.MaxFeePerBlobGas = NumberFromBigIntPtr(t.MaxFeePerBlobGas)
-	}
-	if t.MaxPriorityFeePerGas != nil {
-		transaction.MaxPriorityFeePerGas = NumberFromBigIntPtr(t.MaxPriorityFeePerGas)
-	}
-	transaction.Input = t.Input
-	if t.Nonce != nil {
-		transaction.Nonce = NumberFromUint64Ptr(*t.Nonce)
-	}
-	if t.Value != nil {
-		transaction.Value = NumberFromBigIntPtr(t.Value)
-	}
-	transaction.AccessList = t.AccessList
-	if t.Signature != nil {
-		transaction.V = NumberFromBigIntPtr(t.Signature.V)
-		transaction.R = NumberFromBigIntPtr(t.Signature.R)
-		transaction.S = NumberFromBigIntPtr(t.Signature.S)
-	}
-	for _, blob := range t.Blobs {
-		hash := blob.Hash
-		if hash.IsZero() && blob.Sidecar != nil {
-			hash = blob.Sidecar.ComputeHash()
-		}
-		transaction.BlobHashes = append(transaction.BlobHashes, hash)
-		if blob.Sidecar != nil {
-			transaction.Blobs = append(transaction.Blobs, kzgBlob(blob.Sidecar.Blob))
-			transaction.Commitments = append(transaction.Commitments, kzgCommitment(blob.Sidecar.Commitment))
-			transaction.Proofs = append(transaction.Proofs, kzgProof(blob.Sidecar.Proof))
-		}
-	}
-	return json.Marshal(transaction)
+	j := &jsonTransaction{}
+	t.TransactionFields.toJSON(j)
+	t.CallFields.toJSON(&j.jsonCall)
+	t.AccessListField.toJSON(&j.jsonCall)
+	t.DynamicFeeFields.toJSON(&j.jsonCall)
+	t.BlobFields.toJSON(&j.jsonCall)
+	return json.Marshal(j)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *TransactionBlob) UnmarshalJSON(data []byte) error {
-	transaction := &jsonTransactionBlob{}
-	if err := json.Unmarshal(data, transaction); err != nil {
+	j := &jsonTransaction{}
+	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	if transaction.ChainID != nil {
-		chainID := transaction.ChainID.Big().Uint64()
-		t.ChainID = &chainID
-	}
-	t.To = transaction.To
-	t.From = transaction.From
-	if transaction.GasLimit != nil {
-		gas := transaction.GasLimit.Big().Uint64()
-		t.GasLimit = &gas
-	}
-	if transaction.MaxFeePerGas != nil {
-		t.MaxFeePerGas = transaction.MaxFeePerGas.Big()
-	}
-	if transaction.MaxFeePerBlobGas != nil {
-		t.MaxFeePerBlobGas = transaction.MaxFeePerBlobGas.Big()
-	}
-	if transaction.MaxPriorityFeePerGas != nil {
-		t.MaxPriorityFeePerGas = transaction.MaxPriorityFeePerGas.Big()
-	}
-	t.Input = transaction.Input
-	if transaction.Nonce != nil {
-		Nonce := transaction.Nonce.Big().Uint64()
-		t.Nonce = &Nonce
-	}
-	if transaction.Value != nil {
-		t.Value = transaction.Value.Big()
-	}
-	t.AccessList = transaction.AccessList
-	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
-		t.Signature = SignatureFromVRSPtr(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
-	}
-	if len(transaction.BlobHashes) > 0 {
-		t.Blobs = make([]Blob, len(transaction.BlobHashes))
-		for i, hash := range transaction.BlobHashes {
-			blob := Blob{Hash: hash}
-			if i < len(transaction.Blobs) && i < len(transaction.Commitments) && i < len(transaction.Proofs) {
-				blob.Sidecar = &BlobSidecar{
-					Blob:       kzg4844.Blob(transaction.Blobs[i]),
-					Commitment: kzg4844.Commitment(transaction.Commitments[i]),
-					Proof:      kzg4844.Proof(transaction.Proofs[i]),
-				}
-			}
-			t.Blobs[i] = blob
-		}
-	}
+	t.TransactionFields.fromJSON(j)
+	t.CallFields.fromJSON(&j.jsonCall)
+	t.AccessListField.fromJSON(&j.jsonCall)
+	t.DynamicFeeFields.fromJSON(&j.jsonCall)
+	t.BlobFields.fromJSON(&j.jsonCall)
 	return nil
-}
-
-type jsonTransactionBlob struct {
-	ChainID              *Number         `json:"chainId,omitempty"`
-	From                 *Address        `json:"from,omitempty"`
-	To                   *Address        `json:"to,omitempty"`
-	GasLimit             *Number         `json:"gas,omitempty"`
-	MaxFeePerGas         *Number         `json:"maxFeePerGas,omitempty"`
-	MaxFeePerBlobGas     *Number         `json:"maxFeePerBlobGas,omitempty"`
-	MaxPriorityFeePerGas *Number         `json:"maxPriorityFeePerGas,omitempty"`
-	Input                Bytes           `json:"input,omitempty"`
-	Nonce                *Number         `json:"nonce,omitempty"`
-	Value                *Number         `json:"value,omitempty"`
-	AccessList           AccessList      `json:"accessList,omitempty"`
-	BlobHashes           []Hash          `json:"blobVersionedHashes,omitempty"`
-	Blobs                []kzgBlob       `json:"blobs,omitempty"`
-	Commitments          []kzgCommitment `json:"commitments,omitempty"`
-	Proofs               []kzgProof      `json:"proofs,omitempty"`
-	V                    *Number         `json:"v,omitempty"`
-	R                    *Number         `json:"r,omitempty"`
-	S                    *Number         `json:"s,omitempty"`
 }
 
 var _ Transaction = (*TransactionBlob)(nil)

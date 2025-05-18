@@ -10,27 +10,30 @@ import (
 	"github.com/defiweb/go-eth/crypto"
 )
 
+// TransactionLegacy is the legacy transaction type (Type 0).
+//
+// This is the original transaction format used before EIP-2718.
 type TransactionLegacy struct {
-	EmbedCallData
-	EmbedTransactionData
-	EmbedLegacyPriceData
+	TransactionFields
+	CallLegacy
 }
 
+// NewTransactionLegacy creates a new legacy transaction.
 func NewTransactionLegacy() *TransactionLegacy {
 	return &TransactionLegacy{}
 }
 
+// Type implements the Transaction interface.
 func (t *TransactionLegacy) Type() TransactionType {
 	return LegacyTxType
 }
 
+// Call implements the Transaction interface.
 func (t *TransactionLegacy) Call() Call {
-	return &CallLegacy{
-		EmbedCallData:        *t.EmbedCallData.Copy(),
-		EmbedLegacyPriceData: *t.EmbedLegacyPriceData.Copy(),
-	}
+	return t.CallLegacy.Copy()
 }
 
+// CalculateHash implements the Transaction interface.
 func (t *TransactionLegacy) CalculateHash() (Hash, error) {
 	raw, err := t.EncodeRLP()
 	if err != nil {
@@ -39,48 +42,49 @@ func (t *TransactionLegacy) CalculateHash() (Hash, error) {
 	return Hash(crypto.Keccak256(raw)), nil
 }
 
+// CalculateSigningHash implements the Transaction interface.
 func (t *TransactionLegacy) CalculateSigningHash() (Hash, error) {
 	var (
-		chainID  = uint64(0)
-		nonce    = uint64(0)
-		gasPrice = big.NewInt(0)
-		gasLimit = uint64(0)
-		to       = ([]byte)(nil)
-		value    = big.NewInt(0)
-		input    = ([]byte)(nil)
+		chainID  = rlp.Uint(0)
+		nonce    = rlp.Uint(0)
+		gasPrice = &rlp.BigInt{}
+		gasLimit = rlp.Uint(0)
+		to       = (rlp.Bytes)(nil)
+		value    = &rlp.BigInt{}
+		input    = (rlp.Bytes)(nil)
 	)
 	if t.ChainID != nil {
-		chainID = *t.ChainID
+		chainID = rlp.Uint(*t.ChainID)
 	}
 	if t.Nonce != nil {
-		nonce = *t.Nonce
+		nonce = rlp.Uint(*t.Nonce)
 	}
 	if t.GasPrice != nil {
-		gasPrice = t.GasPrice
+		gasPrice = (*rlp.BigInt)(t.GasPrice)
 	}
 	if t.GasLimit != nil {
-		gasLimit = *t.GasLimit
+		gasLimit = rlp.Uint(*t.GasLimit)
 	}
 	if t.To != nil {
 		to = t.To[:]
 	}
 	if t.Value != nil {
-		value = t.Value
+		value = (*rlp.BigInt)(t.Value)
 	}
 	if t.Input != nil {
 		input = t.Input
 	}
 	list := rlp.List{
-		rlp.Uint(nonce),
-		(*rlp.BigInt)(gasPrice),
-		rlp.Uint(gasLimit),
-		rlp.Bytes(to),
-		(*rlp.BigInt)(value),
-		rlp.Bytes(input),
+		nonce,
+		gasPrice,
+		gasLimit,
+		to,
+		value,
+		input,
 	}
 	if t.ChainID != nil && *t.ChainID != 0 {
 		list.Add(
-			rlp.Uint(chainID),
+			chainID,
 			rlp.Uint(0),
 			rlp.Uint(0),
 		)
@@ -92,58 +96,69 @@ func (t *TransactionLegacy) CalculateSigningHash() (Hash, error) {
 	return Hash(crypto.Keccak256(bin)), nil
 }
 
+// Copy creates a deep copy of the transaction.
+func (t *TransactionLegacy) Copy() *TransactionLegacy {
+	return &TransactionLegacy{
+		TransactionFields: *t.TransactionFields.Copy(),
+		CallLegacy:        *t.CallLegacy.Copy(),
+	}
+}
+
+// EncodeRLP implements the rlp.Encoder interface.
+//
 //nolint:funlen
 func (t TransactionLegacy) EncodeRLP() ([]byte, error) {
 	var (
-		nonce    = uint64(0)
-		gasPrice = big.NewInt(0)
-		gasLimit = uint64(0)
-		to       = ([]byte)(nil)
-		value    = big.NewInt(0)
-		input    = ([]byte)(nil)
-		v        = big.NewInt(0)
-		r        = big.NewInt(0)
-		s        = big.NewInt(0)
+		nonce    = rlp.Uint(0)
+		gasPrice = &rlp.BigInt{}
+		gasLimit = rlp.Uint(0)
+		to       = (rlp.Bytes)(nil)
+		value    = &rlp.BigInt{}
+		input    = (rlp.Bytes)(nil)
+		v        = &rlp.BigInt{}
+		r        = &rlp.BigInt{}
+		s        = &rlp.BigInt{}
 	)
 	if t.Nonce != nil {
-		nonce = *t.Nonce
+		nonce = rlp.Uint(*t.Nonce)
 	}
 	if t.GasPrice != nil {
-		gasPrice = t.GasPrice
+		gasPrice = (*rlp.BigInt)(t.GasPrice)
 	}
 	if t.GasLimit != nil {
-		gasLimit = *t.GasLimit
+		gasLimit = rlp.Uint(*t.GasLimit)
 	}
 	if t.To != nil {
 		to = t.To[:]
 	}
 	if t.Value != nil {
-		value = t.Value
+		value = (*rlp.BigInt)(t.Value)
 	}
 	if t.Input != nil {
 		input = t.Input
 	}
 	if t.Signature != nil {
-		v = t.Signature.V
-		r = t.Signature.R
-		s = t.Signature.S
+		v = (*rlp.BigInt)(t.Signature.V)
+		r = (*rlp.BigInt)(t.Signature.R)
+		s = (*rlp.BigInt)(t.Signature.S)
 	}
 	return rlp.List{
-		rlp.Uint(nonce),
-		(*rlp.BigInt)(gasPrice),
-		rlp.Uint(gasLimit),
-		rlp.Bytes(to),
-		(*rlp.BigInt)(value),
-		rlp.Bytes(input),
-		(*rlp.BigInt)(v),
-		(*rlp.BigInt)(r),
-		(*rlp.BigInt)(s),
+		nonce,
+		gasPrice,
+		gasLimit,
+		to,
+		value,
+		input,
+		v,
+		r,
+		s,
 	}.EncodeRLP()
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
+//
 //nolint:funlen
 func (t *TransactionLegacy) DecodeRLP(data []byte) (int, error) {
-	*t = TransactionLegacy{}
 	if len(data) == 0 {
 		return 0, fmt.Errorf("empty data")
 	}
@@ -172,6 +187,7 @@ func (t *TransactionLegacy) DecodeRLP(data []byte) (int, error) {
 	if _, err := rlp.Decode(data, &list); err != nil {
 		return 0, err
 	}
+	*t = TransactionLegacy{}
 	if nonce.Get() != 0 {
 		t.Nonce = nonce.Ptr()
 	}
@@ -207,78 +223,25 @@ func (t *TransactionLegacy) DecodeRLP(data []byte) (int, error) {
 	return len(data), nil
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionLegacy) MarshalJSON() ([]byte, error) {
-	transaction := &jsonTransactionLegacy{}
-	transaction.To = t.To
-	transaction.From = t.From
-	if t.ChainID != nil {
-		transaction.ChainID = NumberFromUint64Ptr(*t.ChainID)
-	}
-	if t.GasLimit != nil {
-		transaction.GasLimit = NumberFromUint64Ptr(*t.GasLimit)
-	}
-	if t.GasPrice != nil {
-		transaction.GasPrice = NumberFromBigIntPtr(t.GasPrice)
-	}
-	transaction.Input = t.Input
-	if t.Nonce != nil {
-		transaction.Nonce = NumberFromUint64Ptr(*t.Nonce)
-	}
-	if t.Value != nil {
-		transaction.Value = NumberFromBigIntPtr(t.Value)
-	}
-	if t.Signature != nil {
-		transaction.V = NumberFromBigIntPtr(t.Signature.V)
-		transaction.R = NumberFromBigIntPtr(t.Signature.R)
-		transaction.S = NumberFromBigIntPtr(t.Signature.S)
-	}
-	return json.Marshal(transaction)
+	j := &jsonTransaction{}
+	t.TransactionFields.toJSON(j)
+	t.CallFields.toJSON(&j.jsonCall)
+	t.LegacyPriceField.toJSON(&j.jsonCall)
+	return json.Marshal(j)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *TransactionLegacy) UnmarshalJSON(data []byte) error {
-	transaction := &jsonTransactionLegacy{}
-	if err := json.Unmarshal(data, transaction); err != nil {
+	j := &jsonTransaction{}
+	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	if transaction.ChainID != nil {
-		chainID := transaction.ChainID.Big().Uint64()
-		t.ChainID = &chainID
-	}
-	t.To = transaction.To
-	t.From = transaction.From
-	if transaction.GasLimit != nil {
-		gas := transaction.GasLimit.Big().Uint64()
-		t.GasLimit = &gas
-	}
-	if transaction.GasPrice != nil {
-		t.GasPrice = transaction.GasPrice.Big()
-	}
-	t.Input = transaction.Input
-	if transaction.Nonce != nil {
-		nonce := transaction.Nonce.Big().Uint64()
-		t.Nonce = &nonce
-	}
-	if transaction.Value != nil {
-		t.Value = transaction.Value.Big()
-	}
-	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
-		t.Signature = SignatureFromVRSPtr(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
-	}
+	t.TransactionFields.fromJSON(j)
+	t.CallFields.fromJSON(&j.jsonCall)
+	t.LegacyPriceField.fromJSON(&j.jsonCall)
 	return nil
-}
-
-type jsonTransactionLegacy struct {
-	ChainID  *Number  `json:"chainId,omitempty"`
-	From     *Address `json:"from,omitempty"`
-	To       *Address `json:"to,omitempty"`
-	GasLimit *Number  `json:"gas,omitempty"`
-	GasPrice *Number  `json:"gasPrice,omitempty"`
-	Input    Bytes    `json:"input,omitempty"`
-	Nonce    *Number  `json:"nonce,omitempty"`
-	Value    *Number  `json:"value,omitempty"`
-	V        *Number  `json:"v,omitempty"`
-	R        *Number  `json:"r,omitempty"`
-	S        *Number  `json:"s,omitempty"`
 }
 
 var _ Transaction = (*TransactionLegacy)(nil)

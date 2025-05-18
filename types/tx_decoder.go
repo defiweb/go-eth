@@ -29,6 +29,7 @@ type TypedTransactionDecoder struct {
 	IgnoreUnknownTypes bool
 }
 
+// DecodeRLP implements the RLPTransactionDecoder interface.
 func (e *TypedTransactionDecoder) DecodeRLP(data []byte) (Transaction, error) {
 	if len(data) == 0 {
 		return nil, fmt.Errorf("empty transaction data")
@@ -51,6 +52,7 @@ func (e *TypedTransactionDecoder) DecodeRLP(data []byte) (Transaction, error) {
 	return tx, nil
 }
 
+// DecodeJSON implements the JSONTransactionDecoder interface.
 func (e *TypedTransactionDecoder) DecodeJSON(data []byte) (Transaction, error) {
 	typ, err := jsonTXType(data)
 	if err != nil {
@@ -84,6 +86,22 @@ type TransactionUnknown struct {
 	UnknownType TransactionType
 }
 
+func (t *TransactionUnknown) TransactionData() *TransactionFields { return nil }
+
+func (t *TransactionUnknown) SetTransactionData(_ TransactionFields) {}
+
+func (t *TransactionUnknown) Type() TransactionType { return t.UnknownType }
+
+func (t *TransactionUnknown) Call() Call { return nil }
+
+func (t *TransactionUnknown) CalculateHash() (Hash, error) {
+	return ZeroHash, fmt.Errorf("unable to calculate hash of unknown transaction type: %d", t.UnknownType)
+}
+
+func (t *TransactionUnknown) CalculateSigningHash() (Hash, error) {
+	return ZeroHash, fmt.Errorf("unable to calculate signing hash of unknown transaction type: %d", t.UnknownType)
+}
+
 func (t *TransactionUnknown) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unable to marshal unknown transaction type: %d", t.UnknownType)
 }
@@ -98,22 +116,6 @@ func (t *TransactionUnknown) EncodeRLP() ([]byte, error) {
 
 func (t *TransactionUnknown) DecodeRLP(_ []byte) (int, error) {
 	return 0, fmt.Errorf("unable to decode unknown transaction type: %d", t.UnknownType)
-}
-
-func (t *TransactionUnknown) TransactionData() *EmbedTransactionData { return nil }
-
-func (t *TransactionUnknown) SetTransactionData(_ *EmbedTransactionData) {}
-
-func (t *TransactionUnknown) Type() TransactionType { return t.UnknownType }
-
-func (t *TransactionUnknown) Call() Call { return nil }
-
-func (t *TransactionUnknown) CalculateHash() (Hash, error) {
-	return ZeroHash, fmt.Errorf("unable to calculate hash of unknown transaction type: %d", t.UnknownType)
-}
-
-func (t *TransactionUnknown) CalculateSigningHash() (Hash, error) {
-	return ZeroHash, fmt.Errorf("unable to calculate signing hash of unknown transaction type: %d", t.UnknownType)
 }
 
 // jsonTXType returns the type of the transaction encoded in JSON.

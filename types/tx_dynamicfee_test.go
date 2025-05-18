@@ -1,7 +1,6 @@
 package types
 
 import (
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -11,127 +10,230 @@ import (
 	"github.com/defiweb/go-eth/hexutil"
 )
 
-func TestTransactionDynamicFee_RLP(t *testing.T) {
+func TestTransactionDynamicFee_JSON(t *testing.T) {
 	tests := []struct {
-		tx   *TransactionDynamicFee
-		want []byte
+		name     string
+		tx       *TransactionDynamicFee
+		wantJSON string
 	}{
 		{
-			tx:   &TransactionDynamicFee{},
-			want: hexutil.MustHexToBytes("02cc8080808080808080c0808080"),
+			name:     "empty transaction",
+			tx:       &TransactionDynamicFee{},
+			wantJSON: `{}`,
 		},
 		{
+			name: "all fields set",
 			tx: &TransactionDynamicFee{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedDynamicFeeData: EmbedDynamicFeeData{
-					MaxPriorityFeePerGas: big.NewInt(1000000000),
-					MaxFeePerGas:         big.NewInt(2000000000),
-				},
-				EmbedAccessListData: EmbedAccessListData{
-					AccessList: []AccessTuple{{
-						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
-						StorageKeys: []Hash{
-							MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
-							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
-						},
-					}},
+				CallDynamicFee: CallDynamicFee{
+					CallFields: CallFields{
+						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					DynamicFeeFields: DynamicFeeFields{
+						MaxPriorityFeePerGas: big.NewInt(1000000000),
+						MaxFeePerGas:         big.NewInt(2000000000),
+					},
+					AccessListField: AccessListField{
+						AccessList: []AccessTuple{{
+							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+							StorageKeys: []Hash{
+								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+							},
+						}},
+					},
 				},
 			},
-			want: hexutil.MustHexToBytes("02f8d30101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
+			wantJSON: `{
+				  "chainId": "0x1",
+				  "from": "0x1111111111111111111111111111111111111111",
+				  "to": "0x2222222222222222222222222222222222222222",
+				  "gas": "0x186a0",
+				  "maxFeePerGas": "0x77359400",
+				  "maxPriorityFeePerGas": "0x3b9aca00",
+				  "input": "0x01020304",
+				  "nonce": "0x1",
+				  "value": "0xde0b6b3a7640000",
+				  "accessList": [
+					{
+					  "address": "0x3333333333333333333333333333333333333333",
+					  "storageKeys": [
+						"0x4444444444444444444444444444444444444444444444444444444444444444",
+						"0x5555555555555555555555555555555555555555555555555555555555555555"
+					  ]
+					}
+				  ],
+				  "v": "0x6f",
+				  "r": "0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490",
+				  "s": "0x8051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"
+				}`,
 		},
 	}
-	for n, tt := range tests {
-		t.Run(fmt.Sprintf("case-%d", n+1), func(t1 *testing.T) {
-			// Encode:
-			rlp, err := tt.tx.EncodeRLP()
-			require.NoError(t1, err)
-			assert.Equal(t1, tt.want, rlp)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Encode to JSON
+			jsonBytes, err := tt.tx.MarshalJSON()
+			require.NoError(t, err)
+			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
-			// Decode:
+			// Decode from JSON
 			tx := NewTransactionDynamicFee()
-			_, err = tx.DecodeRLP(rlp)
+			err = tx.UnmarshalJSON(jsonBytes)
+			require.NoError(t, err)
+
+			// Compare the original and decoded transactions
 			tx.From = tt.tx.From
-			require.NoError(t1, err)
-			equalTX(t1, tx, tt.tx)
+			tx.ChainID = tt.tx.ChainID
+			assertEqualTX(t, tx, tt.tx)
+		})
+	}
+}
+
+func TestTransactionDynamicFee_RLP(t *testing.T) {
+	tests := []struct {
+		name    string
+		tx      *TransactionDynamicFee
+		wantHex string
+	}{
+		{
+			name:    "empty transaction",
+			tx:      &TransactionDynamicFee{},
+			wantHex: "0x02cc8080808080808080c0808080",
+		},
+		{
+			name: "all fields set",
+			tx: &TransactionDynamicFee{
+				TransactionFields: TransactionFields{
+					Nonce:     ptr(uint64(1)),
+					ChainID:   ptr(uint64(1)),
+					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
+				},
+				CallDynamicFee: CallDynamicFee{
+					CallFields: CallFields{
+						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					DynamicFeeFields: DynamicFeeFields{
+						MaxPriorityFeePerGas: big.NewInt(1000000000),
+						MaxFeePerGas:         big.NewInt(2000000000),
+					},
+					AccessListField: AccessListField{
+						AccessList: []AccessTuple{{
+							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+							StorageKeys: []Hash{
+								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+							},
+						}},
+					},
+				},
+			},
+			wantHex: "0x02f8d30101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Encode to RLP
+			rlpBytes, err := tt.tx.EncodeRLP()
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantHex, hexutil.BytesToHex(rlpBytes))
+
+			// Decode from RLP
+			tx := NewTransactionDynamicFee()
+			_, err = tx.DecodeRLP(rlpBytes)
+			require.NoError(t, err)
+
+			// Compare the original and decoded transactions
+			tx.From = tt.tx.From
+			tx.ChainID = tt.tx.ChainID
+			assertEqualTX(t, tx, tt.tx)
 		})
 	}
 }
 
 func TestTransactionDynamicFee_CalculateSigningHash(t *testing.T) {
 	tests := []struct {
-		tx   *TransactionDynamicFee
-		want Hash
+		name    string
+		tx      *TransactionDynamicFee
+		wantHex string
 	}{
 		{
-			tx:   &TransactionDynamicFee{},
-			want: MustHashFromHex("0x292edeba1be7c90f4dbaed50c44b7f6378633f933202ffe4f547e5a5c2ca3304", PadNone),
+			name:    "empty transaction",
+			tx:      &TransactionDynamicFee{},
+			wantHex: "0x292edeba1be7c90f4dbaed50c44b7f6378633f933202ffe4f547e5a5c2ca3304",
 		},
 		{
+			name: "all fields set",
 			tx: &TransactionDynamicFee{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(1)),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedDynamicFeeData: EmbedDynamicFeeData{
-					MaxPriorityFeePerGas: big.NewInt(1000000000),
-					MaxFeePerGas:         big.NewInt(2000000000),
+				CallDynamicFee: CallDynamicFee{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					DynamicFeeFields: DynamicFeeFields{
+						MaxPriorityFeePerGas: big.NewInt(1000000000),
+						MaxFeePerGas:         big.NewInt(2000000000),
+					},
 				},
 			},
-			want: MustHashFromHex("0xc3266152306909bfe339f90fad4f73f958066860300b5a22b98ee6a1d629706c", PadNone),
+			wantHex: "0xc3266152306909bfe339f90fad4f73f958066860300b5a22b98ee6a1d629706c",
 		},
 		{
+			name: "all fields set with access list",
 			tx: &TransactionDynamicFee{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(1)),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedAccessListData: EmbedAccessListData{
-					AccessList: AccessList{
-						AccessTuple{
-							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
-							StorageKeys: []Hash{
-								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
-								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+				CallDynamicFee: CallDynamicFee{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					AccessListField: AccessListField{
+						AccessList: AccessList{
+							AccessTuple{
+								Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+								StorageKeys: []Hash{
+									MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+									MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+								},
 							},
 						},
 					},
-				},
-				EmbedDynamicFeeData: EmbedDynamicFeeData{
-					MaxPriorityFeePerGas: big.NewInt(1000000000),
-					MaxFeePerGas:         big.NewInt(2000000000),
+					DynamicFeeFields: DynamicFeeFields{
+						MaxPriorityFeePerGas: big.NewInt(1000000000),
+						MaxFeePerGas:         big.NewInt(2000000000),
+					},
 				},
 			},
-			want: MustHashFromHex("0xa66ab756479bfd56f29658a8a199319094e84711e8a2de073ec136ef5179c4c9", PadNone),
+			wantHex: "0xa66ab756479bfd56f29658a8a199319094e84711e8a2de073ec136ef5179c4c9",
 		},
 	}
-	for n, tt := range tests {
-		t.Run(fmt.Sprintf("case-%d", n+1), func(t1 *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			sh, err := tt.tx.CalculateSigningHash()
-			require.NoError(t1, err)
-			assert.Equal(t1, tt.want, sh)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantHex, sh.String())
 		})
 	}
 }

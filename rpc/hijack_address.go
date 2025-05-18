@@ -22,7 +22,7 @@ func (h *hijackAddress) Call() func(next transport.CallFunc) transport.CallFunc 
 				return next(ctx, t, result, method, args...)
 			}
 
-			var cd *types.EmbedCallData
+			var cd *types.CallFields
 			switch method {
 			case "eth_sendTransaction":
 				// Verify arguments:
@@ -32,7 +32,7 @@ func (h *hijackAddress) Call() func(next transport.CallFunc) transport.CallFunc 
 				}
 
 				// Get transaction call data:
-				if tx, ok := tx.(types.HasCallData); ok {
+				if tx, ok := tx.(types.CallData); ok {
 					cd = tx.CallData()
 				}
 			case "eth_call", "eth_estimateGas":
@@ -43,7 +43,7 @@ func (h *hijackAddress) Call() func(next transport.CallFunc) transport.CallFunc 
 				}
 
 				// Get call data:
-				if c, ok := c.(types.HasCallData); ok {
+				if c, ok := c.(types.CallData); ok {
 					cd = c.CallData()
 				}
 			default:

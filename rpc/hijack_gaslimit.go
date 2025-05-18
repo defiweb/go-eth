@@ -32,8 +32,8 @@ func (c *hijackGasLimit) Call() func(next transport.CallFunc) transport.CallFunc
 			}
 
 			// Get transaction call data:
-			var txcd *types.EmbedCallData
-			if tx, ok := tx.(types.HasCallData); ok {
+			var txcd *types.CallFields
+			if tx, ok := tx.(types.CallData); ok {
 				txcd = tx.CallData()
 			}
 

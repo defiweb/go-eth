@@ -11,11 +11,11 @@ import (
 
 func TestTransactionOnChain_JSON(t *testing.T) {
 	tests := []struct {
-		tx   *TransactionOnChain
-		json string
+		tx       *TransactionOnChain
+		wantJSON string
 	}{
 		{
-			json: `
+			wantJSON: `
 				{
 				  "to": "0x2222222222222222222222222222222222222222",
 				  "gas": "0x186a0",
@@ -34,18 +34,20 @@ func TestTransactionOnChain_JSON(t *testing.T) {
 			`,
 			tx: &TransactionOnChain{
 				Transaction: &TransactionLegacy{
-					EmbedTransactionData: EmbedTransactionData{
+					TransactionFields: TransactionFields{
 						Nonce:     ptr(uint64(1)),
 						Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 					},
-					EmbedCallData: EmbedCallData{
-						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-						Value:    big.NewInt(1000000000000000000),
-						GasLimit: ptr(uint64(100000)),
-						Input:    []byte{1, 2, 3, 4},
-					},
-					EmbedLegacyPriceData: EmbedLegacyPriceData{
-						GasPrice: big.NewInt(1000000000),
+					CallLegacy: CallLegacy{
+						CallFields: CallFields{
+							To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+							Value:    big.NewInt(1000000000000000000),
+							GasLimit: ptr(uint64(100000)),
+							Input:    []byte{1, 2, 3, 4},
+						},
+						LegacyPriceField: LegacyPriceField{
+							GasPrice: big.NewInt(1000000000),
+						},
 					},
 				},
 				Hash:             MustHashFromHexPtr("0x1111111111111111111111111111111111111111111111111111111111111111", PadNone),
@@ -59,13 +61,13 @@ func TestTransactionOnChain_JSON(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
 			tx := &TransactionOnChain{}
 
-			err := tx.UnmarshalJSON([]byte(tt.json))
+			err := tx.UnmarshalJSON([]byte(tt.wantJSON))
 			require.NoError(t, err)
 			assert.Equal(t, tt.tx, tx)
 
 			j, err := tx.MarshalJSON()
 			require.NoError(t, err)
-			assert.JSONEq(t, tt.json, string(j))
+			assert.JSONEq(t, tt.wantJSON, string(j))
 		})
 	}
 }

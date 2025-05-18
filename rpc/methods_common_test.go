@@ -591,7 +591,7 @@ const mockCallRequest = `
 		  "gas": "0x76c0",
 		  "gasPrice": "0x9184e72a000",
 		  "value": "0x2540be400",
-		  "data": "0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"
+		  "input": "0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"
 		},
 		"0x1"
 	  ]
@@ -627,14 +627,14 @@ func TestBaseClient_Call(t *testing.T) {
 	response, err := client.Call(
 		context.Background(),
 		&types.CallLegacy{
-			EmbedCallData: types.EmbedCallData{
+			CallFields: types.CallFields{
 				From:     from,
 				To:       to,
 				GasLimit: &gasLimit,
 				Value:    value,
 				Input:    input,
 			},
-			EmbedLegacyPriceData: types.EmbedLegacyPriceData{
+			LegacyPriceField: types.LegacyPriceField{
 				GasPrice: gasPrice,
 			},
 		},
@@ -657,7 +657,7 @@ const mockEstimateGasRequest = `
 		  "gas": "0x76c0",
 		  "gasPrice": "0x9184e72a000",
 		  "value": "0x2540be400",
-		  "data": "0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"
+		  "input": "0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"
 		},
 		"latest"
 	  ]
@@ -688,14 +688,14 @@ func TestBaseClient_EstimateGas(t *testing.T) {
 	gas, err := client.EstimateGas(
 		context.Background(),
 		&types.CallLegacy{
-			EmbedCallData: types.EmbedCallData{
+			CallFields: types.CallFields{
 				From:     types.MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 				To:       types.MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 				GasLimit: &gasLimit,
 				Value:    big.NewInt(10000000000),
 				Input:    hexutil.MustHexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
 			},
-			EmbedLegacyPriceData: types.EmbedLegacyPriceData{
+			LegacyPriceField: types.LegacyPriceField{
 				GasPrice: big.NewInt(10000000000000),
 			},
 		},

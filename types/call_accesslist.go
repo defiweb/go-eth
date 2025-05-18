@@ -2,75 +2,54 @@ package types
 
 import "encoding/json"
 
+// CallAccessList represents a call corresponding to the access list
+// transaction type.
+//
+// Introduced by EIP-2930, this transaction type includes an optional access
+// list that specifies a list of addresses and storage keys the transaction
+// plans to access.
 type CallAccessList struct {
-	EmbedCallData
-	EmbedLegacyPriceData
-	EmbedAccessListData
+	CallFields
+	LegacyPriceField
+	AccessListField
 }
 
+// NewCallAccessList creates a new CallAccessList.
 func NewCallAccessList() *CallAccessList {
 	return &CallAccessList{}
 }
 
+// Copy creates a deep copy of the CallAccessList.
 func (c *CallAccessList) Copy() *CallAccessList {
 	if c == nil {
 		return nil
 	}
 	return &CallAccessList{
-		EmbedCallData:        *c.EmbedCallData.Copy(),
-		EmbedLegacyPriceData: *c.EmbedLegacyPriceData.Copy(),
-		EmbedAccessListData:  *c.EmbedAccessListData.Copy(),
+		CallFields:       *c.CallFields.Copy(),
+		LegacyPriceField: *c.LegacyPriceField.Copy(),
+		AccessListField:  *c.AccessListField.Copy(),
 	}
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (c *CallAccessList) MarshalJSON() ([]byte, error) {
-	call := &jsonCallAccessList{
-		From:       c.From,
-		To:         c.To,
-		Data:       c.Input,
-		AccessList: c.AccessList,
-	}
-	if c.GasLimit != nil {
-		call.GasLimit = NumberFromUint64Ptr(*c.GasLimit)
-	}
-	if c.GasPrice != nil {
-		call.GasPrice = NumberFromBigIntPtr(c.GasPrice)
-	}
-	if c.Value != nil {
-		value := NumberFromBigInt(c.Value)
-		call.Value = &value
-	}
-	return json.Marshal(call)
+	j := &jsonCall{}
+	c.CallFields.toJSON(j)
+	c.LegacyPriceField.toJSON(j)
+	c.AccessListField.toJSON(j)
+	return json.Marshal(j)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (c *CallAccessList) UnmarshalJSON(data []byte) error {
-	call := &jsonCallAccessList{}
-	if err := json.Unmarshal(data, call); err != nil {
+	j := &jsonCall{}
+	if err := json.Unmarshal(data, j); err != nil {
 		return err
 	}
-	c.From = call.From
-	c.To = call.To
-	if call.GasLimit != nil {
-		gas := call.GasLimit.Big().Uint64()
-		c.GasLimit = &gas
-	}
-	if call.GasPrice != nil {
-		c.GasPrice = call.GasPrice.Big()
-	}
-	if call.Value != nil {
-		c.Value = call.Value.Big()
-	}
-	c.Input = call.Data
-	c.AccessList = call.AccessList
+	c.CallFields.fromJSON(j)
+	c.LegacyPriceField.fromJSON(j)
+	c.AccessListField.fromJSON(j)
 	return nil
 }
 
-type jsonCallAccessList struct {
-	From       *Address   `json:"from,omitempty"`
-	To         *Address   `json:"to,omitempty"`
-	GasLimit   *Number    `json:"gas,omitempty"`
-	GasPrice   *Number    `json:"gasPrice,omitempty"`
-	Value      *Number    `json:"value,omitempty"`
-	Data       Bytes      `json:"data,omitempty"`
-	AccessList AccessList `json:"accessList,omitempty"`
-}
+var _ Call = (*CallAccessList)(nil)

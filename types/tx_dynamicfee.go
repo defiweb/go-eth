@@ -3,36 +3,37 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/defiweb/go-rlp"
 
 	"github.com/defiweb/go-eth/crypto"
 )
 
+// TransactionDynamicFee is the dynamic fee transaction type (Type 2).
+//
+// Introduced by EIP-1559, this transaction type supports a new fee market
+// mechanism with a base fee and a priority fee (tip).
 type TransactionDynamicFee struct {
-	EmbedCallData
-	EmbedTransactionData
-	EmbedAccessListData
-	EmbedDynamicFeeData
+	TransactionFields
+	CallDynamicFee
 }
 
+// NewTransactionDynamicFee creates a new dynamic fee transaction.
 func NewTransactionDynamicFee() *TransactionDynamicFee {
 	return &TransactionDynamicFee{}
 }
 
+// Type implements the Transaction interface.
 func (t *TransactionDynamicFee) Type() TransactionType {
 	return DynamicFeeTxType
 }
 
+// Call implements the Transaction interface.
 func (t *TransactionDynamicFee) Call() Call {
-	return &CallDynamicFee{
-		EmbedCallData:       *t.EmbedCallData.Copy(),
-		EmbedAccessListData: *t.EmbedAccessListData.Copy(),
-		EmbedDynamicFeeData: *t.EmbedDynamicFeeData.Copy(),
-	}
+	return t.CallDynamicFee.Copy()
 }
 
+// CalculateHash implements the Transaction interface.
 func (t *TransactionDynamicFee) CalculateHash() (Hash, error) {
 	raw, err := t.EncodeRLP()
 	if err != nil {
@@ -41,38 +42,39 @@ func (t *TransactionDynamicFee) CalculateHash() (Hash, error) {
 	return Hash(crypto.Keccak256(raw)), nil
 }
 
+// CalculateSigningHash implements the Transaction interface.
 func (t *TransactionDynamicFee) CalculateSigningHash() (Hash, error) {
 	var (
-		chainID              = uint64(0)
-		nonce                = uint64(0)
-		gasLimit             = uint64(0)
-		maxPriorityFeePerGas = big.NewInt(0)
-		maxFeePerGas         = big.NewInt(0)
-		to                   = ([]byte)(nil)
-		value                = big.NewInt(0)
-		input                = ([]byte)(nil)
+		chainID              = rlp.Uint(0)
+		nonce                = rlp.Uint(0)
+		gasLimit             = rlp.Uint(0)
+		maxPriorityFeePerGas = &rlp.BigInt{}
+		maxFeePerGas         = &rlp.BigInt{}
+		to                   = (rlp.Bytes)(nil)
+		value                = &rlp.BigInt{}
+		input                = (rlp.Bytes)(nil)
 		accessList           = (AccessList)(nil)
 	)
 	if t.ChainID != nil {
-		chainID = *t.ChainID
+		chainID = rlp.Uint(*t.ChainID)
 	}
 	if t.Nonce != nil {
-		nonce = *t.Nonce
+		nonce = rlp.Uint(*t.Nonce)
 	}
 	if t.GasLimit != nil {
-		gasLimit = *t.GasLimit
+		gasLimit = rlp.Uint(*t.GasLimit)
 	}
 	if t.MaxPriorityFeePerGas != nil {
-		maxPriorityFeePerGas = t.MaxPriorityFeePerGas
+		maxPriorityFeePerGas = (*rlp.BigInt)(t.MaxPriorityFeePerGas)
 	}
 	if t.MaxFeePerGas != nil {
-		maxFeePerGas = t.MaxFeePerGas
+		maxFeePerGas = (*rlp.BigInt)(t.MaxFeePerGas)
 	}
 	if t.To != nil {
 		to = t.To[:]
 	}
 	if t.Value != nil {
-		value = t.Value
+		value = (*rlp.BigInt)(t.Value)
 	}
 	if t.Input != nil {
 		input = t.Input
@@ -81,59 +83,68 @@ func (t *TransactionDynamicFee) CalculateSigningHash() (Hash, error) {
 		accessList = t.AccessList
 	}
 	bin, err := rlp.List{
-		rlp.Uint(chainID),
-		rlp.Uint(nonce),
-		(*rlp.BigInt)(maxPriorityFeePerGas),
-		(*rlp.BigInt)(maxFeePerGas),
-		rlp.Uint(gasLimit),
-		rlp.Bytes(to),
-		(*rlp.BigInt)(value),
-		rlp.Bytes(input),
+		chainID,
+		nonce,
+		maxPriorityFeePerGas,
+		maxFeePerGas,
+		gasLimit,
+		to,
+		value,
+		input,
 		&accessList,
 	}.EncodeRLP()
 	if err != nil {
 		return ZeroHash, err
 	}
-	bin = append([]byte{byte(DynamicFeeTxType)}, bin...)
-	return Hash(crypto.Keccak256(bin)), nil
+	return Hash(crypto.Keccak256(append([]byte{byte(DynamicFeeTxType)}, bin...))), nil
 }
 
+// Copy creates a deep copy of the transaction.
+func (t *TransactionDynamicFee) Copy() *TransactionDynamicFee {
+	return &TransactionDynamicFee{
+		TransactionFields: *t.TransactionFields.Copy(),
+		CallDynamicFee:    *t.CallDynamicFee.Copy(),
+	}
+}
+
+// EncodeRLP implements the rlp.Encoder interface.
+//
 //nolint:funlen
 func (t TransactionDynamicFee) EncodeRLP() ([]byte, error) {
 	var (
-		chainID              = uint64(0)
-		nonce                = uint64(0)
-		gasLimit             = uint64(0)
-		maxPriorityFeePerGas = big.NewInt(0)
-		maxFeePerGas         = big.NewInt(0)
-		to                   = ([]byte)(nil)
-		value                = big.NewInt(0)
-		input                = ([]byte)(nil)
+		chainID              = rlp.Uint(0)
+		nonce                = rlp.Uint(0)
+		gasLimit             = rlp.Uint(0)
+		maxPriorityFeePerGas = &rlp.BigInt{}
+		maxFeePerGas         = &rlp.BigInt{}
+		to                   = (rlp.Bytes)(nil)
+		value                = &rlp.BigInt{}
+		input                = (rlp.Bytes)(nil)
 		accessList           = (AccessList)(nil)
-		v                    = big.NewInt(0)
-		r                    = big.NewInt(0)
-		s                    = big.NewInt(0)
+		v                    = &rlp.BigInt{}
+		r                    = &rlp.BigInt{}
+		s                    = &rlp.BigInt{}
 	)
 	if t.ChainID != nil {
-		chainID = *t.ChainID
+		chainID = rlp.Uint(*t.ChainID)
 	}
 	if t.Nonce != nil {
-		nonce = *t.Nonce
+		nonce = rlp.Uint(*t.Nonce)
 	}
 	if t.GasLimit != nil {
-		gasLimit = *t.GasLimit
+		gasLimit = rlp.Uint(*t.GasLimit)
 	}
 	if t.MaxPriorityFeePerGas != nil {
-		maxPriorityFeePerGas = t.MaxPriorityFeePerGas
+		maxPriorityFeePerGas = (*rlp.BigInt)(t.MaxPriorityFeePerGas)
 	}
 	if t.MaxFeePerGas != nil {
-		maxFeePerGas = t.MaxFeePerGas
+		maxFeePerGas = (*rlp.BigInt)(t.MaxFeePerGas)
 	}
 	if t.To != nil {
 		to = t.To[:]
 	}
 	if t.Value != nil {
-		value = t.Value
+		value = (*rlp.BigInt)(t.Value)
 	}
 	if t.Input != nil {
 		input = t.Input
@@ -142,23 +153,23 @@ func (t TransactionDynamicFee) EncodeRLP() ([]byte, error) {
 		accessList = t.AccessList
 	}
 	if t.Signature != nil {
-		v = t.Signature.V
-		r = t.Signature.R
-		s = t.Signature.S
+		v = (*rlp.BigInt)(t.Signature.V)
+		r = (*rlp.BigInt)(t.Signature.R)
+		s = (*rlp.BigInt)(t.Signature.S)
 	}
 	bin, err := rlp.List{
-		rlp.Uint(chainID),
-		rlp.Uint(nonce),
-		(*rlp.BigInt)(maxPriorityFeePerGas),
-		(*rlp.BigInt)(maxFeePerGas),
-		rlp.Uint(gasLimit),
-		rlp.Bytes(to),
-		(*rlp.BigInt)(value),
-		rlp.Bytes(input),
+		chainID,
+		nonce,
+		maxPriorityFeePerGas,
+		maxFeePerGas,
+		gasLimit,
+		to,
+		value,
+		input,
 		&accessList,
-		(*rlp.BigInt)(v),
-		(*rlp.BigInt)(r),
-		(*rlp.BigInt)(s),
+		v,
+		r,
+		s,
 	}.EncodeRLP()
 	if err != nil {
 		return nil, err
@@ -166,9 +177,10 @@ func (t TransactionDynamicFee) EncodeRLP() ([]byte, error) {
 	return append([]byte{byte(DynamicFeeTxType)}, bin...), nil
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
+//
 //nolint:funlen
 func (t *TransactionDynamicFee) DecodeRLP(data []byte) (int, error) {
-	*t = TransactionDynamicFee{}
 	if len(data) == 0 {
 		return 0, fmt.Errorf("empty data")
 	}
@@ -207,6 +219,7 @@ func (t *TransactionDynamicFee) DecodeRLP(data []byte) (int, error) {
 	if _, err := rlp.Decode(data, &list); err != nil {
 		return 0, err
 	}
+	*t = TransactionDynamicFee{}
 	if chainID.Get() != 0 {
 		t.ChainID = chainID.Ptr()
 	}
@@ -244,88 +257,27 @@ func (t *TransactionDynamicFee) DecodeRLP(data []byte) (int, error) {
 	return len(data), nil
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionDynamicFee) MarshalJSON() ([]byte, error) {
-	transaction := &jsonTransactionDynamicFee{}
-	if t.ChainID != nil {
-		transaction.ChainID = NumberFromUint64Ptr(*t.ChainID)
-	}
-	transaction.To = t.To
-	transaction.From = t.From
-	if t.GasLimit != nil {
-		transaction.GasLimit = NumberFromUint64Ptr(*t.GasLimit)
-	}
-	if t.MaxFeePerGas != nil {
-		transaction.MaxFeePerGas = NumberFromBigIntPtr(t.MaxFeePerGas)
-	}
-	if t.MaxPriorityFeePerGas != nil {
-		transaction.MaxPriorityFeePerGas = NumberFromBigIntPtr(t.MaxPriorityFeePerGas)
-	}
-	transaction.Input = t.Input
-	if t.Nonce != nil {
-		transaction.Nonce = NumberFromUint64Ptr(*t.Nonce)
-	}
-	if t.Value != nil {
-		transaction.Value = NumberFromBigIntPtr(t.Value)
-	}
-	transaction.AccessList = t.AccessList
-	if t.Signature != nil {
-		transaction.V = NumberFromBigIntPtr(t.Signature.V)
-		transaction.R = NumberFromBigIntPtr(t.Signature.R)
-		transaction.S = NumberFromBigIntPtr(t.Signature.S)
-	}
-	return json.Marshal(transaction)
+	j := &jsonTransaction{}
+	t.TransactionFields.toJSON(j)
+	t.CallFields.toJSON(&j.jsonCall)
+	t.AccessListField.toJSON(&j.jsonCall)
+	t.DynamicFeeFields.toJSON(&j.jsonCall)
+	return json.Marshal(j)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *TransactionDynamicFee) UnmarshalJSON(data []byte) error {
-	transaction := &jsonTransactionDynamicFee{}
-	if err := json.Unmarshal(data, transaction); err != nil {
+	j := &jsonTransaction{}
+	if err := json.Unmarshal(data, j); err != nil {
 		return err
 	}
-	if transaction.ChainID != nil {
-		chainID := transaction.ChainID.Big().Uint64()
-		t.ChainID = &chainID
-	}
-	t.To = transaction.To
-	t.From = transaction.From
-	if transaction.GasLimit != nil {
-		gas := transaction.GasLimit.Big().Uint64()
-		t.GasLimit = &gas
-	}
-	if transaction.MaxFeePerGas != nil {
-		t.MaxFeePerGas = transaction.MaxFeePerGas.Big()
-	}
-	if transaction.MaxPriorityFeePerGas != nil {
-		t.MaxPriorityFeePerGas = transaction.MaxPriorityFeePerGas.Big()
-	}
-	t.Input = transaction.Input
-	if transaction.Nonce != nil {
-		Nonce := transaction.Nonce.Big().Uint64()
-		t.Nonce = &Nonce
-	}
-	if transaction.Value != nil {
-		t.Value = transaction.Value.Big()
-	}
-	t.AccessList = transaction.AccessList
-	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
-		t.Signature = SignatureFromVRSPtr(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
-	}
+	t.TransactionFields.fromJSON(j)
+	t.CallFields.fromJSON(&j.jsonCall)
+	t.AccessListField.fromJSON(&j.jsonCall)
+	t.DynamicFeeFields.fromJSON(&j.jsonCall)
 	return nil
-}
-
-type jsonTransactionDynamicFee struct {
-	ChainID              *Number    `json:"chainId,omitempty"`
-	From                 *Address   `json:"from,omitempty"`
-	To                   *Address   `json:"to,omitempty"`
-	GasLimit             *Number    `json:"gas,omitempty"`
-	MaxFeePerGas         *Number    `json:"maxFeePerGas,omitempty"`
-	MaxPriorityFeePerGas *Number    `json:"maxPriorityFeePerGas,omitempty"`
-	Input                Bytes      `json:"input,omitempty"`
-	Nonce                *Number    `json:"nonce,omitempty"`
-	Value                *Number    `json:"value,omitempty"`
-	AccessList           AccessList `json:"accessList,omitempty"`
-	V                    *Number    `json:"v,omitempty"`
-	R                    *Number    `json:"r,omitempty"`
-	S                    *Number    `json:"s,omitempty"`
 }
 
 var _ Transaction = (*TransactionDynamicFee)(nil)

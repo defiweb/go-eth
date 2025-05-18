@@ -32,7 +32,7 @@ func Sign(key *ecdsa.PrivateKey, tx types.Transaction) error {
 		}
 	}
 	txd.SetSignature(types.SignatureFromVRS(sv, sr, ss))
-	if cd, ok := tx.(types.HasCallData); ok {
+	if cd, ok := tx.(types.CallData); ok {
 		cd.CallData().SetFrom(types.Address(ecdsa.PublicKeyToAddress(&key.PublicKey)))
 	}
 	return nil

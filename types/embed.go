@@ -1,82 +1,179 @@
 package types
 
-import "math/big"
+import (
+	"math/big"
 
-// Embedded types are used to embed common fields and methods into call and
-// transaction types.
+	"github.com/defiweb/go-eth/crypto/kzg4844"
+)
 
-type HasCallData interface {
-	CallData() *EmbedCallData
-	SetCallData(data *EmbedCallData)
+// Below types are used to embed common fields and methods into call and
+// transaction types. You probably do not want to use them directly.
+//
+// Below interfaces are used to determine if a given call or transaction has
+// specific capabilities.
+
+// TransactionData defines methods for accessing and setting transaction
+// data.
+type TransactionData interface {
+	TransactionData() *TransactionFields
+	SetTransactionData(data TransactionFields)
 }
 
-type HasTransactionData interface {
-	TransactionData() *EmbedTransactionData
-	SetTransactionData(data *EmbedTransactionData)
+// CallData defines methods for accessing and setting call data.
+type CallData interface {
+	CallData() *CallFields
+	SetCallData(data CallFields)
 }
 
-type HasLegacyPrice interface {
-	LegacyPriceData() *EmbedLegacyPriceData
-	SetLegacyPriceData(data *EmbedLegacyPriceData)
+// LegacyPriceData defines methods for accessing and setting legacy price data.
+type LegacyPriceData interface {
+	LegacyPriceData() *LegacyPriceField
+	SetLegacyPriceData(data LegacyPriceField)
 }
 
-type HasAccessListData interface {
-	AccessListData() *EmbedAccessListData
-	SetAccessListData(data *EmbedAccessListData)
+// AccessListData defines methods for accessing and setting access list
+// data.
+type AccessListData interface {
+	AccessListData() *AccessListField
+	SetAccessListData(data AccessListField)
 }
 
-type HasDynamicFeeData interface {
-	DynamicFeeData() *EmbedDynamicFeeData
-	SetDynamicFeeData(data *EmbedDynamicFeeData)
+// DynamicFeeData defines methods for accessing and setting dynamic fee`1
+// data.
+type DynamicFeeData interface {
+	DynamicFeeData() *DynamicFeeFields
+	SetDynamicFeeData(data DynamicFeeFields)
 }
 
-type HasBlobData interface {
-	BlobData() *EmbedBlobData
-	SetBlobData(data *EmbedBlobData)
+// BlobData defines methods for accessing and setting blob data.
+type BlobData interface {
+	BlobData() *BlobFields
+	SetBlobData(data BlobFields)
 }
 
-// EmbedCallData is set of common fields for calls and transactions.
-type EmbedCallData struct {
+// TransactionFields contains common fields for transactions.
+//
+// This type is used to embed transaction data into other types.
+type TransactionFields struct {
+	ChainID   *uint64    // ChainID is the chain ID.
+	Nonce     *uint64    // Nonce is the transaction nonce.
+	Signature *Signature // Signature is the transaction signature.
+}
+
+// TransactionData returns the embedded transaction data.
+func (c *TransactionFields) TransactionData() *TransactionFields {
+	return c
+}
+
+// SetTransactionData sets the embedded transaction data.
+func (c *TransactionFields) SetTransactionData(data TransactionFields) {
+	*c = data
+}
+
+// SetChainID sets the chain ID.
+func (c *TransactionFields) SetChainID(chainID uint64) {
+	c.ChainID = &chainID
+}
+
+// SetNonce sets the transaction nonce.
+func (c *TransactionFields) SetNonce(nonce uint64) {
+	c.Nonce = &nonce
+}
+
+// SetSignature sets the transaction signature.
+func (c *TransactionFields) SetSignature(signature Signature) {
+	c.Signature = &signature
+}
+
+// Copy creates a deep copy of the TransactionFields.
+func (c *TransactionFields) Copy() *TransactionFields {
+	return &TransactionFields{
+		ChainID:   copyPtr(c.ChainID),
+		Nonce:     copyPtr(c.Nonce),
+		Signature: c.Signature.Copy(),
+	}
+}
+
+func (c *TransactionFields) toJSON(j *jsonTransaction) {
+	if c.ChainID != nil {
+		j.ChainID = NumberFromUint64Ptr(*c.ChainID)
+	}
+	if c.Nonce != nil {
+		j.Nonce = NumberFromUint64Ptr(*c.Nonce)
+	}
+	if c.Signature != nil {
+		j.V = NumberFromBigIntPtr(c.Signature.V)
+		j.R = NumberFromBigIntPtr(c.Signature.R)
+		j.S = NumberFromBigIntPtr(c.Signature.S)
+	}
+}
+
+func (c *TransactionFields) fromJSON(j *jsonTransaction) {
+	if j.ChainID != nil {
+		chainID := j.ChainID.Big().Uint64()
+		c.ChainID = &chainID
+	}
+	if j.Nonce != nil {
+		nonce := j.Nonce.Big().Uint64()
+		c.Nonce = &nonce
+	}
+	if j.V != nil || j.R != nil || j.S != nil {
+		c.Signature = SignatureFromVRSPtr(j.V.Big(), j.R.Big(), j.S.Big())
+	}
+}
+
+// CallFields contains the basic fields for a call.
+//
+// This type is used to embed call data into other types.
+type CallFields struct {
 	From     *Address // From is the sender address.
-	To       *Address // To is the recipient address. nil means contract creation.
-	GasLimit *uint64  // GasLimit is the gas limit, if 0, there is no limit.
+	To       *Address // To is the recipient address. Nil means contract creation.
+	GasLimit *uint64  // GasLimit is the gas limit; if 0, there is no limit.
 	Value    *big.Int // Value is the amount of wei to send.
 	Input    []byte   // Input is the input data.
 }
 
-func (c *EmbedCallData) CallData() *EmbedCallData {
+// CallData returns the embedded call data.
+func (c *CallFields) CallData() *CallFields {
 	return c
 }
 
-func (c *EmbedCallData) SetCallData(data *EmbedCallData) {
-	*c = *data
+// SetCallData sets the embedded call data.
+func (c *CallFields) SetCallData(data CallFields) {
+	*c = data
 }
 
-func (c *EmbedCallData) SetFrom(from Address) {
+// SetFrom sets the sender address.
+func (c *CallFields) SetFrom(from Address) {
 	c.From = &from
 }
 
-func (c *EmbedCallData) SetTo(to Address) {
+// SetTo sets the recipient address.
+func (c *CallFields) SetTo(to Address) {
 	c.To = &to
 }
 
-func (c *EmbedCallData) SetGasLimit(gasLimit uint64) {
+// SetGasLimit sets the gas limit.
+func (c *CallFields) SetGasLimit(gasLimit uint64) {
 	c.GasLimit = &gasLimit
 }
 
-func (c *EmbedCallData) SetValue(value *big.Int) {
+// SetValue sets the amount of wei to send.
+func (c *CallFields) SetValue(value *big.Int) {
 	c.Value = value
 }
 
-func (c *EmbedCallData) SetInput(input []byte) {
+// SetInput sets the input data.
+func (c *CallFields) SetInput(input []byte) {
 	c.Input = input
 }
 
-func (c *EmbedCallData) Copy() *EmbedCallData {
+// Copy creates a deep copy of the CallFields.
+func (c *CallFields) Copy() *CallFields {
 	if c == nil {
 		return nil
 	}
-	return &EmbedCallData{
+	return &CallFields{
 		From:     copyPtr(c.From),
 		To:       copyPtr(c.To),
 		GasLimit: copyPtr(c.GasLimit),
@@ -85,158 +182,265 @@ func (c *EmbedCallData) Copy() *EmbedCallData {
 	}
 }
 
-// EmbedTransactionData is a set of common fields for transactions.
-type EmbedTransactionData struct {
-	ChainID   *uint64
-	Nonce     *uint64
-	Signature *Signature
-}
-
-func (c *EmbedTransactionData) TransactionData() *EmbedTransactionData {
-	return c
-}
-
-func (c *EmbedTransactionData) SetTransactionData(data *EmbedTransactionData) {
-	*c = *data
-}
-
-func (c *EmbedTransactionData) SetChainID(chainID uint64) {
-	c.ChainID = &chainID
-}
-
-func (c *EmbedTransactionData) SetNonce(nonce uint64) {
-	c.Nonce = &nonce
-}
-
-func (c *EmbedTransactionData) SetSignature(signature Signature) {
-	c.Signature = &signature
-}
-
-func (c *EmbedTransactionData) Copy() *EmbedTransactionData {
-	return &EmbedTransactionData{
-		ChainID:   copyPtr(c.ChainID),
-		Nonce:     copyPtr(c.Nonce),
-		Signature: c.Signature.Copy(),
+func (c *CallFields) toJSON(j *jsonCall) {
+	j.From = c.From
+	j.To = c.To
+	if c.GasLimit != nil {
+		j.GasLimit = NumberFromUint64Ptr(*c.GasLimit)
 	}
+	if c.Value != nil {
+		j.Value = NumberFromBigIntPtr(c.Value)
+	}
+	j.Input = c.Input
 }
 
-type EmbedLegacyPriceData struct {
-	GasPrice *big.Int
+func (c *CallFields) fromJSON(j *jsonCall) {
+	c.From = j.From
+	c.To = j.To
+	if j.GasLimit != nil {
+		gas := j.GasLimit.Big().Uint64()
+		c.GasLimit = &gas
+	}
+	if j.Value != nil {
+		c.Value = j.Value.Big()
+	}
+	c.Input = j.Input
 }
 
-func (c *EmbedLegacyPriceData) LegacyPriceData() *EmbedLegacyPriceData {
+// LegacyPriceField contains the gas price for legacy transactions.
+//
+// This type is used to embed legacy price data into other types.
+type LegacyPriceField struct {
+	GasPrice *big.Int // GasPrice is the gas price.
+}
+
+// LegacyPriceData returns the embedded legacy price data.
+func (c *LegacyPriceField) LegacyPriceData() *LegacyPriceField {
 	return c
 }
 
-func (c *EmbedLegacyPriceData) SetLegacyPriceData(data *EmbedLegacyPriceData) {
-	*c = *data
+// SetLegacyPriceData sets the embedded legacy price data.
+func (c *LegacyPriceField) SetLegacyPriceData(data LegacyPriceField) {
+	*c = data
 }
 
-func (c *EmbedLegacyPriceData) SetGasPrice(gasPrice *big.Int) {
+// SetGasPrice sets the gas price.
+func (c *LegacyPriceField) SetGasPrice(gasPrice *big.Int) {
 	c.GasPrice = gasPrice
 }
 
-func (c *EmbedLegacyPriceData) Copy() *EmbedLegacyPriceData {
+// Copy creates a deep copy of the LegacyPriceField.
+func (c *LegacyPriceField) Copy() *LegacyPriceField {
 	if c == nil {
 		return nil
 	}
-	return &EmbedLegacyPriceData{
+	return &LegacyPriceField{
 		GasPrice: copyBigInt(c.GasPrice),
 	}
 }
 
-type EmbedAccessListData struct {
-	AccessList AccessList
+func (c *LegacyPriceField) toJSON(j *jsonCall) {
+	if c.GasPrice != nil {
+		j.GasPrice = NumberFromBigIntPtr(c.GasPrice)
+	}
 }
 
-func (c *EmbedAccessListData) AccessListData() *EmbedAccessListData {
+func (c *LegacyPriceField) fromJSON(j *jsonCall) {
+	if j.GasPrice != nil {
+		c.GasPrice = j.GasPrice.Big()
+	}
+}
+
+// AccessListField contains the access list for EIP-2930 transactions.
+//
+// This type is used to embed access list data into other types.
+type AccessListField struct {
+	AccessList AccessList // AccessList is the EIP-2930 access list.
+}
+
+// AccessListData returns the embedded access list data.
+func (c *AccessListField) AccessListData() *AccessListField {
 	return c
 }
 
-func (c *EmbedAccessListData) SetAccessListData(data *EmbedAccessListData) {
-	*c = *data
+// SetAccessListData sets the embedded access list data.
+func (c *AccessListField) SetAccessListData(data AccessListField) {
+	*c = data
 }
 
-func (c *EmbedAccessListData) SetAccessList(accessList AccessList) {
+// SetAccessList sets the access list.
+func (c *AccessListField) SetAccessList(accessList AccessList) {
 	c.AccessList = accessList
 }
 
-func (c *EmbedAccessListData) Copy() *EmbedAccessListData {
+// Copy creates a deep copy of the AccessListField.
+func (c *AccessListField) Copy() *AccessListField {
 	if c == nil {
 		return nil
 	}
-	return &EmbedAccessListData{
+	return &AccessListField{
 		AccessList: c.AccessList.Copy(),
 	}
 }
 
-type EmbedDynamicFeeData struct {
-	MaxFeePerGas         *big.Int
-	MaxPriorityFeePerGas *big.Int
+func (c *AccessListField) toJSON(j *jsonCall) {
+	j.AccessList = c.AccessList
 }
 
-func (c *EmbedDynamicFeeData) DynamicFeeData() *EmbedDynamicFeeData {
+func (c *AccessListField) fromJSON(j *jsonCall) {
+	c.AccessList = j.AccessList
+}
+
+// DynamicFeeFields contains fee data for EIP-1559 transactions.
+//
+// This type is used to embed dynamic fee data into other types.
+type DynamicFeeFields struct {
+	MaxFeePerGas         *big.Int // MaxFeePerGas is the maximum total fee per gas.
+	MaxPriorityFeePerGas *big.Int // MaxPriorityFeePerGas is the maximum priority fee per gas.
+}
+
+// DynamicFeeData returns the embedded dynamic fee data.
+func (c *DynamicFeeFields) DynamicFeeData() *DynamicFeeFields {
 	return c
 }
 
-func (c *EmbedDynamicFeeData) SetDynamicFeeData(data *EmbedDynamicFeeData) {
-	*c = *data
+// SetDynamicFeeData sets the embedded dynamic fee data.
+func (c *DynamicFeeFields) SetDynamicFeeData(data DynamicFeeFields) {
+	*c = data
 }
 
-func (c *EmbedDynamicFeeData) SetMaxFeePerGas(maxFeePerGas *big.Int) {
+// SetMaxFeePerGas sets the maximum total fee per gas.
+func (c *DynamicFeeFields) SetMaxFeePerGas(maxFeePerGas *big.Int) {
 	c.MaxFeePerGas = maxFeePerGas
 }
 
-func (c *EmbedDynamicFeeData) SetMaxPriorityFeePerGas(maxPriorityFeePerGas *big.Int) {
+// SetMaxPriorityFeePerGas sets the maximum priority fee per gas.
+func (c *DynamicFeeFields) SetMaxPriorityFeePerGas(maxPriorityFeePerGas *big.Int) {
 	c.MaxPriorityFeePerGas = maxPriorityFeePerGas
 }
 
-func (c *EmbedDynamicFeeData) Copy() *EmbedDynamicFeeData {
+// Copy creates a deep copy of the DynamicFeeFields.
+func (c *DynamicFeeFields) Copy() *DynamicFeeFields {
 	if c == nil {
 		return nil
 	}
-	return &EmbedDynamicFeeData{
+	return &DynamicFeeFields{
 		MaxFeePerGas:         copyBigInt(c.MaxFeePerGas),
 		MaxPriorityFeePerGas: copyBigInt(c.MaxPriorityFeePerGas),
 	}
 }
 
-type EmbedBlobData struct {
-	MaxFeePerBlobGas *big.Int
-	Blobs            []Blob
+func (c *DynamicFeeFields) toJSON(j *jsonCall) {
+	if c.MaxFeePerGas != nil {
+		j.MaxFeePerGas = NumberFromBigIntPtr(c.MaxFeePerGas)
+	}
+	if c.MaxPriorityFeePerGas != nil {
+		j.MaxPriorityFeePerGas = NumberFromBigIntPtr(c.MaxPriorityFeePerGas)
+	}
 }
 
-func (c *EmbedBlobData) BlobData() *EmbedBlobData {
+func (c *DynamicFeeFields) fromJSON(j *jsonCall) {
+	if j.MaxFeePerGas != nil {
+		c.MaxFeePerGas = j.MaxFeePerGas.Big()
+	}
+	if j.MaxPriorityFeePerGas != nil {
+		c.MaxPriorityFeePerGas = j.MaxPriorityFeePerGas.Big()
+	}
+}
+
+// BlobFields contains data for EIP-4844 blob transactions.
+//
+// Use NewBlobInfo to create a BlobInfo.
+//
+// This type is used to embed blob data into other types.
+type BlobFields struct {
+	MaxFeePerBlobGas *big.Int   // MaxFeePerBlobGas is the maximum fee per blob gas.
+	Blobs            []BlobInfo // Blobs is the list of blobs.
+}
+
+// BlobData returns the embedded blob data.
+func (c *BlobFields) BlobData() *BlobFields {
 	return c
 }
 
-func (c *EmbedBlobData) SetBlobData(data *EmbedBlobData) {
-	*c = *data
+// SetBlobData sets the embedded blob data.
+func (c *BlobFields) SetBlobData(data BlobFields) {
+	*c = data
 }
 
-func (c *EmbedBlobData) SetMaxFeePerBlobGas(maxFeePerBlobGas *big.Int) {
+// SetMaxFeePerBlobGas sets the maximum fee per blob gas.
+func (c *BlobFields) SetMaxFeePerBlobGas(maxFeePerBlobGas *big.Int) {
 	c.MaxFeePerBlobGas = maxFeePerBlobGas
 }
 
-func (c *EmbedBlobData) SetBlobs(blobs []Blob) {
+// SetBlobs sets the list of blobs.
+//
+// Use NewBlobInfo to create a BlobInfo.
+func (c *BlobFields) SetBlobs(blobs []BlobInfo) {
 	c.Blobs = blobs
 }
 
-func (c *EmbedBlobData) AddBlob(blob Blob) {
+// AddBlob adds a blob to the list.
+//
+// Use NewBlobInfo to create a BlobInfo.
+func (c *BlobFields) AddBlob(blob BlobInfo) {
 	c.Blobs = append(c.Blobs, blob)
 }
 
-func (c *EmbedBlobData) Copy() *EmbedBlobData {
+// Copy creates a deep copy of the BlobFields.
+func (c *BlobFields) Copy() *BlobFields {
 	if c == nil {
 		return nil
 	}
-	blobs := make([]Blob, len(c.Blobs))
+	blobs := make([]BlobInfo, len(c.Blobs))
 	for i, blob := range c.Blobs {
 		blobs[i].Hash = blob.Hash
 		blobs[i].Sidecar = copyPtr(blob.Sidecar)
 	}
-	return &EmbedBlobData{
+	return &BlobFields{
 		MaxFeePerBlobGas: copyBigInt(c.MaxFeePerBlobGas),
 		Blobs:            blobs,
+	}
+}
+
+func (c *BlobFields) toJSON(j *jsonCall) {
+	if c.MaxFeePerBlobGas != nil {
+		j.MaxFeePerBlobGas = NumberFromBigIntPtr(c.MaxFeePerBlobGas)
+	}
+	if len(c.Blobs) > 0 && c.Blobs[0].Sidecar != nil {
+		// If the first blob has a sidecar, then all blobs should have
+		// sidecars, so we can allocate memory for them.
+		j.BlobHashes = make([]Hash, 0, len(c.Blobs))
+		j.Blobs = make([]kzgBlob, 0, len(c.Blobs))
+		j.Commitments = make([]kzgCommitment, 0, len(c.Blobs))
+		j.Proofs = make([]kzgProof, 0, len(c.Blobs))
+	}
+	for _, b := range c.Blobs {
+		j.BlobHashes = append(j.BlobHashes, b.Hash)
+		if b.Sidecar != nil {
+			j.Blobs = append(j.Blobs, kzgBlob(b.Sidecar.Blob))
+			j.Commitments = append(j.Commitments, kzgCommitment(b.Sidecar.Commitment))
+			j.Proofs = append(j.Proofs, kzgProof(b.Sidecar.Proof))
+		}
+	}
+}
+
+func (c *BlobFields) fromJSON(j *jsonCall) {
+	if j.MaxFeePerBlobGas != nil {
+		c.MaxFeePerBlobGas = j.MaxFeePerBlobGas.Big()
+	}
+	if len(j.BlobHashes) > 0 {
+		c.Blobs = make([]BlobInfo, len(j.BlobHashes))
+		for i, h := range j.BlobHashes {
+			b := BlobInfo{Hash: h}
+			if i < len(j.Blobs) && i < len(j.Commitments) && i < len(j.Proofs) {
+				b.Sidecar = &BlobSidecar{
+					Blob:       kzg4844.Blob(j.Blobs[i]),
+					Commitment: kzg4844.Commitment(j.Commitments[i]),
+					Proof:      kzg4844.Proof(j.Proofs[i]),
+				}
+			}
+			c.Blobs[i] = b
+		}
 	}
 }

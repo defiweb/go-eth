@@ -5,43 +5,44 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
 )
 
-func TestTransaction_RLP(t *testing.T) {
+func TestTransactionDecoder_DecodeRLP(t *testing.T) {
 	tests := []struct {
 		tx  Transaction
-		rlp []byte
+		rlp string
 	}{
 		{
 			tx:  &TransactionLegacy{},
-			rlp: hexutil.MustHexToBytes("c9808080808080808080"),
+			rlp: "0xc9808080808080808080",
 		},
 		{
 			tx: &TransactionLegacy{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					ChainID:   ptr(uint64(38)),
 					Nonce:     ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedLegacyPriceData: EmbedLegacyPriceData{
-					GasPrice: big.NewInt(1000000000),
+				CallLegacy: CallLegacy{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					LegacyPriceField: LegacyPriceField{
+						GasPrice: big.NewInt(1000000000),
+					},
 				},
 			},
-			rlp: hexutil.MustHexToBytes("f87001843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a764000084010203046fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
+			rlp: "0xf87001843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a764000084010203046fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84",
 		},
 		{
 			tx: &TransactionLegacy{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(9)),
 					Signature: SignatureFromVRSPtr(
@@ -59,134 +60,142 @@ func TestTransaction_RLP(t *testing.T) {
 						}(),
 					),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(21000)),
-				},
-				EmbedLegacyPriceData: EmbedLegacyPriceData{
-					GasPrice: big.NewInt(20000000000),
+				CallLegacy: CallLegacy{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(21000)),
+					},
+					LegacyPriceField: LegacyPriceField{
+						GasPrice: big.NewInt(20000000000),
+					},
 				},
 			},
-			rlp: hexutil.MustHexToBytes("f86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"),
+			rlp: "0xf86c098504a817c800825208943535353535353535353535353535353535353535880de0b6b3a76400008025a028ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276a067cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83",
 		},
 		{
 			tx:  &TransactionAccessList{},
-			rlp: hexutil.MustHexToBytes("01cb80808080808080c0808080"),
+			rlp: "0x01cb80808080808080c0808080",
 		},
 		{
 			tx: &TransactionAccessList{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedLegacyPriceData: EmbedLegacyPriceData{
-					GasPrice: big.NewInt(1000000000),
-				},
-				EmbedAccessListData: EmbedAccessListData{
-					AccessList: []AccessTuple{{
-						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
-						StorageKeys: []Hash{
-							MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
-							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
-						},
-					}},
+				CallAccessList: CallAccessList{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					LegacyPriceField: LegacyPriceField{
+						GasPrice: big.NewInt(1000000000),
+					},
+					AccessListField: AccessListField{
+						AccessList: []AccessTuple{{
+							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+							StorageKeys: []Hash{
+								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+							},
+						}},
+					},
 				},
 			},
-			rlp: hexutil.MustHexToBytes("01f8ce0101843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
+			rlp: "0x01f8ce0101843b9aca00830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84",
 		},
 		{
 			tx:  &TransactionDynamicFee{},
-			rlp: hexutil.MustHexToBytes("02cc8080808080808080c0808080"),
+			rlp: "0x02cc8080808080808080c0808080",
 		},
 		{
 			tx: &TransactionDynamicFee{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedDynamicFeeData: EmbedDynamicFeeData{
-					MaxPriorityFeePerGas: big.NewInt(1000000000),
-					MaxFeePerGas:         big.NewInt(2000000000),
-				},
-				EmbedAccessListData: EmbedAccessListData{
-					AccessList: []AccessTuple{{
-						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
-						StorageKeys: []Hash{
-							MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
-							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
-						},
-					}},
+				CallDynamicFee: CallDynamicFee{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					DynamicFeeFields: DynamicFeeFields{
+						MaxPriorityFeePerGas: big.NewInt(1000000000),
+						MaxFeePerGas:         big.NewInt(2000000000),
+					},
+					AccessListField: AccessListField{
+						AccessList: []AccessTuple{{
+							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+							StorageKeys: []Hash{
+								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+							},
+						}},
+					},
 				},
 			},
-			rlp: hexutil.MustHexToBytes("02f8d30101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
+			rlp: "0x02f8d30101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a055555555555555555555555555555555555555555555555555555555555555556fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84",
 		},
 		{
 			tx:  &TransactionBlob{},
-			rlp: hexutil.MustHexToBytes("03ce8080808080808080c080c0808080"),
+			rlp: "0x03ce8080808080808080c080c0808080",
 		},
 		{
 			tx: &TransactionBlob{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedDynamicFeeData: EmbedDynamicFeeData{
-					MaxPriorityFeePerGas: big.NewInt(1000000000),
-					MaxFeePerGas:         big.NewInt(2000000000),
-				},
-				EmbedAccessListData: EmbedAccessListData{
-					AccessList: []AccessTuple{{
-						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
-						StorageKeys: []Hash{
-							MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
-							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
-						},
-					}},
-				},
-				EmbedBlobData: EmbedBlobData{
-					MaxFeePerBlobGas: big.NewInt(3000000000),
-					Blobs: []Blob{
-						{
-							Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+				CallBlob: CallBlob{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					DynamicFeeFields: DynamicFeeFields{
+						MaxPriorityFeePerGas: big.NewInt(1000000000),
+						MaxFeePerGas:         big.NewInt(2000000000),
+					},
+					AccessListField: AccessListField{
+						AccessList: []AccessTuple{{
+							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+							StorageKeys: []Hash{
+								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+							},
+						}},
+					},
+					BlobFields: BlobFields{
+						MaxFeePerBlobGas: big.NewInt(3000000000),
+						Blobs: []BlobInfo{
+							{
+								Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+							},
 						},
 					},
 				},
 			},
-			rlp: hexutil.MustHexToBytes("03f8fa0101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a0555555555555555555555555555555555555555555555555555555555555555584b2d05e00e1a066666666666666666666666666666666666666666666666666666666666666666fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84"),
+			rlp: "0x03f8fa0101843b9aca008477359400830186a0942222222222222222222222222222222222222222880de0b6b3a76400008401020304f85bf859943333333333333333333333333333333333333333f842a04444444444444444444444444444444444444444444444444444444444444444a0555555555555555555555555555555555555555555555555555555555555555584b2d05e00e1a066666666666666666666666666666666666666666666666666666666666666666fa0a3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad91490a08051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd84",
 		},
 	}
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			tx, err := DefaultTransactionDecoder.DecodeRLP(tt.rlp)
+			tx, err := DefaultTransactionDecoder.DecodeRLP(hexutil.MustHexToBytes(tt.rlp))
 			require.NoError(t, err)
-			assert.Equal(t, tt.tx, tx)
+			assertEqualTX(t, tt.tx, tx)
 		})
 	}
 }
 
-func TestTransaction_JSON(t *testing.T) {
+func TestTransactionDeocder_DecodeJSON(t *testing.T) {
 	tests := []struct {
 		tx   Transaction
 		json string
@@ -197,18 +206,20 @@ func TestTransaction_JSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionLegacy{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce:     ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedLegacyPriceData: EmbedLegacyPriceData{
-					GasPrice: big.NewInt(1000000000),
+				CallLegacy: CallLegacy{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					LegacyPriceField: LegacyPriceField{
+						GasPrice: big.NewInt(1000000000),
+					},
 				},
 			},
 			json: `
@@ -227,7 +238,7 @@ func TestTransaction_JSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionLegacy{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce: ptr(uint64(9)),
 					Signature: SignatureFromVRSPtr(
 						func() *big.Int {
@@ -244,13 +255,15 @@ func TestTransaction_JSON(t *testing.T) {
 						}(),
 					),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(21000)),
-				},
-				EmbedLegacyPriceData: EmbedLegacyPriceData{
-					GasPrice: big.NewInt(20000000000),
+				CallLegacy: CallLegacy{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(21000)),
+					},
+					LegacyPriceField: LegacyPriceField{
+						GasPrice: big.NewInt(20000000000),
+					},
 				},
 			},
 			json: `
@@ -276,28 +289,30 @@ func TestTransaction_JSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionAccessList{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedLegacyPriceData: EmbedLegacyPriceData{
-					GasPrice: big.NewInt(1000000000),
-				},
-				EmbedAccessListData: EmbedAccessListData{
-					AccessList: []AccessTuple{{
-						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
-						StorageKeys: []Hash{
-							MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
-							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
-						},
-					}},
+				CallAccessList: CallAccessList{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					LegacyPriceField: LegacyPriceField{
+						GasPrice: big.NewInt(1000000000),
+					},
+					AccessListField: AccessListField{
+						AccessList: []AccessTuple{{
+							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+							StorageKeys: []Hash{
+								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+							},
+						}},
+					},
 				},
 			},
 			json: `
@@ -334,29 +349,31 @@ func TestTransaction_JSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionDynamicFee{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedDynamicFeeData: EmbedDynamicFeeData{
-					MaxPriorityFeePerGas: big.NewInt(1000000000),
-					MaxFeePerGas:         big.NewInt(2000000000),
-				},
-				EmbedAccessListData: EmbedAccessListData{
-					AccessList: []AccessTuple{{
-						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
-						StorageKeys: []Hash{
-							MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
-							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
-						},
-					}},
+				CallDynamicFee: CallDynamicFee{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					DynamicFeeFields: DynamicFeeFields{
+						MaxPriorityFeePerGas: big.NewInt(1000000000),
+						MaxFeePerGas:         big.NewInt(2000000000),
+					},
+					AccessListField: AccessListField{
+						AccessList: []AccessTuple{{
+							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+							StorageKeys: []Hash{
+								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+							},
+						}},
+					},
 				},
 			},
 			json: `
@@ -394,35 +411,37 @@ func TestTransaction_JSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionBlob{
-				EmbedTransactionData: EmbedTransactionData{
+				TransactionFields: TransactionFields{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
-				EmbedCallData: EmbedCallData{
-					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
-					Value:    big.NewInt(1000000000000000000),
-					GasLimit: ptr(uint64(100000)),
-					Input:    []byte{1, 2, 3, 4},
-				},
-				EmbedDynamicFeeData: EmbedDynamicFeeData{
-					MaxPriorityFeePerGas: big.NewInt(1000000000),
-					MaxFeePerGas:         big.NewInt(2000000000),
-				},
-				EmbedAccessListData: EmbedAccessListData{
-					AccessList: []AccessTuple{{
-						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
-						StorageKeys: []Hash{
-							MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
-							MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
-						},
-					}},
-				},
-				EmbedBlobData: EmbedBlobData{
-					MaxFeePerBlobGas: big.NewInt(3000000000),
-					Blobs: []Blob{
-						{
-							Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+				CallBlob: CallBlob{
+					CallFields: CallFields{
+						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
+						Value:    big.NewInt(1000000000000000000),
+						GasLimit: ptr(uint64(100000)),
+						Input:    []byte{1, 2, 3, 4},
+					},
+					DynamicFeeFields: DynamicFeeFields{
+						MaxPriorityFeePerGas: big.NewInt(1000000000),
+						MaxFeePerGas:         big.NewInt(2000000000),
+					},
+					AccessListField: AccessListField{
+						AccessList: []AccessTuple{{
+							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
+							StorageKeys: []Hash{
+								MustHashFromHex("0x4444444444444444444444444444444444444444444444444444444444444444", PadNone),
+								MustHashFromHex("0x5555555555555555555555555555555555555555555555555555555555555555", PadNone),
+							},
+						}},
+					},
+					BlobFields: BlobFields{
+						MaxFeePerBlobGas: big.NewInt(3000000000),
+						Blobs: []BlobInfo{
+							{
+								Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+							},
 						},
 					},
 				},
@@ -462,6 +481,9 @@ func TestTransaction_JSON(t *testing.T) {
 				{
 				  "accessList": [],
 				  "maxFeePerGas": "0x0",
+				  "blobVersionedHashes": [
+					"0x6666666666666666666666666666666666666666666666666666666666666666"
+				  ],
 				  "type": "0x0"
 				}
 			`,
@@ -471,7 +493,7 @@ func TestTransaction_JSON(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
 			tx, err := DefaultTransactionDecoder.DecodeJSON([]byte(tt.json))
 			require.NoError(t, err)
-			assert.Equal(t, tt.tx, tx)
+			assertEqualTX(t, tt.tx, tx)
 		})
 	}
 }
