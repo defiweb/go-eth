@@ -2,8 +2,6 @@ package kzg4844
 
 import (
 	"crypto/sha256"
-	"embed"
-	"encoding/json"
 	"sync"
 
 	kzg4844 "github.com/crate-crypto/go-kzg-4844"
@@ -98,9 +96,6 @@ func ComputeBlobHashV1(commit Commitment) (h [32]byte) {
 	return
 }
 
-//go:embed trusted_setup.json
-var content embed.FS
-
 // context holds the necessary configuration needed to create and verify proofs.
 var context *kzg4844.Context
 
@@ -108,15 +103,8 @@ var once sync.Once
 
 func initContext() {
 	once.Do(func() {
-		setupFile, err := content.ReadFile("trusted_setup.json")
-		if err != nil {
-			panic(err)
-		}
-		setup := new(kzg4844.JSONTrustedSetup)
-		if err = json.Unmarshal(setupFile, setup); err != nil {
-			panic(err)
-		}
-		context, err = kzg4844.NewContext4096(setup)
+		var err error
+		context, err = kzg4844.NewContext4096Secure()
 		if err != nil {
 			panic(err)
 		}
