@@ -23,7 +23,7 @@ type Client struct {
 type ClientOptionsContext struct {
 	Transport transport.Transport      // Transport instance that will be passed to the client.
 	Decoder   types.TransactionDecoder // Transaction decoder that will be passed to the client.
-	Custom    map[string]any           // Custom data that may be used by client options.
+	Custom    map[any]any              // Custom data that may be used by client options.
 }
 
 type ClientOption interface {
@@ -365,12 +365,12 @@ func setFields(ctx *ClientOptionsContext, r reflect.Value) {
 			continue
 		}
 		t := f.Type()
-		switch {
-		case t == transportTy:
+		switch t {
+		case transportTy:
 			if f.CanSet() {
 				f.Set(reflect.ValueOf(ctx.Transport))
 			}
-		case t == decoderTy:
+		case decoderTy:
 			if f.CanSet() {
 				f.Set(reflect.ValueOf(ctx.Decoder))
 			}

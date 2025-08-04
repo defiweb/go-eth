@@ -16,18 +16,18 @@ import (
 )
 
 func TestHijackNonce(t *testing.T) {
-	tt := []struct {
+	tc := []struct {
 		name     string
-		nonce    *hijackNonce
+		hijacker *hijackNonce
 		method   string
 		args     []any
 		request  []string
 		response []string
 	}{
 		{
-			name:   "set nonce",
-			nonce:  &hijackNonce{},
-			method: "eth_sendTransaction",
+			name:     "set nonce",
+			hijacker: &hijackNonce{},
+			method:   "eth_sendTransaction",
 			args: []any{func() types.Transaction {
 				tx := types.NewTransactionAccessList()
 				tx.SetFrom(types.MustAddressFromHex("0x1111111111111111111111111111111111111111"))
@@ -43,9 +43,9 @@ func TestHijackNonce(t *testing.T) {
 			},
 		},
 		{
-			name:   "do not replace nonce",
-			nonce:  &hijackNonce{replace: false},
-			method: "eth_sendTransaction",
+			name:     "do not replace nonce",
+			hijacker: &hijackNonce{replace: false},
+			method:   "eth_sendTransaction",
 			args: []any{func() types.Transaction {
 				tx := types.NewTransactionAccessList()
 				tx.SetNonce(2)
@@ -60,9 +60,9 @@ func TestHijackNonce(t *testing.T) {
 			},
 		},
 		{
-			name:   "replace nonce",
-			nonce:  &hijackNonce{replace: true},
-			method: "eth_sendTransaction",
+			name:     "replace nonce",
+			hijacker: &hijackNonce{replace: true},
+			method:   "eth_sendTransaction",
 			args: []any{func() types.Transaction {
 				tx := types.NewTransactionAccessList()
 				tx.SetNonce(2)
@@ -79,32 +79,32 @@ func TestHijackNonce(t *testing.T) {
 			},
 		},
 	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
-				require.NotEmpty(t, tc.request)
-				require.NotEmpty(t, tc.response)
+				require.NotEmpty(t, tt.request)
+				require.NotEmpty(t, tt.response)
 
 				body, err := io.ReadAll(req.Body)
 				require.NoError(t, err)
-				require.JSONEq(t, tc.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tc.request[0], string(body)))
+				require.JSONEq(t, tt.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tt.request[0], string(body)))
 
-				res := tc.response[0]
-				tc.request = tc.request[1:]
-				tc.response = tc.response[1:]
+				res := tt.response[0]
+				tt.request = tt.request[1:]
+				tt.response = tt.response[1:]
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(res)),
 				}, nil
 			}
-			hijacker := transport.NewHijacker(httpMock, tc.nonce)
 
-			var result any
-			err := hijacker.Call(ctx, &result, tc.method, tc.args...)
-			assert.Len(t, tc.request, 0)
-			assert.Len(t, tc.response, 0)
+			hijacker := transport.NewHijacker(httpMock, tt.hijacker)
+
+			err := hijacker.Call(ctx, nil, tt.method, tt.args...)
+			assert.Len(t, tt.request, 0)
+			assert.Len(t, tt.response, 0)
 			require.NoError(t, err)
 		})
 	}

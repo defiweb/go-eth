@@ -5,45 +5,44 @@ import (
 	"encoding/json"
 )
 
-const hijackerKey = "goeth_transport_hijackers"
+// Hijacker intercepts and modifies calls to the underlying [Transport] using
+// the middleware pattern.
+//
+// The 'next' function should be called to continue the call chain.
+//
+// The transport provided to 'next' is the underlying [Transport] instance;
+// using it will bypass any subsequent hijackers.
+type Hijacker interface {
+	// Call returns a [CallFunc] that intercepts and modifies
+	// the 'Call' method.
+	//
+	// If nil is returned, no middleware is applied.
+	Call() func(next CallFunc) CallFunc
+
+	// Subscribe returns a [SubscribeFunc] that intercepts and modifies
+	// the 'Subscribe' method.
+	//
+	// If nil is returned, no middleware is applied.
+	Subscribe() func(next SubscribeFunc) SubscribeFunc
+
+	// Unsubscribe returns an [UnsubscribeFunc that intercepts and modifies
+	// the 'Unsubscribe' method.
+	//
+	// If nil is returned, no middleware is applied.
+	Unsubscribe() func(next UnsubscribeFunc) UnsubscribeFunc
+}
 
 type (
-	// Hijacker is used to intercept and modify calls to the underlying
-	// Transport. It employs the middleware pattern to facilitate the use of
-	// multiple hijackers. The 'next' function should be invoked to proceed
-	// with the call chain. The transport provided to the 'next' function is an
-	// instance of the underlying Transport. Using it will bypass any
-	// subsequent hijackers.
-	Hijacker interface {
-		// Call returns a CallFunc that intercepts and modifies the Call
-		// method. If nil is returned, the Call method is not modified.
-		Call() func(next CallFunc) CallFunc
-
-		// Subscribe returns a SubscribeFunc that intercepts and modifies the
-		// Subscribe method. If nil is returned, the Subscribe method is not
-		// modified.
-		Subscribe() func(next SubscribeFunc) SubscribeFunc
-
-		// Unsubscribe returns an UnsubscribeFunc that intercepts and modifies
-		// the Unsubscribe method. If nil is returned, the Unsubscribe method
-		// is not modified.
-		Unsubscribe() func(next UnsubscribeFunc) UnsubscribeFunc
-	}
-
 	CallFunc        func(ctx context.Context, t Transport, result any, method string, args ...any) error
 	SubscribeFunc   func(ctx context.Context, t SubscriptionTransport, method string, args ...any) (ch chan json.RawMessage, id string, err error)
 	UnsubscribeFunc func(ctx context.Context, t SubscriptionTransport, id string) error
 )
 
-// Hijack is a wrapper around another Transport that allows for hijacking
-// and modifying the behavior of the underlying Transport.
+// Hijack is a wrapper around another [Transport] that allows hijacking
+// and modifying the behavior of the underlying [Transport] using the
+// middleware pattern.
 //
-// To use Hijack, create a new Hijack instance with the underlying Transport
-// and then use the Use method to add any number of hijackers. The hijackers
-// will be called in the order they are added.
-//
-// Hijackers must implement one or more of the Hijacker, SubscribeHijacker,
-// and UnsubscribeHijacker interfaces.
+// Hijackers must implement one or more of the Hijacker interface methods.
 type Hijack struct {
 	transport Transport
 	callFunc  CallFunc
@@ -51,6 +50,7 @@ type Hijack struct {
 	unsubFunc UnsubscribeFunc
 }
 
+// NewHijacker creates a new [Hijack] instance.
 func NewHijacker(t Transport, hs ...Hijacker) *Hijack {
 	h := &Hijack{
 		transport: t,
@@ -62,6 +62,7 @@ func NewHijacker(t Transport, hs ...Hijacker) *Hijack {
 	return h
 }
 
+// Use adds hijackers in the order they are provided.
 func (h *Hijack) Use(hs ...Hijacker) {
 	for _, m := range hs {
 		if m == nil {
@@ -79,13 +80,11 @@ func (h *Hijack) Use(hs ...Hijacker) {
 	}
 }
 
+// Call implements the [Transport] interface.
 func (h *Hijack) Call(ctx context.Context, result any, method string, args ...any) error {
 	hs := getHijackers(ctx)
-	if len(hs) == 0 {
-		return h.callFunc(ctx, h.transport, result, method, args...)
-	}
 	fn := h.callFunc
-	for i := len(hs) - 1; i >= 0; i-- {
+	for i := 0; i < len(hs); i++ {
 		if call := hs[i].Call(); call != nil {
 			fn = call(fn)
 		}
@@ -93,26 +92,46 @@ func (h *Hijack) Call(ctx context.Context, result any, method string, args ...an
 	return fn(ctx, h.transport, result, method, args...)
 }
 
+// Subscribe implements the [SubscriptionTransport] interface.
 func (h *Hijack) Subscribe(ctx context.Context, method string, args ...any) (ch chan json.RawMessage, id string, err error) {
 	if s, ok := h.transport.(SubscriptionTransport); ok {
-		return h.subFunc(ctx, s, method, args...)
+		hs := getHijackers(ctx)
+		fn := h.subFunc
+		for i := 0; i < len(hs); i++ {
+			if sub := hs[i].Subscribe(); sub != nil {
+				fn = sub(fn)
+			}
+		}
+		return fn(ctx, s, method, args...)
 	}
 	return nil, "", ErrNotSubscriptionTransport
 }
 
+// Unsubscribe implements the [SubscriptionTransport] interface.
 func (h *Hijack) Unsubscribe(ctx context.Context, id string) error {
 	if s, ok := h.transport.(SubscriptionTransport); ok {
-		return h.unsubFunc(ctx, s, id)
+		hs := getHijackers(ctx)
+		fn := h.unsubFunc
+		for i := 0; i < len(hs); i++ {
+			if unsub := hs[i].Unsubscribe(); unsub != nil {
+				fn = unsub(fn)
+			}
+		}
+		return fn(ctx, s, id)
 	}
 	return ErrNotSubscriptionTransport
 }
 
+// WithHijackers returns a new context with the provided hijackers added to it.
+//
+// This allows you to pass hijackers down the call chain. The provided hijackers
+// will be appended to any existing hijackers in the context.
 func WithHijackers(ctx context.Context, hs ...Hijacker) context.Context {
-	return context.WithValue(ctx, hijackerKey, append(getHijackers(ctx), hs...))
+	return context.WithValue(ctx, hijackerContextKey{}, append(getHijackers(ctx), hs...))
 }
 
 func getHijackers(ctx context.Context) []Hijacker {
-	if hs, ok := ctx.Value(hijackerKey).([]Hijacker); ok {
+	if hs, ok := ctx.Value(hijackerContextKey{}).([]Hijacker); ok {
 		return hs
 	}
 	return nil
@@ -129,3 +148,5 @@ func defSub(ctx context.Context, t SubscriptionTransport, method string, args ..
 func defUnsub(ctx context.Context, t SubscriptionTransport, id string) error {
 	return t.Unsubscribe(ctx, id)
 }
+
+type hijackerContextKey struct{}

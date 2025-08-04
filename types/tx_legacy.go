@@ -14,7 +14,7 @@ import (
 //
 // This is the original transaction format used before EIP-2718.
 type TransactionLegacy struct {
-	TransactionFields
+	TransactionData
 	CallLegacy
 }
 
@@ -99,7 +99,7 @@ func (t *TransactionLegacy) CalculateSigningHash() (Hash, error) {
 // Copy creates a deep copy of the transaction.
 func (t *TransactionLegacy) Copy() *TransactionLegacy {
 	return &TransactionLegacy{
-		TransactionFields: *t.TransactionFields.Copy(),
+		TransactionData: *t.TransactionData.Copy(),
 		CallLegacy:        *t.CallLegacy.Copy(),
 	}
 }
@@ -226,9 +226,9 @@ func (t *TransactionLegacy) DecodeRLP(data []byte) (int, error) {
 // MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionLegacy) MarshalJSON() ([]byte, error) {
 	j := &jsonTransaction{}
-	t.TransactionFields.toJSON(j)
-	t.CallFields.toJSON(&j.jsonCall)
-	t.LegacyPriceField.toJSON(&j.jsonCall)
+	t.TransactionData.toJSON(j)
+	t.CallData.toJSON(&j.jsonCall)
+	t.LegacyPriceData.toJSON(&j.jsonCall)
 	return json.Marshal(j)
 }
 
@@ -238,9 +238,9 @@ func (t *TransactionLegacy) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	t.TransactionFields.fromJSON(j)
-	t.CallFields.fromJSON(&j.jsonCall)
-	t.LegacyPriceField.fromJSON(&j.jsonCall)
+	t.TransactionData.fromJSON(j)
+	t.CallData.fromJSON(&j.jsonCall)
+	t.LegacyPriceData.fromJSON(&j.jsonCall)
 	return nil
 }
 

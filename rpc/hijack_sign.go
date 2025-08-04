@@ -9,12 +9,13 @@ import (
 	"github.com/defiweb/go-eth/wallet"
 )
 
-// hijackSign hijacks calls to the methods that require account access
+// hijackSign hijacks calls to methods that require account access
 // and simulates their behavior using the provided keys.
 type hijackSign struct {
 	keys []wallet.Key
 }
 
+// Call implements the [transport.Hijacker] interface.
 func (k *hijackSign) Call() func(next transport.CallFunc) transport.CallFunc {
 	return func(next transport.CallFunc) transport.CallFunc {
 		return func(ctx context.Context, t transport.Transport, result any, method string, args ...any) error {
@@ -67,10 +68,12 @@ func (k *hijackSign) Call() func(next transport.CallFunc) transport.CallFunc {
 	}
 }
 
+// Subscribe implements the [transport.Hijacker] interface.
 func (k *hijackSign) Subscribe() func(next transport.SubscribeFunc) transport.SubscribeFunc {
 	return nil
 }
 
+// Unsubscribe implements the [transport.Hijacker] interface.
 func (k *hijackSign) Unsubscribe() func(next transport.UnsubscribeFunc) transport.UnsubscribeFunc {
 	return nil
 }

@@ -1,9 +1,12 @@
+// Package txsign provides transaction signing and address recovery
+// functionality for Ethereum transactions.
 package txsign
 
 import (
 	"fmt"
 	"math/big"
 
+	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/crypto/ecdsa"
 	"github.com/defiweb/go-eth/types"
 )
@@ -13,12 +16,12 @@ func Sign(key *ecdsa.PrivateKey, tx types.Transaction) error {
 	if key == nil {
 		return fmt.Errorf("missing private key")
 	}
-	txd := tx.TransactionData()
+	txd := tx.GetTransactionData()
 	hash, err := tx.CalculateSigningHash()
 	if err != nil {
 		return err
 	}
-	sig, err := ecdsa.SignHash(key, ecdsa.Hash(hash))
+	sig, err := crypto.ECSignHash(key, ecdsa.Hash(hash))
 	if err != nil {
 		return err
 	}
@@ -32,15 +35,16 @@ func Sign(key *ecdsa.PrivateKey, tx types.Transaction) error {
 		}
 	}
 	txd.SetSignature(types.SignatureFromVRS(sv, sr, ss))
-	if cd, ok := tx.(types.CallData); ok {
-		cd.CallData().SetFrom(types.Address(ecdsa.PublicKeyToAddress(&key.PublicKey)))
+	if cd, ok := tx.(types.HasCallData); ok {
+		cd.GetCallData().SetFrom(types.Address(crypto.ECPublicKeyToAddress(crypto.ECPrivateKeyToPublicKey(key))))
 	}
 	return nil
 }
 
-// Recover recovers the Ethereum address from the given transaction.
+// Recover recovers the Ethereum address from the given transaction's
+// signature.
 func Recover(tx types.Transaction) (*types.Address, error) {
-	txd := tx.TransactionData()
+	txd := tx.GetTransactionData()
 	if txd.Signature == nil {
 		return nil, fmt.Errorf("signature is missing")
 	}
@@ -65,7 +69,7 @@ func Recover(tx types.Transaction) (*types.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	addr, err := ecdsa.RecoverHash(ecdsa.Hash(hash), ecdsa.Signature(sig))
+	addr, err := crypto.ECRecoverHash(ecdsa.Hash(hash), ecdsa.Signature(sig))
 	if err != nil {
 		return nil, err
 	}

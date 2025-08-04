@@ -7,41 +7,7 @@ type Call interface {
 	json.Marshaler
 	json.Unmarshaler
 
-	CallData
-}
-
-// CallBasic represents a simplest Ethereum call.
-type CallBasic struct {
-	CallFields
-}
-
-// NewCall creates a new CallBasic.
-func NewCall() *CallBasic {
-	return &CallBasic{}
-}
-
-// Copy creates a deep copy of the CallBasic.
-func (c *CallBasic) Copy() *CallBasic {
-	return &CallBasic{
-		CallFields: *c.CallFields.Copy(),
-	}
-}
-
-// MarshalJSON implements the json.Marshaler interface.
-func (c CallBasic) MarshalJSON() ([]byte, error) {
-	j := &jsonCall{}
-	c.CallFields.toJSON(j)
-	return json.Marshal(j)
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface.
-func (c CallBasic) UnmarshalJSON(bytes []byte) error {
-	j := &jsonCall{}
-	if err := json.Unmarshal(bytes, &j); err != nil {
-		return err
-	}
-	c.CallFields.fromJSON(j)
-	return nil
+	HasCallData
 }
 
 type jsonCall struct {

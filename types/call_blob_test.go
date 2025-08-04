@@ -24,18 +24,18 @@ func TestCallBlob_JSON(t *testing.T) {
 		{
 			name: "all fields set",
 			call: &CallBlob{
-				CallFields: CallFields{
+				CallData: CallData{
 					From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 					Value:    big.NewInt(1000000000000000000),
 					GasLimit: ptr(uint64(100000)),
 					Input:    []byte{1, 2, 3, 4},
 				},
-				DynamicFeeFields: DynamicFeeFields{
+				DynamicFeeData: DynamicFeeData{
 					MaxPriorityFeePerGas: big.NewInt(1000000000),
 					MaxFeePerGas:         big.NewInt(2000000000),
 				},
-				AccessListField: AccessListField{
+				AccessListData: AccessListData{
 					AccessList: []AccessTuple{{
 						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 						StorageKeys: []Hash{
@@ -44,7 +44,7 @@ func TestCallBlob_JSON(t *testing.T) {
 						},
 					}},
 				},
-				BlobFields: BlobFields{
+				BlobData: BlobData{
 					MaxFeePerBlobGas: big.NewInt(3000000000),
 					Blobs: []BlobInfo{
 						{Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone)},
@@ -79,18 +79,18 @@ func TestCallBlob_JSON(t *testing.T) {
 		{
 			name: "blobs with shortened zero fields",
 			call: &CallBlob{
-				CallFields: CallFields{
+				CallData: CallData{
 					From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 					Value:    big.NewInt(1000000000000000000),
 					GasLimit: ptr(uint64(100000)),
 					Input:    []byte{1, 2, 3, 4},
 				},
-				DynamicFeeFields: DynamicFeeFields{
+				DynamicFeeData: DynamicFeeData{
 					MaxPriorityFeePerGas: big.NewInt(1000000000),
 					MaxFeePerGas:         big.NewInt(2000000000),
 				},
-				AccessListField: AccessListField{
+				AccessListData: AccessListData{
 					AccessList: []AccessTuple{{
 						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 						StorageKeys: []Hash{
@@ -99,7 +99,7 @@ func TestCallBlob_JSON(t *testing.T) {
 						},
 					}},
 				},
-				BlobFields: BlobFields{
+				BlobData: BlobData{
 					MaxFeePerBlobGas: big.NewInt(3000000000),
 					Blobs: []BlobInfo{
 						newBlob("blob1"),

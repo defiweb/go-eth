@@ -42,7 +42,7 @@ type Transaction interface {
 	rlp.Encoder
 	rlp.Decoder
 
-	TransactionData
+	HasTransactionData
 
 	// Type returns the type of the transaction.
 	Type() TransactionType

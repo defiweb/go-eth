@@ -204,7 +204,7 @@ func (t *TransactionOnChain) MarshalJSON() ([]byte, error) {
 	if t.TransactionIndex != nil {
 		ocd.TransactionIndex = NumberFromUint64Ptr(*t.TransactionIndex)
 	}
-	return marshalJSONInline(
+	return marshalJSONMerge(
 		t.Transaction,
 		ocd,
 	)

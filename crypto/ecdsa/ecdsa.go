@@ -1,3 +1,4 @@
+// Package ecdsa provides ECDSA cryptographic functionality for Ethereum.
 package ecdsa
 
 import (
@@ -15,32 +16,34 @@ import (
 )
 
 // PublicKey is an ECDSA public key.
-type PublicKey = ecdsa.PublicKey
+type PublicKey struct {
+	X *big.Int
+	Y *big.Int
+}
 
 // PrivateKey is an ECDSA private key.
-type PrivateKey = ecdsa.PrivateKey
-
-// Hash is a 32-byte hash.
-//
-// This type is used in ECDSA cryptographic operations. For most use cases, the
-// Hash type from the types package should be used instead.
-type Hash [32]byte
-
-// Address is a 20-byte Ethereum address.
-//
-// This type is used in ECDSA cryptographic operations. For most use cases, the
-// Address type from the types package should be used instead.
-type Address [20]byte
+type PrivateKey struct {
+	D *big.Int
+}
 
 // Signature is an ECDSA signature.
 //
-// This type is used in ECDSA cryptographic operations. For most use cases, the
-// Signature type from the types package should be used instead.
+// For most use cases, the [types.Signature] type should be used instead.
 type Signature struct {
 	V *big.Int
 	R *big.Int
 	S *big.Int
 }
+
+// Hash is a 32-byte hash.
+//
+// For most use cases, the [types.Hash] type should be used instead.
+type Hash [32]byte
+
+// Address is a 20-byte Ethereum address.
+//
+// For most use cases, the [types.Address] type should be used instead.
+type Address [20]byte
 
 var s256 = btcec.S256()
 
@@ -52,14 +55,33 @@ func AddMessagePrefix(data []byte) []byte {
 
 // GenerateKey generates a new ECDSA private key.
 func GenerateKey() (*PrivateKey, error) {
-	return ecdsa.GenerateKey(s256, rand.Reader)
+	pk, err := ecdsa.GenerateKey(s256, rand.Reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate ECDSA key: %w", err)
+	}
+	return &PrivateKey{D: pk.D}, nil
 }
 
-// PublicKeyToAddress returns the Ethereum address for the given ECDSA public key.
+// PublicKeyToAddress returns the Ethereum address for the given ECDSA
+// public key.
 func PublicKeyToAddress(publicKey *PublicKey) (addr Address) {
-	h := keccak.Hash256(elliptic.Marshal(s256, publicKey.X, publicKey.Y)[1:])
+	h := keccak.Keccak256(elliptic.Marshal(s256, publicKey.X, publicKey.Y)[1:])
 	copy(addr[:], h[12:])
 	return
+}
+
+// PrivateKeyToPublicKey converts a private key to a public key.
+// If the private key is nil, it returns nil.
+func PrivateKeyToPublicKey(privateKey *PrivateKey) *PublicKey {
+	if privateKey == nil {
+		return nil
+	}
+	privKey, _ := btcec.PrivKeyFromBytes(privateKey.D.Bytes())
+	pubKey := privKey.PubKey()
+	return &PublicKey{
+		X: pubKey.X(),
+		Y: pubKey.Y(),
+	}
 }
 
 // SignHash signs the given hash with the given private key.
@@ -86,7 +108,8 @@ func SignHash(privateKey *PrivateKey, hash Hash) (*Signature, error) {
 	}, nil
 }
 
-// RecoverHash recovers the Ethereum address from the given hash and signature.
+// RecoverHash recovers the Ethereum address from the given hash and
+// signature.
 func RecoverHash(hash Hash, signature Signature) (*Address, error) {
 	if signature.V.BitLen() > 8 {
 		return nil, errors.New("invalid signature: V has more than 8 bits")
@@ -112,7 +135,10 @@ func RecoverHash(hash Hash, signature Signature) (*Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	addr := PublicKeyToAddress(pub.ToECDSA())
+	addr := PublicKeyToAddress(&PublicKey{
+		X: pub.X(),
+		Y: pub.Y(),
+	})
 	return &addr, nil
 }
 
@@ -121,7 +147,7 @@ func SignMessage(key *PrivateKey, data []byte) (*Signature, error) {
 	if key == nil {
 		return nil, fmt.Errorf("missing private key")
 	}
-	sig, err := SignHash(key, Hash(keccak.Hash256(AddMessagePrefix(data))))
+	sig, err := SignHash(key, Hash(keccak.Keccak256(AddMessagePrefix(data))))
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +155,9 @@ func SignMessage(key *PrivateKey, data []byte) (*Signature, error) {
 	return sig, nil
 }
 
-// RecoverMessage recovers the Ethereum address from the given message and signature.
+// RecoverMessage recovers the Ethereum address from the given message and
+// signature.
 func RecoverMessage(data []byte, sig Signature) (*Address, error) {
 	sig.V = new(big.Int).Sub(sig.V, big.NewInt(27))
-	return RecoverHash(Hash(keccak.Hash256(AddMessagePrefix(data))), sig)
+	return RecoverHash(Hash(keccak.Keccak256(AddMessagePrefix(data))), sig)
 }

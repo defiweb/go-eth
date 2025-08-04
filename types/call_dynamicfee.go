@@ -8,9 +8,9 @@ import "encoding/json"
 // Introduced by EIP-1559, this transaction type supports a new fee market
 // mechanism with a base fee and a priority fee (tip).
 type CallDynamicFee struct {
-	CallFields
-	DynamicFeeFields
-	AccessListField
+	CallData
+	DynamicFeeData
+	AccessListData
 }
 
 // NewCallDynamicFee creates a new CallDynamicFee.
@@ -24,18 +24,18 @@ func (c *CallDynamicFee) Copy() *CallDynamicFee {
 		return nil
 	}
 	return &CallDynamicFee{
-		CallFields:       *c.CallFields.Copy(),
-		DynamicFeeFields: *c.DynamicFeeFields.Copy(),
-		AccessListField:  *c.AccessListField.Copy(),
+		CallData:       *c.CallData.Copy(),
+		DynamicFeeData: *c.DynamicFeeData.Copy(),
+		AccessListData:  *c.AccessListData.Copy(),
 	}
 }
 
 // MarshalJSON implements the json.Marshaler interface.
 func (c *CallDynamicFee) MarshalJSON() ([]byte, error) {
 	j := &jsonCall{}
-	c.CallFields.toJSON(j)
-	c.DynamicFeeFields.toJSON(j)
-	c.AccessListField.toJSON(j)
+	c.CallData.toJSON(j)
+	c.DynamicFeeData.toJSON(j)
+	c.AccessListData.toJSON(j)
 	return json.Marshal(j)
 }
 
@@ -45,9 +45,9 @@ func (c *CallDynamicFee) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	c.CallFields.fromJSON(j)
-	c.DynamicFeeFields.fromJSON(j)
-	c.AccessListField.fromJSON(j)
+	c.CallData.fromJSON(j)
+	c.DynamicFeeData.fromJSON(j)
+	c.AccessListData.fromJSON(j)
 	return nil
 }
 

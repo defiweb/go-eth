@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,9 +15,9 @@ import (
 )
 
 func TestHijackLegacyGasFee(t *testing.T) {
-	tt := []struct {
+	tc := []struct {
 		name     string
-		gasLimit *hijackLegacyGasFee
+		hijacker *hijackLegacyGasFee
 		method   string
 		args     []any
 		request  []string
@@ -26,7 +25,7 @@ func TestHijackLegacyGasFee(t *testing.T) {
 	}{
 		{
 			name:     "set gas price",
-			gasLimit: &hijackLegacyGasFee{multiplier: 1.0},
+			hijacker: &hijackLegacyGasFee{multiplier: 1.0},
 			method:   "eth_sendTransaction",
 			args:     []any{types.NewTransactionLegacy()},
 			request: []string{
@@ -39,41 +38,40 @@ func TestHijackLegacyGasFee(t *testing.T) {
 			},
 		},
 	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
-				require.NotEmpty(t, tc.request)
-				require.NotEmpty(t, tc.response)
+				require.NotEmpty(t, tt.request)
+				require.NotEmpty(t, tt.response)
 
 				body, err := io.ReadAll(req.Body)
 				require.NoError(t, err)
-				require.JSONEq(t, tc.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tc.request[0], string(body)))
+				require.JSONEq(t, tt.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tt.request[0], string(body)))
 
-				res := tc.response[0]
-				tc.request = tc.request[1:]
-				tc.response = tc.response[1:]
+				res := tt.response[0]
+				tt.request = tt.request[1:]
+				tt.response = tt.response[1:]
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(res)),
 				}, nil
 			}
-			hijacker := transport.NewHijacker(httpMock, tc.gasLimit)
 
-			var result any
-			err := hijacker.Call(ctx, &result, tc.method, tc.args...)
-			assert.Len(t, tc.request, 0)
-			assert.Len(t, tc.response, 0)
+			hijacker := transport.NewHijacker(httpMock, tt.hijacker)
+
+			err := hijacker.Call(t.Context(), nil, tt.method, tt.args...)
+			assert.Len(t, tt.request, 0)
+			assert.Len(t, tt.response, 0)
 			require.NoError(t, err)
 		})
 	}
 }
 
 func TestHijackDynamicGasFee(t *testing.T) {
-	tt := []struct {
+	tc := []struct {
 		name     string
-		gasLimit *hijackDynamicGasFee
+		hijacker *hijackDynamicGasFee
 		method   string
 		args     []any
 		request  []string
@@ -81,7 +79,7 @@ func TestHijackDynamicGasFee(t *testing.T) {
 	}{
 		{
 			name:     "set gas price",
-			gasLimit: &hijackDynamicGasFee{gasPriceMultiplier: 1.0, priorityFeePerGasMultiplier: 1.0},
+			hijacker: &hijackDynamicGasFee{gasPriceMultiplier: 1.0, priorityFeePerGasMultiplier: 1.0},
 			method:   "eth_sendTransaction",
 			args:     []any{types.NewTransactionDynamicFee()},
 			request: []string{
@@ -96,32 +94,31 @@ func TestHijackDynamicGasFee(t *testing.T) {
 			},
 		},
 	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
-				require.NotEmpty(t, tc.request)
-				require.NotEmpty(t, tc.response)
+				require.NotEmpty(t, tt.request)
+				require.NotEmpty(t, tt.response)
 
 				body, err := io.ReadAll(req.Body)
 				require.NoError(t, err)
-				require.JSONEq(t, tc.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tc.request[0], string(body)))
+				require.JSONEq(t, tt.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tt.request[0], string(body)))
 
-				res := tc.response[0]
-				tc.request = tc.request[1:]
-				tc.response = tc.response[1:]
+				res := tt.response[0]
+				tt.request = tt.request[1:]
+				tt.response = tt.response[1:]
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(res)),
 				}, nil
 			}
-			hijacker := transport.NewHijacker(httpMock, tc.gasLimit)
 
-			var result any
-			err := hijacker.Call(ctx, &result, tc.method, tc.args...)
-			assert.Len(t, tc.request, 0)
-			assert.Len(t, tc.response, 0)
+			hijacker := transport.NewHijacker(httpMock, tt.hijacker)
+
+			err := hijacker.Call(t.Context(), nil, tt.method, tt.args...)
+			assert.Len(t, tt.request, 0)
+			assert.Len(t, tt.response, 0)
 			require.NoError(t, err)
 		})
 	}

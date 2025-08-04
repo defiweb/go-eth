@@ -15,55 +15,33 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-const mockHijackChainIDCallValidResponse = `
-	{
-	  "jsonrpc": "2.0",
-	  "id": 1,
-	  "result": "0x01"
-	}
-`
-
-const mockHijackChainIDSendTransactionValidResponse = `
-	{
-	  "jsonrpc": "2.0",
-	  "id": 1,
-	  "result": "0x1111111111111111111111111111111111111111111111111111111111111111"
-	}
-`
-
 func TestHijackChainID(t *testing.T) {
-	tt := []struct {
+	tc := []struct {
 		name     string
-		chainID  *hijackChainID
+		hijacker *hijackChainID
 		method   string
 		args     []any
 		request  []string
-		response []*http.Response
+		response []string
 	}{
 		{
-			name:    "set chainID",
-			chainID: &hijackChainID{},
-			method:  "eth_sendTransaction",
-			args:    []any{types.NewTransactionAccessList()},
+			name:     "set chainID",
+			hijacker: &hijackChainID{},
+			method:   "eth_sendTransaction",
+			args:     []any{types.NewTransactionAccessList()},
 			request: []string{
 				`{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}`,
 				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"chainId": "0x1"}]}`,
 			},
-			response: []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(bytes.NewBufferString(mockHijackChainIDCallValidResponse)),
-				},
-				{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(bytes.NewBufferString(mockHijackChainIDSendTransactionValidResponse)),
-				},
+			response: []string{
+				`{"jsonrpc":"2.0","id": 1,"result": "0x01"}`,
+				`{"jsonrpc":"2.0","id": 1,"result": "0x1111111111111111111111111111111111111111111111111111111111111111"}`,
 			},
 		},
 		{
-			name:    "do not replace chainID",
-			chainID: &hijackChainID{replace: false},
-			method:  "eth_sendTransaction",
+			name:     "do not replace chainID",
+			hijacker: &hijackChainID{replace: false},
+			method:   "eth_sendTransaction",
 			args: []any{func() types.Transaction {
 				tx := types.NewTransactionAccessList()
 				tx.SetChainID(2)
@@ -72,17 +50,14 @@ func TestHijackChainID(t *testing.T) {
 			request: []string{
 				`{"jsonrpc":"2.0","id":1,"method":"eth_sendTransaction","params":[{"chainId": "0x2"}]}`,
 			},
-			response: []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(bytes.NewBufferString(mockHijackChainIDSendTransactionValidResponse)),
-				},
+			response: []string{
+				`{"jsonrpc":"2.0","id": 1,"result": "0x1111111111111111111111111111111111111111111111111111111111111111"}`,
 			},
 		},
 		{
-			name:    "replace chainID",
-			chainID: &hijackChainID{replace: true},
-			method:  "eth_sendTransaction",
+			name:     "replace chainID",
+			hijacker: &hijackChainID{replace: true},
+			method:   "eth_sendTransaction",
 			args: []any{func() types.Transaction {
 				tx := types.NewTransactionAccessList()
 				tx.SetChainID(2)
@@ -92,41 +67,38 @@ func TestHijackChainID(t *testing.T) {
 				`{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}`,
 				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"chainId": "0x1"}]}`,
 			},
-			response: []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(bytes.NewBufferString(mockHijackChainIDCallValidResponse)),
-				},
-				{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(bytes.NewBufferString(mockHijackChainIDSendTransactionValidResponse)),
-				},
+			response: []string{
+				`{"jsonrpc":"2.0","id": 1,"result": "0x01"}`,
+				`{"jsonrpc":"2.0","id": 1,"result": "0x1111111111111111111111111111111111111111111111111111111111111111"}`,
 			},
 		},
 	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
-				require.NotEmpty(t, tc.request)
-				require.NotEmpty(t, tc.response)
+				require.NotEmpty(t, tt.request)
+				require.NotEmpty(t, tt.response)
 
 				body, err := io.ReadAll(req.Body)
 				require.NoError(t, err)
-				require.JSONEq(t, tc.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tc.request[0], string(body)))
+				require.JSONEq(t, tt.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tt.request[0], string(body)))
 
-				res := tc.response[0]
-				tc.request = tc.request[1:]
-				tc.response = tc.response[1:]
-				return res, nil
+				res := tt.response[0]
+				tt.request = tt.request[1:]
+				tt.response = tt.response[1:]
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString(res)),
+				}, nil
 			}
-			hijacker := transport.NewHijacker(httpMock, tc.chainID)
 
-			var result any
-			err := hijacker.Call(ctx, &result, tc.method, tc.args...)
-			assert.Len(t, tc.request, 0)
-			assert.Len(t, tc.response, 0)
+			hijacker := transport.NewHijacker(httpMock, tt.hijacker)
+
+			err := hijacker.Call(ctx, nil, tt.method, tt.args...)
+			assert.Len(t, tt.request, 0)
+			assert.Len(t, tt.response, 0)
 			require.NoError(t, err)
 		})
 	}

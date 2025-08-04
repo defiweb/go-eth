@@ -9,7 +9,7 @@ import (
 )
 
 func TestKeccak256(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		data [][]byte
 		want string
 	}{
@@ -26,9 +26,9 @@ func TestKeccak256(t *testing.T) {
 			want: "67fad3bfa1e0321bd021ca805ce14876e50acac8ca8532eda8cbf924da565160",
 		},
 	}
-	for n, tt := range tests {
+	for n, tt := range tc {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			h := Hash256(tt.data...)
+			h := Keccak256(tt.data...)
 			assert.Equal(t, tt.want, hex.EncodeToString(h[:]))
 		})
 	}

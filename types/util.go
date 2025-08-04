@@ -132,17 +132,14 @@ func numberUnmarshalText(input []byte, output *big.Int) error {
 	return nil
 }
 
-// marshalJSONInline marshals given values into a single JSON object.
+// marshalJSONMerge marshals given values into a single JSON object.
 // The given values must marshal into JSON objects. If same field is present in
 // multiple values, both are included in the result resulting in an invalid
 // JSON object.
-func marshalJSONInline(vs ...any) ([]byte, error) {
-	var (
-		buf   bytes.Buffer
-		comma bool
-	)
+func marshalJSONMerge(vs ...any) ([]byte, error) {
+	var buf bytes.Buffer
 	buf.WriteByte('{')
-	for _, v := range vs {
+	for n, v := range vs {
 		b, err := json.Marshal(v)
 		if err != nil {
 			return nil, err
@@ -150,11 +147,9 @@ func marshalJSONInline(vs ...any) ([]byte, error) {
 		if len(b) < 2 || (b[0] != '{' && b[len(b)-1] != '}') {
 			return nil, fmt.Errorf("expected JSON object, got %s", b)
 		}
-		if comma {
-			comma = false
+		if n > 0 {
 			buf.WriteByte(',')
 		}
-		comma = true
 		buf.Write(b[1 : len(b)-1])
 	}
 	buf.WriteByte('}')

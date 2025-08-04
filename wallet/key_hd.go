@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/defiweb/go-eth/crypto/ecdsa"
 
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/tyler-smith/go-bip39"
@@ -116,8 +117,7 @@ func (m Mnemonic) Derive(path DerivationPath) (*PrivateKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	privKeyECDSA := privKey.ToECDSA()
-	return NewKeyFromECDSA(privKeyECDSA), nil
+	return NewKeyFromECDSA(&ecdsa.PrivateKey{D: privKey.ToECDSA().D}), nil
 }
 
 // ParseDerivationPath converts a BIP-33 derivation path string into the

@@ -15,7 +15,7 @@ import (
 // list that specifies a list of addresses and storage keys the transaction
 // plans to access.
 type TransactionAccessList struct {
-	TransactionFields
+	TransactionData
 	CallAccessList
 }
 
@@ -32,9 +32,9 @@ func (t *TransactionAccessList) Type() TransactionType {
 // Call implements the Transaction interface.
 func (t *TransactionAccessList) Call() Call {
 	return &CallAccessList{
-		CallFields:       *t.CallFields.Copy(),
-		LegacyPriceField: *t.LegacyPriceField.Copy(),
-		AccessListField:  *t.AccessListField.Copy(),
+		CallData:        *t.CallData.Copy(),
+		LegacyPriceData: *t.LegacyPriceData.Copy(),
+		AccessListData:  *t.AccessListData.Copy(),
 	}
 }
 
@@ -167,8 +167,8 @@ func (t TransactionAccessList) EncodeRLP() ([]byte, error) {
 // Copy creates a deep copy of the transaction.
 func (t *TransactionAccessList) Copy() *TransactionAccessList {
 	return &TransactionAccessList{
-		TransactionFields: *t.TransactionFields.Copy(),
-		CallAccessList:    *t.CallAccessList.Copy(),
+		TransactionData: *t.TransactionData.Copy(),
+		CallAccessList:  *t.CallAccessList.Copy(),
 	}
 }
 
@@ -251,10 +251,10 @@ func (t *TransactionAccessList) DecodeRLP(data []byte) (int, error) {
 // MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionAccessList) MarshalJSON() ([]byte, error) {
 	j := &jsonTransaction{}
-	t.TransactionFields.toJSON(j)
-	t.CallFields.toJSON(&j.jsonCall)
-	t.LegacyPriceField.toJSON(&j.jsonCall)
-	t.AccessListField.toJSON(&j.jsonCall)
+	t.TransactionData.toJSON(j)
+	t.CallData.toJSON(&j.jsonCall)
+	t.LegacyPriceData.toJSON(&j.jsonCall)
+	t.AccessListData.toJSON(&j.jsonCall)
 	return json.Marshal(j)
 }
 
@@ -264,10 +264,10 @@ func (t *TransactionAccessList) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	t.TransactionFields.fromJSON(j)
-	t.CallFields.fromJSON(&j.jsonCall)
-	t.LegacyPriceField.fromJSON(&j.jsonCall)
-	t.AccessListField.fromJSON(&j.jsonCall)
+	t.TransactionData.fromJSON(j)
+	t.CallData.fromJSON(&j.jsonCall)
+	t.LegacyPriceData.fromJSON(&j.jsonCall)
+	t.AccessListData.fromJSON(&j.jsonCall)
 	return nil
 }
 

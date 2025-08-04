@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -15,6 +14,7 @@ import (
 	"golang.org/x/crypto/scrypt"
 
 	"github.com/defiweb/go-eth/crypto"
+	"github.com/defiweb/go-eth/crypto/ecdsa"
 	"github.com/defiweb/go-eth/types"
 )
 
@@ -71,7 +71,7 @@ func encryptV3Key(key *ecdsa.PrivateKey, passphrase string, scryptN, scryptP int
 	return &jsonKey{
 		Version: 3,
 		ID:      id,
-		Address: types.Address(crypto.ECPublicKeyToAddress(&key.PublicKey)),
+		Address: types.Address(crypto.ECPublicKeyToAddress(crypto.ECPrivateKeyToPublicKey(key))),
 		Crypto: jsonKeyCrypto{
 			Cipher: "aes-128-ctr",
 			CipherParams: jsonKeyCipherParams{

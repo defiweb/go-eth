@@ -24,23 +24,23 @@ func TestTransactionAccessList_JSON(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionAccessList{
-				TransactionFields: TransactionFields{
+				TransactionData: TransactionData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallAccessList: CallAccessList{
-					CallFields: CallFields{
+					CallData: CallData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceField: LegacyPriceField{
+					LegacyPriceData: LegacyPriceData{
 						GasPrice: big.NewInt(1000000000),
 					},
-					AccessListField: AccessListField{
+					AccessListData: AccessListData{
 						AccessList: []AccessTuple{{
 							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 							StorageKeys: []Hash{
@@ -77,7 +77,7 @@ func TestTransactionAccessList_JSON(t *testing.T) {
 		{
 			name: "invalid negative nonce",
 			tx: &TransactionAccessList{
-				TransactionFields: TransactionFields{
+				TransactionData: TransactionData{
 					Nonce: ptr(uint64(18446744073709551615)), // Max uint64 value to simulate negative when interpreted incorrectly
 				},
 			},
@@ -120,23 +120,23 @@ func TestTransactionAccessList_RLP(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionAccessList{
-				TransactionFields: TransactionFields{
+				TransactionData: TransactionData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallAccessList: CallAccessList{
-					CallFields: CallFields{
+					CallData: CallData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceField: LegacyPriceField{
+					LegacyPriceData: LegacyPriceData{
 						GasPrice: big.NewInt(1000000000),
 					},
-					AccessListField: AccessListField{
+					AccessListData: AccessListData{
 						AccessList: []AccessTuple{{
 							Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
 							StorageKeys: []Hash{
@@ -183,18 +183,18 @@ func TestTransactionAccessList_CalculateSigningHash(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionAccessList{
-				TransactionFields: TransactionFields{
+				TransactionData: TransactionData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(1)),
 				},
 				CallAccessList: CallAccessList{
-					CallFields: CallFields{
+					CallData: CallData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceField: LegacyPriceField{
+					LegacyPriceData: LegacyPriceData{
 						GasPrice: big.NewInt(1000000000),
 					},
 				},

@@ -30,7 +30,7 @@ type stream struct {
 }
 
 // initStream initializes the stream struct with default values and starts
-// goroutines.
+// the required goroutines.
 func (s *stream) initStream() *stream {
 	s.writerCh = make(chan rpcRequest)
 	s.readerCh = make(chan rpcResponse)
@@ -41,7 +41,7 @@ func (s *stream) initStream() *stream {
 	return s
 }
 
-// Call implements the Transport interface.
+// Call implements the [Transport] interface.
 func (s *stream) Call(ctx context.Context, result any, method string, args ...any) error {
 	ctx, ctxCancel := context.WithTimeout(ctx, s.timeout)
 	defer ctxCancel()
@@ -62,7 +62,7 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 	s.writerCh <- req
 
 	// Wait for the response.
-	// The response is handled by the streamRoutine. It will send the response
+	// The response is handled by streamRoutine, which sends the response
 	// to the ch channel.
 	select {
 	case res := <-ch:
@@ -84,7 +84,7 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 	return nil
 }
 
-// Subscribe implements the SubscriptionTransport interface.
+// Subscribe implements the [SubscriptionTransport] interface.
 func (s *stream) Subscribe(ctx context.Context, method string, args ...any) (chan json.RawMessage, string, error) {
 	rawID := types.Number{}
 	params := make([]any, 0, 2)
@@ -101,7 +101,7 @@ func (s *stream) Subscribe(ctx context.Context, method string, args ...any) (cha
 	return ch, id, nil
 }
 
-// Unsubscribe implements the SubscriptionTransport interface.
+// Unsubscribe implements the [SubscriptionTransport] interface.
 func (s *stream) Unsubscribe(ctx context.Context, id string) error {
 	if !s.delSubCh(id) {
 		return errors.New("unknown subscription")
@@ -113,8 +113,8 @@ func (s *stream) Unsubscribe(ctx context.Context, id string) error {
 	return s.Call(ctx, nil, "eth_unsubscribe", num)
 }
 
-// readerRoutine reads messages from the stream connection and dispatches
-// them to the appropriate channel.
+// streamRoutine reads messages from the stream connection and dispatches
+// them to the appropriate channels.
 func (s *stream) streamRoutine() {
 	for {
 		res, ok := <-s.readerCh
@@ -157,17 +157,17 @@ func (s *stream) contextHandlerRoutine() {
 	}
 }
 
-// addCallCh adds a channel to the calls map. Incoming response that match the
-// id will be sent to the given channel. Because message ids are unique, the
-// channel must be deleted after the response is received using delCallCh.
+// addCallCh adds a channel to the calls map. Incoming responses that match
+// the id will be sent to the given channel. Because message ids are unique,
+// the channel must be deleted after the response is received using delCallCh.
 func (s *stream) addCallCh(id uint64, ch chan rpcResponse) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.calls[id] = ch
 }
 
-// addSubCh adds a channel to the subs map. Incoming subscription notifications
-// that match the id will be sent to the given channel.
+// addSubCh adds a channel to the subs map. Incoming subscription
+// notifications that match the id will be sent to the given channel.
 func (s *stream) addSubCh(id string, ch chan json.RawMessage) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -207,8 +207,8 @@ func (s *stream) callChSend(id uint64, res rpcResponse) {
 	}
 }
 
-// subChSend sends a subscription notification to the channel that matches the
-// id.
+// subChSend sends a subscription notification to the channel that matches
+// the id.
 func (s *stream) subChSend(id string, res json.RawMessage) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

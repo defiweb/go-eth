@@ -28,7 +28,7 @@ type httpMock struct {
 
 //nolint:funlen
 func TestHTTP(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		asserts func(t *testing.T, h *httpMock)
 	}{
 		// Simple request:
@@ -126,7 +126,7 @@ func TestHTTP(t *testing.T) {
 			},
 		},
 	}
-	for n, tt := range tests {
+	for n, tt := range tc {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
 			h := &httpMock{}
 			h.HTTP, _ = NewHTTP(HTTPOptions{

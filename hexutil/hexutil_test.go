@@ -9,7 +9,7 @@ import (
 )
 
 func TestBigIntToHex(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		name     string
 		input    *big.Int
 		expected string
@@ -19,8 +19,7 @@ func TestBigIntToHex(t *testing.T) {
 		{"positive value", big.NewInt(26), "0x1a"},
 		{"negative value", big.NewInt(-26), "-0x1a"},
 	}
-
-	for _, tt := range tests {
+	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, BigIntToHex(tt.input))
 		})
@@ -28,7 +27,7 @@ func TestBigIntToHex(t *testing.T) {
 }
 
 func TestHexToBigInt(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		name     string
 		input    string
 		expected *big.Int
@@ -45,8 +44,7 @@ func TestHexToBigInt(t *testing.T) {
 		{"empty string", "", nil, fmt.Errorf("invalid hex string")},
 		{"invalid hex", "0x1g", nil, fmt.Errorf("invalid hex string")},
 	}
-
-	for _, tt := range tests {
+	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := HexToBigInt(tt.input)
 			assert.Equal(t, tt.err, err)
@@ -56,7 +54,7 @@ func TestHexToBigInt(t *testing.T) {
 }
 
 func TestBytesToHex(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		name     string
 		input    []byte
 		expected string
@@ -65,8 +63,7 @@ func TestBytesToHex(t *testing.T) {
 		{"non-empty bytes", []byte("abc"), "0x616263"},
 		{"bytes with zeros", []byte{0, 1, 2}, "0x000102"},
 	}
-
-	for _, tt := range tests {
+	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, BytesToHex(tt.input))
 		})
@@ -74,7 +71,7 @@ func TestBytesToHex(t *testing.T) {
 }
 
 func TestHexToBytes(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		name     string
 		input    string
 		expected []byte
@@ -87,8 +84,7 @@ func TestHexToBytes(t *testing.T) {
 		{"single zero", "0", []byte{0}, nil},
 		{"invalid hex", "0x1", nil, fmt.Errorf("invalid hex string, length must be even")},
 	}
-
-	for _, tt := range tests {
+	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := HexToBytes(tt.input)
 			assert.Equal(t, tt.err, err)

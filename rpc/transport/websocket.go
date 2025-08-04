@@ -1,5 +1,3 @@
-//go:build !wasm && !tinygo
-
 package transport
 
 import (
@@ -13,37 +11,35 @@ import (
 	"nhooyr.io/websocket/wsjson"
 )
 
-// Websocket is a Transport implementation that uses the websocket
-// protocol.
+// Websocket is a [Transport] implementation that uses the WebSocket protocol.
 type Websocket struct {
 	*stream
 	conn *websocket.Conn
 }
 
-// WebsocketOptions contains options for the websocket transport.
+// WebsocketOptions contains options for the [WebSocket] transport.
 type WebsocketOptions struct {
-	// Context used to close the connection.
+	// Context is used to close the connection.
 	Context context.Context
 
-	// URL of the websocket endpoint.
+	// URL is the WebSocket endpoint.
 	URL string
 
-	// HTTPClient is the HTTP client to use. If nil, http.DefaultClient is
-	// used.
+	// HTTPClient is the HTTP client to use. If nil, http.DefaultClient is used.
 	HTTPClient *http.Client
 
-	// HTTPHeader specifies the HTTP headers to be included in the
-	// websocket handshake request.
+	// HTTPHeader specifies the HTTP headers to include in the WebSocket
+	// handshake request.
 	HTTPHeader http.Header
 
-	// Timeout is the timeout for the websocket requests. Default is 60s.
+	// Timeout is the timeout for WebSocket requests. The default is 60s.
 	Timout time.Duration
 
 	// ErrorCh is an optional channel used to report errors.
 	ErrorCh chan error
 }
 
-// NewWebsocket creates a new Websocket instance.
+// NewWebsocket creates a new [Websocket] instance.
 func NewWebsocket(opts WebsocketOptions) (*Websocket, error) {
 	if opts.URL == "" {
 		return nil, errors.New("URL cannot be empty")
@@ -77,9 +73,9 @@ func NewWebsocket(opts WebsocketOptions) (*Websocket, error) {
 }
 
 func (ws *Websocket) readerRoutine() {
-	// The background context is used here because closing context will
-	// cause the nhooyr.io/websocket package to close a connection with
-	// a close code of 1008 (policy violation) which is not what we want.
+	// The background context is used here because closing the context will
+	// cause the nhooyr.io/websocket package to close the connection with a
+	// close code of 1008 (policy violation), which is not what we want.
 	ctx := context.Background()
 	for {
 		res := rpcResponse{}

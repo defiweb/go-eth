@@ -20,17 +20,18 @@ type PrivateKey struct {
 
 // NewKeyFromECDSA creates a new private key from an ecdsa.PrivateKey.
 func NewKeyFromECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
+	pub := crypto.ECPrivateKeyToPublicKey(prv)
 	return &PrivateKey{
 		private: prv,
-		public:  &prv.PublicKey,
-		address: types.Address(crypto.ECPublicKeyToAddress(&prv.PublicKey)),
+		public:  pub,
+		address: types.Address(crypto.ECPublicKeyToAddress(pub)),
 	}
 }
 
 // NewKeyFromBytes creates a new private key from private key bytes.
 func NewKeyFromBytes(prv []byte) *PrivateKey {
 	key, _ := btcec.PrivKeyFromBytes(prv)
-	return NewKeyFromECDSA(key.ToECDSA())
+	return NewKeyFromECDSA(&ecdsa.PrivateKey{D: key.ToECDSA().D})
 }
 
 // NewRandomKey creates a random private key.

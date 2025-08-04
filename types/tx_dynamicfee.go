@@ -14,7 +14,7 @@ import (
 // Introduced by EIP-1559, this transaction type supports a new fee market
 // mechanism with a base fee and a priority fee (tip).
 type TransactionDynamicFee struct {
-	TransactionFields
+	TransactionData
 	CallDynamicFee
 }
 
@@ -102,7 +102,7 @@ func (t *TransactionDynamicFee) CalculateSigningHash() (Hash, error) {
 // Copy creates a deep copy of the transaction.
 func (t *TransactionDynamicFee) Copy() *TransactionDynamicFee {
 	return &TransactionDynamicFee{
-		TransactionFields: *t.TransactionFields.Copy(),
+		TransactionData: *t.TransactionData.Copy(),
 		CallDynamicFee:    *t.CallDynamicFee.Copy(),
 	}
 }
@@ -260,10 +260,10 @@ func (t *TransactionDynamicFee) DecodeRLP(data []byte) (int, error) {
 // MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionDynamicFee) MarshalJSON() ([]byte, error) {
 	j := &jsonTransaction{}
-	t.TransactionFields.toJSON(j)
-	t.CallFields.toJSON(&j.jsonCall)
-	t.AccessListField.toJSON(&j.jsonCall)
-	t.DynamicFeeFields.toJSON(&j.jsonCall)
+	t.TransactionData.toJSON(j)
+	t.CallData.toJSON(&j.jsonCall)
+	t.AccessListData.toJSON(&j.jsonCall)
+	t.DynamicFeeData.toJSON(&j.jsonCall)
 	return json.Marshal(j)
 }
 
@@ -273,10 +273,10 @@ func (t *TransactionDynamicFee) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, j); err != nil {
 		return err
 	}
-	t.TransactionFields.fromJSON(j)
-	t.CallFields.fromJSON(&j.jsonCall)
-	t.AccessListField.fromJSON(&j.jsonCall)
-	t.DynamicFeeFields.fromJSON(&j.jsonCall)
+	t.TransactionData.fromJSON(j)
+	t.CallData.fromJSON(&j.jsonCall)
+	t.AccessListData.fromJSON(&j.jsonCall)
+	t.DynamicFeeData.fromJSON(&j.jsonCall)
 	return nil
 }
 

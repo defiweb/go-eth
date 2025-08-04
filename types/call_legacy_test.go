@@ -22,14 +22,14 @@ func TestCallLegacy_JSON(t *testing.T) {
 		{
 			name: "all fields set",
 			call: &CallLegacy{
-				CallFields: CallFields{
+				CallData: CallData{
 					From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 					Value:    big.NewInt(1000000000000000000),
 					GasLimit: ptr(uint64(100000)),
 					Input:    []byte{1, 2, 3, 4},
 				},
-				LegacyPriceField: LegacyPriceField{
+				LegacyPriceData: LegacyPriceData{
 					GasPrice: big.NewInt(1000000000),
 				},
 			},

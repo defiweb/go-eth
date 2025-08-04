@@ -9,9 +9,9 @@ import "encoding/json"
 // list that specifies a list of addresses and storage keys the transaction
 // plans to access.
 type CallAccessList struct {
-	CallFields
-	LegacyPriceField
-	AccessListField
+	CallData
+	LegacyPriceData
+	AccessListData
 }
 
 // NewCallAccessList creates a new CallAccessList.
@@ -25,18 +25,18 @@ func (c *CallAccessList) Copy() *CallAccessList {
 		return nil
 	}
 	return &CallAccessList{
-		CallFields:       *c.CallFields.Copy(),
-		LegacyPriceField: *c.LegacyPriceField.Copy(),
-		AccessListField:  *c.AccessListField.Copy(),
+		CallData:       *c.CallData.Copy(),
+		LegacyPriceData: *c.LegacyPriceData.Copy(),
+		AccessListData:  *c.AccessListData.Copy(),
 	}
 }
 
 // MarshalJSON implements the json.Marshaler interface.
 func (c *CallAccessList) MarshalJSON() ([]byte, error) {
 	j := &jsonCall{}
-	c.CallFields.toJSON(j)
-	c.LegacyPriceField.toJSON(j)
-	c.AccessListField.toJSON(j)
+	c.CallData.toJSON(j)
+	c.LegacyPriceData.toJSON(j)
+	c.AccessListData.toJSON(j)
 	return json.Marshal(j)
 }
 
@@ -46,9 +46,9 @@ func (c *CallAccessList) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, j); err != nil {
 		return err
 	}
-	c.CallFields.fromJSON(j)
-	c.LegacyPriceField.fromJSON(j)
-	c.AccessListField.fromJSON(j)
+	c.CallData.fromJSON(j)
+	c.LegacyPriceData.fromJSON(j)
+	c.AccessListData.fromJSON(j)
 	return nil
 }
 

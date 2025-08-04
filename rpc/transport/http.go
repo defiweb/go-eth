@@ -10,13 +10,13 @@ import (
 	"sync/atomic"
 )
 
-// HTTP is a Transport implementation that uses the HTTP protocol.
+// HTTP is a [Transport] implementation that uses the HTTP protocol.
 type HTTP struct {
 	opts HTTPOptions
 	id   uint64
 }
 
-// HTTPOptions contains options for the HTTP transport.
+// HTTPOptions contains options for the [HTTP] transport.
 type HTTPOptions struct {
 	// URL of the HTTP endpoint.
 	URL string
@@ -29,7 +29,7 @@ type HTTPOptions struct {
 	HTTPHeader http.Header
 }
 
-// NewHTTP creates a new HTTP instance.
+// NewHTTP creates a new [HTTP] instance.
 func NewHTTP(opts HTTPOptions) (*HTTP, error) {
 	if opts.URL == "" {
 		return nil, errors.New("URL cannot be empty")
@@ -40,7 +40,7 @@ func NewHTTP(opts HTTPOptions) (*HTTP, error) {
 	return &HTTP{opts: opts}, nil
 }
 
-// Call implements the Transport interface.
+// Call implements the [Transport] interface.
 func (h *HTTP) Call(ctx context.Context, result any, method string, args ...any) error {
 	id := atomic.AddUint64(&h.id, 1)
 	rpcReq, err := newRPCRequest(&id, method, args)

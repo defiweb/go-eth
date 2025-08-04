@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -40,7 +39,8 @@ func TestBaseClient_ClientVersion(t *testing.T) {
 		}, nil
 	}
 
-	clientVersion, err := client.ClientVersion(context.Background())
+	clientVersion, err := client.ClientVersion(t.Context())
+
 	require.NoError(t, err)
 	assert.Equal(t, "Geth/v1.9.25-unstable-3f0b5e4e-20201014/linux-amd64/go1.15.2", clientVersion)
 }
@@ -74,7 +74,8 @@ func TestBaseClient_NetworkID(t *testing.T) {
 		}, nil
 	}
 
-	networkID, err := client.NetworkID(context.Background())
+	networkID, err := client.NetworkID(t.Context())
+
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), networkID)
 }
@@ -108,7 +109,8 @@ func TestBaseClient_Listening(t *testing.T) {
 		}, nil
 	}
 
-	listening, err := client.Listening(context.Background())
+	listening, err := client.Listening(t.Context())
+
 	require.NoError(t, err)
 	assert.True(t, listening)
 }
@@ -142,7 +144,49 @@ func TestBaseClient_PeerCount(t *testing.T) {
 		}, nil
 	}
 
-	peerCount, err := client.PeerCount(context.Background())
+	peerCount, err := client.PeerCount(t.Context())
+
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), peerCount)
+}
+
+const mockSyncingRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_syncing",
+	  "params": []
+	}
+`
+
+const mockSyncingResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+	    "startingBlock": "0x384",
+	    "currentBlock": "0x386",
+	    "highestBlock": "0x454"
+	  }
+	}
+`
+
+func TestBaseClient_Syncing(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &MethodsClient{Transport: httpMock}
+
+	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
+		assert.JSONEq(t, mockSyncingRequest, readBody(req))
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(mockSyncingResponse)),
+		}, nil
+	}
+
+	syncStatus, err := client.Syncing(t.Context())
+
+	require.NoError(t, err)
+	assert.Equal(t, uint64(0x384), syncStatus.StartingBlock.Big().Uint64())
+	assert.Equal(t, uint64(0x386), syncStatus.CurrentBlock.Big().Uint64())
+	assert.Equal(t, uint64(0x454), syncStatus.HighestBlock.Big().Uint64())
 }

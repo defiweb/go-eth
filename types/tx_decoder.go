@@ -86,9 +86,9 @@ type TransactionUnknown struct {
 	UnknownType TransactionType
 }
 
-func (t *TransactionUnknown) TransactionData() *TransactionFields { return nil }
+func (t *TransactionUnknown) GetTransactionData() *TransactionData { return nil }
 
-func (t *TransactionUnknown) SetTransactionData(_ TransactionFields) {}
+func (t *TransactionUnknown) SetTransactionData(_ TransactionData) {}
 
 func (t *TransactionUnknown) Type() TransactionType { return t.UnknownType }
 

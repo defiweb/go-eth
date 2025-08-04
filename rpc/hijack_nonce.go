@@ -8,69 +8,48 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-// hijackNonce hijacks "eth_sendTransaction" method and sets the "nonce"
+// hijackNonce hijacks the "eth_sendTransaction" method and sets the "nonce"
 // field using the "eth_getTransactionCount" RPC method.
 type hijackNonce struct {
 	usePendingBlock bool
 	replace         bool
 }
 
-func (c *hijackNonce) Call() func(next transport.CallFunc) transport.CallFunc {
+func (h *hijackNonce) Call() func(next transport.CallFunc) transport.CallFunc {
 	return func(next transport.CallFunc) transport.CallFunc {
 		return func(ctx context.Context, t transport.Transport, result any, method string, args ...any) (err error) {
-			if method != "eth_sendTransaction" || len(args) == 0 {
+			if len(args) == 0 || method != "eth_sendTransaction" {
 				return next(ctx, t, result, method, args...)
 			}
-
-			// Verify arguments:
 			tx, ok := args[0].(types.Transaction)
 			if !ok {
-				return &ErrHijackFailed{name: "nonce", err: fmt.Errorf("invalid transaction type: %T", args[0])}
-			}
-
-			// If the nonce is already set, continue:
-			txd := tx.TransactionData()
-			if !c.replace && txd.Nonce != nil {
 				return next(ctx, t, result, method, args...)
 			}
-
-			// Get transaction call data:
-			var txcd *types.CallFields
-			if tx, ok := tx.(types.CallData); ok {
-				txcd = tx.CallData()
+			td := getTransactionData(tx) // to set the nonce
+			cd := getCallData(tx)        // to get the "from" address
+			if td != nil && cd != nil && (h.replace || td.Nonce == nil) {
+				if cd.From == nil {
+					return &ErrHijackFailed{name: "nonce", err: fmt.Errorf("'from' field not set")}
+				}
+				block := types.LatestBlockNumber
+				if h.usePendingBlock {
+					block = types.PendingBlockNumber
+				}
+				nonce, err := (&MethodsCommon{Transport: t}).GetTransactionCount(ctx, *cd.From, block)
+				if err != nil {
+					return &ErrHijackFailed{name: "nonce", err: fmt.Errorf("failed to get transaction count: %w", err)}
+				}
+				td.Nonce = &nonce
 			}
-
-			// It is some strange transaction type with no call data, continue:
-			if txcd == nil {
-				return next(ctx, t, result, method, args...)
-			}
-
-			// The "from" field must be set to obtain the nonce:
-			if txcd.From == nil {
-				return &ErrHijackFailed{name: "nonce", err: fmt.Errorf("'from' field not set")}
-			}
-
-			// Get the latest nonce:
-			block := types.LatestBlockNumber
-			if c.usePendingBlock {
-				block = types.PendingBlockNumber
-			}
-			nonce, err := (&MethodsCommon{Transport: t}).GetTransactionCount(ctx, *txcd.From, block)
-			if err != nil {
-				return &ErrHijackFailed{name: "nonce", err: fmt.Errorf("failed to get transaction count: %w", err)}
-			}
-
-			// Update the nonce and continue:
-			txd.Nonce = &nonce
 			return next(ctx, t, result, method, args...)
 		}
 	}
 }
 
-func (c *hijackNonce) Subscribe() func(next transport.SubscribeFunc) transport.SubscribeFunc {
+func (h *hijackNonce) Subscribe() func(next transport.SubscribeFunc) transport.SubscribeFunc {
 	return nil
 }
 
-func (c *hijackNonce) Unsubscribe() func(next transport.UnsubscribeFunc) transport.UnsubscribeFunc {
+func (h *hijackNonce) Unsubscribe() func(next transport.UnsubscribeFunc) transport.UnsubscribeFunc {
 	return nil
 }

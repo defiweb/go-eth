@@ -14,19 +14,19 @@ import (
 func TestTransactionData_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     *TransactionFields
+		data     *TransactionData
 		want     *jsonTransaction
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &TransactionFields{},
+			data:     &TransactionData{},
 			want:     &jsonTransaction{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "all fields set",
-			data: &TransactionFields{
+			data: &TransactionData{
 				ChainID: ptr(uint64(1)),
 				Nonce:   ptr(uint64(2)),
 				Signature: &Signature{
@@ -52,7 +52,7 @@ func TestTransactionData_JSON(t *testing.T) {
 		},
 		{
 			name: "nil signature",
-			data: &TransactionFields{
+			data: &TransactionData{
 				ChainID:   ptr(uint64(1)),
 				Nonce:     ptr(uint64(2)),
 				Signature: nil,
@@ -71,7 +71,7 @@ func TestTransactionData_JSON(t *testing.T) {
 		},
 		{
 			name: "max uint64 values",
-			data: &TransactionFields{
+			data: &TransactionData{
 				ChainID: ptr(^uint64(0)),
 				Nonce:   ptr(^uint64(0)),
 			},
@@ -86,7 +86,7 @@ func TestTransactionData_JSON(t *testing.T) {
 		},
 		{
 			name: "zero values",
-			data: &TransactionFields{
+			data: &TransactionData{
 				ChainID: ptr(uint64(0)),
 				Nonce:   ptr(uint64(0)),
 				Signature: &Signature{
@@ -128,7 +128,7 @@ func TestTransactionData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
 			// Test fromJSON
-			var data TransactionFields
+			var data TransactionData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)
@@ -149,19 +149,19 @@ func TestTransactionData_JSON(t *testing.T) {
 func TestCallData_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     *CallFields
+		data     *CallData
 		want     *jsonCall
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &CallFields{},
+			data:     &CallData{},
 			want:     &jsonCall{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "all fields set",
-			data: &CallFields{
+			data: &CallData{
 				From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 				To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 				GasLimit: ptr(uint64(21000)),
@@ -185,7 +185,7 @@ func TestCallData_JSON(t *testing.T) {
 		},
 		{
 			name: "max values",
-			data: &CallFields{
+			data: &CallData{
 				From:     MustAddressFromHexPtr("0xffffffffffffffffffffffffffffffffffffffff"),
 				To:       MustAddressFromHexPtr("0xffffffffffffffffffffffffffffffffffffffff"),
 				GasLimit: ptr(^uint64(0)),
@@ -209,7 +209,7 @@ func TestCallData_JSON(t *testing.T) {
 		},
 		{
 			name: "zero values",
-			data: &CallFields{
+			data: &CallData{
 				From:     MustAddressFromHexPtr("0x0000000000000000000000000000000000000000"),
 				To:       MustAddressFromHexPtr("0x0000000000000000000000000000000000000000"),
 				GasLimit: ptr(uint64(0)),
@@ -248,7 +248,7 @@ func TestCallData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
 			// Test fromJSON
-			var data CallFields
+			var data CallData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)
@@ -264,19 +264,19 @@ func TestCallData_JSON(t *testing.T) {
 func TestLegacyPriceData_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     *LegacyPriceField
+		data     *LegacyPriceData
 		want     *jsonCall
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &LegacyPriceField{},
+			data:     &LegacyPriceData{},
 			want:     &jsonCall{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "all fields set",
-			data: &LegacyPriceField{
+			data: &LegacyPriceData{
 				GasPrice: big.NewInt(2000000000),
 			},
 			want: &jsonCall{
@@ -288,7 +288,7 @@ func TestLegacyPriceData_JSON(t *testing.T) {
 		},
 		{
 			name: "zero value",
-			data: &LegacyPriceField{
+			data: &LegacyPriceData{
 				GasPrice: big.NewInt(0),
 			},
 			want: &jsonCall{
@@ -312,7 +312,7 @@ func TestLegacyPriceData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
 			// Test fromJSON
-			var data LegacyPriceField
+			var data LegacyPriceData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)
@@ -324,19 +324,19 @@ func TestLegacyPriceData_JSON(t *testing.T) {
 func TestAccessListData_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     *AccessListField
+		data     *AccessListData
 		want     *jsonCall
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &AccessListField{},
+			data:     &AccessListData{},
 			want:     &jsonCall{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "all fields set",
-			data: &AccessListField{
+			data: &AccessListData{
 				AccessList: AccessList{
 					{
 						Address: MustAddressFromHex("0x3333333333333333333333333333333333333333"),
@@ -384,7 +384,7 @@ func TestAccessListData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
 			// Test fromJSON
-			var data AccessListField
+			var data AccessListData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)
@@ -396,19 +396,19 @@ func TestAccessListData_JSON(t *testing.T) {
 func TestDynamicFeeData_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     *DynamicFeeFields
+		data     *DynamicFeeData
 		want     *jsonCall
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &DynamicFeeFields{},
+			data:     &DynamicFeeData{},
 			want:     &jsonCall{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "all fields set",
-			data: &DynamicFeeFields{
+			data: &DynamicFeeData{
 				MaxFeePerGas:         big.NewInt(2000000000),
 				MaxPriorityFeePerGas: big.NewInt(1000000000),
 			},
@@ -423,7 +423,7 @@ func TestDynamicFeeData_JSON(t *testing.T) {
 		},
 		{
 			name: "zero values",
-			data: &DynamicFeeFields{
+			data: &DynamicFeeData{
 				MaxFeePerGas:         big.NewInt(0),
 				MaxPriorityFeePerGas: big.NewInt(0),
 			},
@@ -438,7 +438,7 @@ func TestDynamicFeeData_JSON(t *testing.T) {
 		},
 		{
 			name: "max values",
-			data: &DynamicFeeFields{
+			data: &DynamicFeeData{
 				MaxFeePerGas:         big.NewInt(0).Sub(big.NewInt(0).SetBit(big.NewInt(0), 256, 1), big.NewInt(1)),
 				MaxPriorityFeePerGas: big.NewInt(0).Sub(big.NewInt(0).SetBit(big.NewInt(0), 256, 1), big.NewInt(1)),
 			},
@@ -466,7 +466,7 @@ func TestDynamicFeeData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
 			// Test fromJSON
-			var data DynamicFeeFields
+			var data DynamicFeeData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)
@@ -480,19 +480,19 @@ func TestBlobData_JSON(t *testing.T) {
 	remZerosRx := regexp.MustCompile(`0{128,}`)
 	tests := []struct {
 		name     string
-		data     *BlobFields
+		data     *BlobData
 		want     *jsonCall
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &BlobFields{},
+			data:     &BlobData{},
 			want:     &jsonCall{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "blobs with sidecars",
-			data: &BlobFields{
+			data: &BlobData{
 				MaxFeePerBlobGas: big.NewInt(3000000000),
 				Blobs: []BlobInfo{
 					{
@@ -532,7 +532,7 @@ func TestBlobData_JSON(t *testing.T) {
 		},
 		{
 			name: "blobs without sidecars",
-			data: &BlobFields{
+			data: &BlobData{
 				MaxFeePerBlobGas: big.NewInt(3000000000),
 				Blobs: []BlobInfo{
 					{
@@ -570,7 +570,7 @@ func TestBlobData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(remZerosRx.ReplaceAll(jsonBytes, []byte(""))))
 
 			// Test fromJSON
-			var data BlobFields
+			var data BlobData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)

@@ -10,13 +10,13 @@ import (
 	"time"
 )
 
-// IPC is a Transport implementation that uses the IPC protocol.
+// IPC is a [Transport] implementation that uses the IPC protocol.
 type IPC struct {
 	*stream
 	conn net.Conn
 }
 
-// IPCOptions contains options for the IPC transport.
+// IPCOptions contains options for the [IPC] transport.
 type IPCOptions struct {
 	// Context used to close the connection.
 	Context context.Context
@@ -31,7 +31,7 @@ type IPCOptions struct {
 	ErrorCh chan error
 }
 
-// NewIPC creates a new IPC instance.
+// NewIPC creates a new [IPC] instance.
 func NewIPC(opts IPCOptions) (*IPC, error) {
 	var d net.Dialer
 	conn, err := d.DialContext(opts.Context, "unix", opts.Path)

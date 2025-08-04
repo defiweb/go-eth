@@ -17,7 +17,7 @@ import (
 )
 
 func TestHijackSimulate(t *testing.T) {
-	tt := []struct {
+	tc := []struct {
 		name       string
 		method     string
 		args       []any
@@ -95,21 +95,21 @@ func TestHijackSimulate(t *testing.T) {
 			wantErr:  "failed to decode transaction",
 		},
 	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
-				require.NotEmpty(t, tc.request)
-				require.NotEmpty(t, tc.response)
+				require.NotEmpty(t, tt.request)
+				require.NotEmpty(t, tt.response)
 
 				body, err := io.ReadAll(req.Body)
 				require.NoError(t, err)
-				require.JSONEq(t, tc.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tc.request[0], string(body)))
+				require.JSONEq(t, tt.request[0], string(body), fmt.Sprintf("expected: %s, got: %s", tt.request[0], string(body)))
 
-				res := tc.response[0]
-				tc.request = tc.request[1:]
-				tc.response = tc.response[1:]
+				res := tt.response[0]
+				tt.request = tt.request[1:]
+				tt.response = tt.response[1:]
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(res)),
@@ -120,17 +120,17 @@ func TestHijackSimulate(t *testing.T) {
 			})
 
 			var result any
-			err := hijacker.Call(ctx, &result, tc.method, tc.args...)
-			assert.Len(t, tc.request, 0)
-			assert.Len(t, tc.response, 0)
+			err := hijacker.Call(ctx, &result, tt.method, tt.args...)
+			assert.Len(t, tt.request, 0)
+			assert.Len(t, tt.response, 0)
 
-			if tc.wantErr != "" {
+			if tt.wantErr != "" {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), tc.wantErr)
+				require.Contains(t, err.Error(), tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tc.wantResult, result)
+			assert.Equal(t, tt.wantResult, result)
 		})
 	}
 }

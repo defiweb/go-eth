@@ -15,7 +15,7 @@ import (
 // Introduced by EIP-4844, this transaction type adds support for blob-carrying
 // transactions.
 type TransactionBlob struct {
-	TransactionFields
+	TransactionData
 	CallBlob
 }
 
@@ -90,7 +90,7 @@ func (t *TransactionBlob) CalculateSigningHash() (Hash, error) {
 	}
 	if len(t.Blobs) > 0 {
 		blobHashes = make(rlp.TypedList[Hash], len(t.Blobs))
-		for i, _ := range t.Blobs {
+		for i := range t.Blobs {
 			blobHashes[i] = &t.Blobs[i].Hash
 		}
 	}
@@ -116,7 +116,7 @@ func (t *TransactionBlob) CalculateSigningHash() (Hash, error) {
 // Copy creates a deep copy of the transaction.
 func (t *TransactionBlob) Copy() *TransactionBlob {
 	return &TransactionBlob{
-		TransactionFields: *t.TransactionFields.Copy(),
+		TransactionData: *t.TransactionData.Copy(),
 		CallBlob:          *t.CallBlob.Copy(),
 	}
 }
@@ -176,7 +176,7 @@ func (t TransactionBlob) EncodeRLP() ([]byte, error) {
 	}
 	if len(t.Blobs) > 0 {
 		blobHashes = make(rlp.TypedList[Hash], 0, len(t.Blobs))
-		for i, _ := range t.Blobs {
+		for i := range t.Blobs {
 			blob := t.Blobs[i]
 
 			blobHashes = append(blobHashes, &blob.Hash)
@@ -363,11 +363,11 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 // MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionBlob) MarshalJSON() ([]byte, error) {
 	j := &jsonTransaction{}
-	t.TransactionFields.toJSON(j)
-	t.CallFields.toJSON(&j.jsonCall)
-	t.AccessListField.toJSON(&j.jsonCall)
-	t.DynamicFeeFields.toJSON(&j.jsonCall)
-	t.BlobFields.toJSON(&j.jsonCall)
+	t.TransactionData.toJSON(j)
+	t.CallData.toJSON(&j.jsonCall)
+	t.AccessListData.toJSON(&j.jsonCall)
+	t.DynamicFeeData.toJSON(&j.jsonCall)
+	t.BlobData.toJSON(&j.jsonCall)
 	return json.Marshal(j)
 }
 
@@ -377,11 +377,11 @@ func (t *TransactionBlob) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	t.TransactionFields.fromJSON(j)
-	t.CallFields.fromJSON(&j.jsonCall)
-	t.AccessListField.fromJSON(&j.jsonCall)
-	t.DynamicFeeFields.fromJSON(&j.jsonCall)
-	t.BlobFields.fromJSON(&j.jsonCall)
+	t.TransactionData.fromJSON(j)
+	t.CallData.fromJSON(&j.jsonCall)
+	t.AccessListData.fromJSON(&j.jsonCall)
+	t.DynamicFeeData.fromJSON(&j.jsonCall)
+	t.BlobData.fromJSON(&j.jsonCall)
 	return nil
 }
 

@@ -2,18 +2,23 @@ package kzg4844
 
 import (
 	"crypto/sha256"
+	"math/big"
 	"sync"
 
 	kzg4844 "github.com/crate-crypto/go-kzg-4844"
 )
 
 const (
-	BlobLength       = 131072 // 128 KiB
+	ScalarLength     = 4096
+	ScalarSize       = 32
+	BlobLength       = ScalarLength * ScalarSize // 128 KiB
 	CommitmentLength = 48
 	ProofLength      = 48
 	PointLength      = 32
-	ClaimLength      = 32
 )
+
+// BLSModulus is the BLS12-381 scalar field modulus.
+var BLSModulus = new(big.Int).SetBytes(kzg4844.BlsModulus[:])
 
 // Blob represents a 4844 data blob.
 type Blob [BlobLength]byte
@@ -27,9 +32,7 @@ type Proof [ProofLength]byte
 // Point is a BLS field element.
 type Point [PointLength]byte
 
-// Claim is a claimed evaluation value in a specific point.
-type Claim [ClaimLength]byte
-
+// BlobToCommitment computes the KZG commitment for the given blob.
 func BlobToCommitment(blob *Blob) (Commitment, error) {
 	initContext()
 	commitment, err := context.BlobToKZGCommitment(
@@ -42,7 +45,8 @@ func BlobToCommitment(blob *Blob) (Commitment, error) {
 	return (Commitment)(commitment), nil
 }
 
-func ComputeProof(blob *Blob, point Point) (Proof, Claim, error) {
+// ComputeProof computes the KZG proof and claim for the given blob and point.
+func ComputeProof(blob *Blob, point Point) (Proof, Point, error) {
 	initContext()
 	proof, claim, err := context.ComputeKZGProof(
 		(*kzg4844.Blob)(blob),
@@ -50,12 +54,14 @@ func ComputeProof(blob *Blob, point Point) (Proof, Claim, error) {
 		0,
 	)
 	if err != nil {
-		return Proof{}, Claim{}, err
+		return Proof{}, Point{}, err
 	}
-	return (Proof)(proof), (Claim)(claim), nil
+	return (Proof)(proof), (Point)(claim), nil
 }
 
-func VerifyProof(commitment Commitment, point Point, claim Claim, proof Proof) error {
+// VerifyProof verifies the KZG proof for the given commitment, point, claim,
+// and proof.
+func VerifyProof(commitment Commitment, point Point, claim Point, proof Proof) error {
 	initContext()
 	return context.VerifyKZGProof(
 		(kzg4844.KZGCommitment)(commitment),
@@ -65,6 +71,7 @@ func VerifyProof(commitment Commitment, point Point, claim Claim, proof Proof) e
 	)
 }
 
+// ComputeBlobProof computes the KZG proof for the given blob and commitment.
 func ComputeBlobProof(blob *Blob, commitment Commitment) (Proof, error) {
 	initContext()
 	proof, err := context.ComputeBlobKZGProof(
@@ -78,6 +85,7 @@ func ComputeBlobProof(blob *Blob, commitment Commitment) (Proof, error) {
 	return (Proof)(proof), nil
 }
 
+// VerifyBlobProof verifies the KZG proof for the given blob, commitment, and proof.
 func VerifyBlobProof(blob *Blob, commitment Commitment, proof Proof) error {
 	initContext()
 	return context.VerifyBlobKZGProof(

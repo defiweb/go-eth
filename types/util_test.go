@@ -9,40 +9,40 @@ import (
 
 func assertEqualTX(t *testing.T, actual, expected Transaction) {
 	assert.Equal(t, deref(reflect.TypeOf(actual)), deref(reflect.TypeOf(expected)))
-	assert.Equal(t, actual.TransactionData(), expected.TransactionData())
-	if _, ok := expected.(CallData); ok {
-		assert.Equal(t, actual.(CallData).CallData(), actual.(CallData).CallData())
+	assert.Equal(t, actual.GetTransactionData(), expected.GetTransactionData())
+	if _, ok := expected.(HasCallData); ok {
+		assert.Equal(t, actual.(HasCallData).GetCallData(), actual.(HasCallData).GetCallData())
 	}
-	if _, ok := actual.(LegacyPriceData); ok {
-		assert.Equal(t, expected.(LegacyPriceData).LegacyPriceData(), actual.(LegacyPriceData).LegacyPriceData())
+	if _, ok := actual.(HasLegacyPriceData); ok {
+		assert.Equal(t, expected.(HasLegacyPriceData).GetLegacyPriceData(), actual.(HasLegacyPriceData).GetLegacyPriceData())
 	}
-	if _, ok := actual.(AccessListData); ok {
-		assert.Equal(t, expected.(AccessListData).AccessListData(), actual.(AccessListData).AccessListData())
+	if _, ok := actual.(HasAccessListData); ok {
+		assert.Equal(t, expected.(HasAccessListData).GetAccessListData(), actual.(HasAccessListData).GetAccessListData())
 	}
-	if _, ok := actual.(DynamicFeeData); ok {
-		assert.Equal(t, expected.(DynamicFeeData).DynamicFeeData(), actual.(DynamicFeeData).DynamicFeeData())
+	if _, ok := actual.(HasDynamicFeeData); ok {
+		assert.Equal(t, expected.(HasDynamicFeeData).GetDynamicFeeData(), actual.(HasDynamicFeeData).GetDynamicFeeData())
 	}
-	if _, ok := actual.(BlobData); ok {
-		assert.Equal(t, expected.(BlobData).BlobData(), actual.(BlobData).BlobData())
+	if _, ok := actual.(HasBlobData); ok {
+		assert.Equal(t, expected.(HasBlobData).GetBlobData(), actual.(HasBlobData).GetBlobData())
 	}
 }
 
 func assertEqualCall(t *testing.T, actual, expected Call) {
 	assert.Equal(t, deref(reflect.TypeOf(actual)), deref(reflect.TypeOf(expected)))
-	if _, ok := expected.(CallData); ok {
-		assert.Equal(t, actual.(CallData).CallData(), actual.(CallData).CallData())
+	if _, ok := expected.(HasCallData); ok {
+		assert.Equal(t, actual.(HasCallData).GetCallData(), actual.(HasCallData).GetCallData())
 	}
-	if _, ok := actual.(LegacyPriceData); ok {
-		assert.Equal(t, expected.(LegacyPriceData).LegacyPriceData(), actual.(LegacyPriceData).LegacyPriceData())
+	if _, ok := actual.(HasLegacyPriceData); ok {
+		assert.Equal(t, expected.(HasLegacyPriceData).GetLegacyPriceData(), actual.(HasLegacyPriceData).GetLegacyPriceData())
 	}
-	if _, ok := actual.(AccessListData); ok {
-		assert.Equal(t, expected.(AccessListData).AccessListData(), actual.(AccessListData).AccessListData())
+	if _, ok := actual.(HasAccessListData); ok {
+		assert.Equal(t, expected.(HasAccessListData).GetAccessListData(), actual.(HasAccessListData).GetAccessListData())
 	}
-	if _, ok := actual.(DynamicFeeData); ok {
-		assert.Equal(t, expected.(DynamicFeeData).DynamicFeeData(), actual.(DynamicFeeData).DynamicFeeData())
+	if _, ok := actual.(HasDynamicFeeData); ok {
+		assert.Equal(t, expected.(HasDynamicFeeData).GetDynamicFeeData(), actual.(HasDynamicFeeData).GetDynamicFeeData())
 	}
-	if _, ok := actual.(BlobData); ok {
-		assert.Equal(t, expected.(BlobData).BlobData(), actual.(BlobData).BlobData())
+	if _, ok := actual.(HasBlobData); ok {
+		assert.Equal(t, expected.(HasBlobData).GetBlobData(), actual.(HasBlobData).GetBlobData())
 	}
 }
 

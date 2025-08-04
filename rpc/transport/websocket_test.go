@@ -1,5 +1,3 @@
-//go:build !wasm && !tinygo
-
 package transport
 
 import (
@@ -23,7 +21,7 @@ import (
 
 //nolint:funlen
 func TestWebsocket(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		asserts func(t *testing.T, ws *Websocket, reqCh, resCh chan string)
 	}{
 		// Simple case:
@@ -123,7 +121,7 @@ func TestWebsocket(t *testing.T) {
 			},
 		},
 	}
-	for n, tt := range tests {
+	for n, tt := range tc {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
 			wg := sync.WaitGroup{}
 			reqCh := make(chan string)     // Received requests.

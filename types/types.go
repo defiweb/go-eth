@@ -14,6 +14,15 @@ import (
 	"github.com/defiweb/go-eth/hexutil"
 )
 
+var (
+	// ForceAddressChecksum is a global flag that forces the use of checksummed
+	// addresses in text representations.
+	//
+	// Note: This is a global flag, so it affects all packages that use the
+	// Address type.
+	ForceAddressChecksum = false
+)
+
 // Pad is a padding type.
 type Pad uint8
 
@@ -39,6 +48,9 @@ var ZeroAddress = Address{}
 // AddressFromHex parses an address in hex format and returns an Address type.
 func AddressFromHex(h string) (a Address, err error) {
 	err = a.UnmarshalText([]byte(h))
+	if err != nil {
+		return ZeroAddress, err
+	}
 	return a, err
 }
 
@@ -106,6 +118,15 @@ func MustAddressFromBytesPtr(b []byte) *Address {
 	return &a
 }
 
+// VerifyAddressChecksum verifies if the given cheksummed address is valid.
+func VerifyAddressChecksum(h string) bool {
+	a, err := AddressFromHex(h)
+	if err != nil {
+		return false
+	}
+	return a.Checksum() == h
+}
+
 // Bytes returns the byte representation of the address.
 func (t Address) Bytes() []byte {
 	return t[:]
@@ -113,6 +134,9 @@ func (t Address) Bytes() []byte {
 
 // String returns the hex representation of the address.
 func (t Address) String() string {
+	if ForceAddressChecksum {
+		return t.Checksum()
+	}
 	return hexutil.BytesToHex(t[:])
 }
 
@@ -139,6 +163,9 @@ func (t Address) IsZero() bool {
 
 // MarshalJSON implements the json.Marshaler interface.
 func (t Address) MarshalJSON() ([]byte, error) {
+	if ForceAddressChecksum {
+		return naiveQuote([]byte(t.Checksum())), nil
+	}
 	return bytesMarshalJSON(t[:]), nil
 }
 
@@ -149,6 +176,9 @@ func (t *Address) UnmarshalJSON(input []byte) error {
 
 // MarshalText implements the encoding.TextMarshaler interface.
 func (t Address) MarshalText() ([]byte, error) {
+	if ForceAddressChecksum {
+		return []byte(t.Checksum()), nil
+	}
 	return bytesMarshalText(t[:]), nil
 }
 
@@ -194,6 +224,11 @@ type Hash [HashLength]byte
 
 // ZeroHash is a hash with all zeros.
 var ZeroHash = Hash{}
+
+// HashKeccak256 calculates the Keccak256 hash of the given data.
+func HashKeccak256(data ...[]byte) Hash {
+	return Hash(crypto.Keccak256(data...))
+}
 
 // HashFromHex parses a hash in hex format and returns a Hash type.
 // If hash is longer than 32 bytes, it returns an error.

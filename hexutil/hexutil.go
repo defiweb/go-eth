@@ -1,3 +1,5 @@
+// Package hexutil provides utilities for working with hexadecimal-encoded
+// data.
 package hexutil
 
 import (
@@ -6,9 +8,9 @@ import (
 	"math/big"
 )
 
-// BigIntToHex returns the hex representation of the given big integer.
-// The hex string is prefixed with "0x". Negative numbers are prefixed with
-// "-0x".
+// BigIntToHex returns the hex representation of the given [big.Int].
+// The hex string is prefixed with "0x".
+// Negative numbers are prefixed with "-0x".
 func BigIntToHex(x *big.Int) string {
 	if x == nil {
 		return "0x0"
@@ -24,7 +26,7 @@ func BigIntToHex(x *big.Int) string {
 	}
 }
 
-// HexToBigInt returns the big integer representation of the given hex string.
+// HexToBigInt returns the [big.Int] representation of the given hex string.
 // The hex string may be prefixed with "0x".
 func HexToBigInt(h string) (*big.Int, error) {
 	isNeg := len(h) > 1 && h[0] == '-'
@@ -44,6 +46,7 @@ func HexToBigInt(h string) (*big.Int, error) {
 	return x, nil
 }
 
+// MustHexToBigInt works like [HexToBigInt] but panics on error.
 func MustHexToBigInt(h string) *big.Int {
 	x, err := HexToBigInt(h)
 	if err != nil {
@@ -52,18 +55,18 @@ func MustHexToBigInt(h string) *big.Int {
 	return x
 }
 
-// BytesToHex returns the hex representation of the given bytes. The hex string
-// is always even-length and prefixed with "0x".
+// BytesToHex returns the hex representation of the given bytes.
+// The hex string is always even-length and prefixed with "0x".
 func BytesToHex(b []byte) string {
 	r := make([]byte, len(b)*2+2)
-	copy(r, `0x`)
+	copy(r, "0x")
 	hex.Encode(r[2:], b)
 	return string(r)
 }
 
 // HexToBytes returns the bytes representation of the given hex string.
-// The number of hex digits must be even. The hex string may be prefixed with
-// "0x".
+// The number of hex digits must be even.
+// The hex string may be prefixed with "0x".
 func HexToBytes(h string) ([]byte, error) {
 	if len(h) == 0 {
 		return []byte{}, nil
@@ -83,6 +86,7 @@ func HexToBytes(h string) ([]byte, error) {
 	return hex.DecodeString(h)
 }
 
+// MustHexToBytes works like [HexToBytes] but panics on error.
 func MustHexToBytes(h string) []byte {
 	b, err := HexToBytes(h)
 	if err != nil {
@@ -91,7 +95,7 @@ func MustHexToBytes(h string) []byte {
 	return b
 }
 
-// Has0xPrefix returns true if the given byte slice starts with "0x".
+// Has0xPrefix returns true if the given string starts with "0x" or "0X".
 func Has0xPrefix(h string) bool {
 	return len(h) >= 2 && h[0] == '0' && (h[1] == 'x' || h[1] == 'X')
 }
