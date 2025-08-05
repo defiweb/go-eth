@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -45,7 +46,7 @@ func TestBaseClient_Accounts(t *testing.T) {
 		}, nil
 	}
 
-	accounts, err := client.Accounts(t.Context())
+	accounts, err := client.Accounts(context.Background())
 
 	require.NoError(t, err)
 	require.Len(t, accounts, 2)
@@ -86,7 +87,7 @@ func TestBaseClient_Sign(t *testing.T) {
 	}
 
 	signature, err := client.Sign(
-		t.Context(),
+		context.Background(),
 		types.MustAddressFromHex("0x1111111111111111111111111111111111111111"),
 		[]byte("Hello World"),
 	)
@@ -144,7 +145,7 @@ func TestBaseClient_SignTransaction(t *testing.T) {
 	tx.SetGasLimit(0x5208)
 	tx.SetGasPrice(hexutil.MustHexToBigInt("0x9184e72a000"))
 	tx.SetInput(hexutil.MustHexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"))
-	rawTx, err := client.SignTransaction(t.Context(), tx)
+	rawTx, err := client.SignTransaction(context.Background(), tx)
 
 	require.NoError(t, err)
 	assert.Equal(t, "0xf893808609184e72a0008276c094d46e8dd67c5d32be8058bb8eb970870f072445678502540be400a9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f07244567511a02222222222222222222222222222222222222222222222222222222222222222a03333333333333333333333333333333333333333333333333333333333333333", hexutil.BytesToHex(rawTx))
@@ -195,7 +196,7 @@ func TestBaseClient_SendTransaction(t *testing.T) {
 	tx.SetGasLimit(0x5208)
 	tx.SetGasPrice(hexutil.MustHexToBigInt("0x9184e72a000"))
 	tx.SetInput(hexutil.MustHexToBytes("0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675"))
-	txHash, err := client.SendTransaction(t.Context(), tx)
+	txHash, err := client.SendTransaction(context.Background(), tx)
 
 	require.NoError(t, err)
 	assert.Equal(t, types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone), *txHash)

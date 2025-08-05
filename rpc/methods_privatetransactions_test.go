@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -45,7 +46,7 @@ func TestBaseClient_CancelPrivateTransaction(t *testing.T) {
 	}
 
 	result, err := client.CancelPrivateTransaction(
-		t.Context(),
+		context.Background(),
 		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
 	)
 
@@ -85,7 +86,7 @@ func TestBaseClient_SendPrivateTransaction(t *testing.T) {
 	}
 
 	txHash, err := client.SendPrivateTransaction(
-		t.Context(),
+		context.Background(),
 		hexutil.MustHexToBytes("0xf893808609184e72a0008276c094d46e8dd67c5d32be8058bb8eb970870f072445678502540be400a9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f07244567511a02222222222222222222222222222222222222222222222222222222222222222a03333333333333333333333333333333333333333333333333333333333333333"),
 	)
 

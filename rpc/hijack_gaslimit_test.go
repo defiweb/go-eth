@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -96,7 +97,7 @@ func TestHijackGasLimit(t *testing.T) {
 
 			hijacker := transport.NewHijacker(httpMock, tc.hijacker)
 
-			err := hijacker.Call(t.Context(), nil, tc.method, tc.args...)
+			err := hijacker.Call(context.Background(), nil, tc.method, tc.args...)
 			assert.Len(t, tc.request, 0)
 			assert.Len(t, tc.response, 0)
 			require.NoError(t, err)

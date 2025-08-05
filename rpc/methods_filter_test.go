@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"math/big"
 	"net/http"
@@ -51,7 +52,7 @@ func TestBaseClient_NewFilter(t *testing.T) {
 
 	from := types.MustBlockNumberFromHex("0x1")
 	to := types.MustBlockNumberFromHex("0x2")
-	id, err := client.NewFilter(t.Context(), &types.FilterLogsQuery{
+	id, err := client.NewFilter(context.Background(), &types.FilterLogsQuery{
 		FromBlock: &from,
 		ToBlock:   &to,
 		Address:   []types.Address{types.MustAddressFromHex("0x3333333333333333333333333333333333333333")},
@@ -93,7 +94,7 @@ func TestBaseClient_NewBlockFilter(t *testing.T) {
 		}, nil
 	}
 
-	id, err := client.NewBlockFilter(t.Context())
+	id, err := client.NewBlockFilter(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, "2", id.String())
@@ -128,7 +129,7 @@ func TestBaseClient_NewPendingTransactionFilter(t *testing.T) {
 		}, nil
 	}
 
-	id, err := client.NewPendingTransactionFilter(t.Context())
+	id, err := client.NewPendingTransactionFilter(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, "3", id.String())
@@ -163,7 +164,7 @@ func TestBaseClient_UninstallFilter(t *testing.T) {
 		}, nil
 	}
 
-	result, err := client.UninstallFilter(t.Context(), big.NewInt(1))
+	result, err := client.UninstallFilter(context.Background(), big.NewInt(1))
 
 	require.NoError(t, err)
 	assert.True(t, result)
@@ -212,7 +213,7 @@ func TestBaseClient_GetFilterChanges(t *testing.T) {
 		}, nil
 	}
 
-	logs, err := client.GetFilterChanges(t.Context(), big.NewInt(1))
+	logs, err := client.GetFilterChanges(context.Background(), big.NewInt(1))
 
 	require.NoError(t, err)
 	require.Len(t, logs, 1)
@@ -263,7 +264,7 @@ func TestBaseClient_GetFilterLogs(t *testing.T) {
 		}, nil
 	}
 
-	logs, err := client.GetFilterLogs(t.Context(), big.NewInt(1))
+	logs, err := client.GetFilterLogs(context.Background(), big.NewInt(1))
 
 	require.NoError(t, err)
 	require.Len(t, logs, 1)
@@ -304,7 +305,7 @@ func TestBaseClient_GetBlockFilterChanges(t *testing.T) {
 		}, nil
 	}
 
-	hashes, err := client.GetBlockFilterChanges(t.Context(), big.NewInt(2))
+	hashes, err := client.GetBlockFilterChanges(context.Background(), big.NewInt(2))
 
 	require.NoError(t, err)
 	require.Len(t, hashes, 2)

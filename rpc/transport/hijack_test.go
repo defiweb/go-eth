@@ -23,13 +23,13 @@ func TestHijacker(t *testing.T) {
 					f.subResult <- nil
 					f.unsubResult <- nil
 				}()
-				err := h.Call(t.Context(), nil, "foo")
+				err := h.Call(context.Background(), nil, "foo")
 				require.NoError(t, err)
 
-				_, _, err = h.Subscribe(t.Context(), "bar")
+				_, _, err = h.Subscribe(context.Background(), "bar")
 				require.NoError(t, err)
 
-				err = h.Unsubscribe(t.Context(), "baz")
+				err = h.Unsubscribe(context.Background(), "baz")
 				require.NoError(t, err)
 
 				require.Equal(t, 1, f.callCount)
@@ -60,7 +60,7 @@ func TestHijacker(t *testing.T) {
 				go func() {
 					f.callResult <- nil
 				}()
-				err := h.Call(t.Context(), nil, "foo")
+				err := h.Call(context.Background(), nil, "foo")
 				require.NoError(t, err)
 
 				assert.Equal(t, []string{"call2", "call1"}, order)
@@ -73,7 +73,7 @@ func TestHijacker(t *testing.T) {
 			asserts: func(t *testing.T, f *mockTransport, h *Hijack) {
 				var order []string
 
-				ctx := WithHijackers(t.Context(), &mockHijacker{callFn: func(next CallFunc) CallFunc {
+				ctx := WithHijackers(context.Background(), &mockHijacker{callFn: func(next CallFunc) CallFunc {
 					return func(ctx context.Context, t Transport, result any, method string, args ...any) (err error) {
 						order = append(order, "call1")
 						return next(ctx, t, result, method, args...)
@@ -117,7 +117,7 @@ func TestHijacker(t *testing.T) {
 					}
 				}})
 
-				ctx := WithHijackers(t.Context(), &mockHijacker{callFn: func(next CallFunc) CallFunc {
+				ctx := WithHijackers(context.Background(), &mockHijacker{callFn: func(next CallFunc) CallFunc {
 					return func(ctx context.Context, t Transport, result any, method string, args ...any) (err error) {
 						order = append(order, "call3")
 						return next(ctx, t, result, method, args...)

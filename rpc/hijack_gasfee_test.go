@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -60,7 +61,7 @@ func TestHijackLegacyGasFee(t *testing.T) {
 
 			hijacker := transport.NewHijacker(httpMock, tt.hijacker)
 
-			err := hijacker.Call(t.Context(), nil, tt.method, tt.args...)
+			err := hijacker.Call(context.Background(), nil, tt.method, tt.args...)
 			assert.Len(t, tt.request, 0)
 			assert.Len(t, tt.response, 0)
 			require.NoError(t, err)
@@ -116,7 +117,7 @@ func TestHijackDynamicGasFee(t *testing.T) {
 
 			hijacker := transport.NewHijacker(httpMock, tt.hijacker)
 
-			err := hijacker.Call(t.Context(), nil, tt.method, tt.args...)
+			err := hijacker.Call(context.Background(), nil, tt.method, tt.args...)
 			assert.Len(t, tt.request, 0)
 			assert.Len(t, tt.response, 0)
 			require.NoError(t, err)

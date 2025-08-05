@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"testing"
@@ -39,7 +40,7 @@ func TestBaseClient_ClientVersion(t *testing.T) {
 		}, nil
 	}
 
-	clientVersion, err := client.ClientVersion(t.Context())
+	clientVersion, err := client.ClientVersion(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, "Geth/v1.9.25-unstable-3f0b5e4e-20201014/linux-amd64/go1.15.2", clientVersion)
@@ -74,7 +75,7 @@ func TestBaseClient_NetworkID(t *testing.T) {
 		}, nil
 	}
 
-	networkID, err := client.NetworkID(t.Context())
+	networkID, err := client.NetworkID(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), networkID)
@@ -109,7 +110,7 @@ func TestBaseClient_Listening(t *testing.T) {
 		}, nil
 	}
 
-	listening, err := client.Listening(t.Context())
+	listening, err := client.Listening(context.Background())
 
 	require.NoError(t, err)
 	assert.True(t, listening)
@@ -144,7 +145,7 @@ func TestBaseClient_PeerCount(t *testing.T) {
 		}, nil
 	}
 
-	peerCount, err := client.PeerCount(t.Context())
+	peerCount, err := client.PeerCount(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), peerCount)
@@ -183,7 +184,7 @@ func TestBaseClient_Syncing(t *testing.T) {
 		}, nil
 	}
 
-	syncStatus, err := client.Syncing(t.Context())
+	syncStatus, err := client.Syncing(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, uint64(0x384), syncStatus.StartingBlock.Big().Uint64())

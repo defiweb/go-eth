@@ -116,7 +116,7 @@ func TestBaseClient_GetBalance(t *testing.T) {
 	}
 
 	balance, err := client.GetBalance(
-		t.Context(),
+		context.Background(),
 		types.MustAddressFromHex("0x1111111111111111111111111111111111111111"),
 		types.LatestBlockNumber,
 	)
@@ -158,7 +158,7 @@ func TestBaseClient_GetCode(t *testing.T) {
 	}
 
 	code, err := client.GetCode(
-		t.Context(),
+		context.Background(),
 		types.MustAddressFromHex("0x1111111111111111111111111111111111111111"),
 		types.MustBlockNumberFromHex("0x2"),
 	)
@@ -201,7 +201,7 @@ func TestBaseClient_GetStorageAt(t *testing.T) {
 	}
 
 	storage, err := client.GetStorageAt(
-		t.Context(),
+		context.Background(),
 		types.MustAddressFromHex("0x1111111111111111111111111111111111111111"),
 		types.MustHashFromHex("0x2222222222222222222222222222222222222222222222222222222222222222", types.PadNone),
 		types.MustBlockNumberFromHex("0x1"),
@@ -244,7 +244,7 @@ func TestBaseClient_GetTransactionCount(t *testing.T) {
 	}
 
 	transactionCount, err := client.GetTransactionCount(
-		t.Context(),
+		context.Background(),
 		types.MustAddressFromHex("0x1111111111111111111111111111111111111111"),
 		types.MustBlockNumberFromHex("0x1"),
 	)
@@ -278,7 +278,7 @@ func TestBaseClient_BlockByHash(t *testing.T) {
 	}
 
 	block, err := client.BlockByHash(
-		t.Context(),
+		context.Background(),
 		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
 		true,
 	)
@@ -312,7 +312,7 @@ func TestBaseClient_BlockByNumber(t *testing.T) {
 	}
 
 	block, err := client.BlockByNumber(
-		t.Context(),
+		context.Background(),
 		types.MustBlockNumberFromHex("0x1"),
 		true,
 	)
@@ -382,7 +382,7 @@ func TestBaseClient_GetBlockTransactionCountByHash(t *testing.T) {
 	}
 
 	transactionCount, err := client.GetBlockTransactionCountByHash(
-		t.Context(),
+		context.Background(),
 		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
 	)
 
@@ -422,7 +422,7 @@ func TestBaseClient_GetBlockTransactionCountByNumber(t *testing.T) {
 	}
 
 	transactionCount, err := client.GetBlockTransactionCountByNumber(
-		t.Context(),
+		context.Background(),
 		types.MustBlockNumberFromHex("0x1"),
 	)
 
@@ -455,7 +455,7 @@ func TestBaseClient_GetUncleByBlockHashAndIndex(t *testing.T) {
 	}
 
 	block, err := client.GetUncleByBlockHashAndIndex(
-		t.Context(),
+		context.Background(),
 		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
 		0,
 	)
@@ -489,7 +489,7 @@ func TestBaseClient_GetUncleByBlockNumberAndIndex(t *testing.T) {
 	}
 
 	block, err := client.GetUncleByBlockNumberAndIndex(
-		t.Context(),
+		context.Background(),
 		types.MustBlockNumberFromHex("0x1"),
 		2,
 	)
@@ -530,7 +530,7 @@ func TestBaseClient_GetUncleCountByBlockHash(t *testing.T) {
 	}
 
 	uncleCount, err := client.GetUncleCountByBlockHash(
-		t.Context(),
+		context.Background(),
 		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
 	)
 
@@ -570,7 +570,7 @@ func TestBaseClient_GetUncleCountByBlockNumber(t *testing.T) {
 	}
 
 	uncleCount, err := client.GetUncleCountByBlockNumber(
-		t.Context(),
+		context.Background(),
 		types.MustBlockNumberFromHex("0x1"),
 	)
 
@@ -626,7 +626,7 @@ func TestBaseClient_Call(t *testing.T) {
 	value := big.NewInt(10000000000)
 	input := hexutil.MustHexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333")
 	response, err := client.Call(
-		t.Context(),
+		context.Background(),
 		&types.CallLegacy{
 			CallData: types.CallData{
 				From:     from,
@@ -687,7 +687,7 @@ func TestBaseClient_EstimateGas(t *testing.T) {
 
 	gasLimit := uint64(30400)
 	gas, err := client.EstimateGas(
-		t.Context(),
+		context.Background(),
 		&types.CallLegacy{
 			CallData: types.CallData{
 				From:     types.MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
@@ -739,7 +739,7 @@ func TestBaseClient_SendRawTransaction(t *testing.T) {
 	}
 
 	txHash, err := client.SendRawTransaction(
-		t.Context(),
+		context.Background(),
 		hexutil.MustHexToBytes("0xf893808609184e72a0008276c094d46e8dd67c5d32be8058bb8eb970870f072445678502540be400a9d46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f07244567511a02222222222222222222222222222222222222222222222222222222222222222a03333333333333333333333333333333333333333333333333333333333333333"),
 	)
 
@@ -771,7 +771,7 @@ func TestBaseClient_GetTransactionByHash(t *testing.T) {
 	}
 
 	onChainTX, err := client.GetTransactionByHash(
-		t.Context(),
+		context.Background(),
 		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
 	)
 
@@ -819,7 +819,7 @@ func TestBaseClient_GetTransactionByBlockHashAndIndex(t *testing.T) {
 	}
 
 	onChainTX, err := client.GetTransactionByBlockHashAndIndex(
-		t.Context(),
+		context.Background(),
 		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
 		0,
 	)
@@ -856,7 +856,7 @@ func TestBaseClient_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 	}
 
 	onChainTX, err := client.GetTransactionByBlockNumberAndIndex(
-		t.Context(),
+		context.Background(),
 		types.MustBlockNumberFromHex("0x1"),
 		2,
 	)
@@ -929,7 +929,7 @@ func TestBaseClient_GetTransactionReceipt(t *testing.T) {
 	}
 
 	receipt, err := client.GetTransactionReceipt(
-		t.Context(),
+		context.Background(),
 		types.MustHashFromHex("0x1111111111111111111111111111111111111111111111111111111111111111", types.PadNone),
 	)
 
@@ -1022,7 +1022,7 @@ func TestBaseClient_GetBlockReceipts(t *testing.T) {
 	}
 
 	receipts, err := client.GetBlockReceipts(
-		t.Context(),
+		context.Background(),
 		types.MustBlockNumberFromHex("0x1"),
 	)
 
@@ -1109,7 +1109,7 @@ func TestBaseClient_GetLogs(t *testing.T) {
 
 	from := types.MustBlockNumberFromHex("0x1")
 	to := types.MustBlockNumberFromHex("0x2")
-	logs, err := client.GetLogs(t.Context(), &types.FilterLogsQuery{
+	logs, err := client.GetLogs(context.Background(), &types.FilterLogsQuery{
 		FromBlock: &from,
 		ToBlock:   &to,
 		Address:   []types.Address{types.MustAddressFromHex("0x3333333333333333333333333333333333333333")},
@@ -1162,7 +1162,7 @@ func TestBaseClient_ChainID(t *testing.T) {
 		}, nil
 	}
 
-	chainID, err := client.ChainID(t.Context())
+	chainID, err := client.ChainID(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, uint64(1), chainID)
 }
@@ -1196,7 +1196,7 @@ func TestBaseClient_BlockNumber(t *testing.T) {
 		}, nil
 	}
 
-	blockNumber, err := client.BlockNumber(t.Context())
+	blockNumber, err := client.BlockNumber(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, big.NewInt(1), blockNumber)
@@ -1231,7 +1231,7 @@ func TestBaseClient_GasPrice(t *testing.T) {
 		}, nil
 	}
 
-	gasPrice, err := client.GasPrice(t.Context())
+	gasPrice, err := client.GasPrice(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, big.NewInt(10000000000000), gasPrice)
@@ -1266,7 +1266,7 @@ func TestBaseClient_MaxPriorityFeePerGas(t *testing.T) {
 		}, nil
 	}
 
-	gasPrice, err := client.MaxPriorityFeePerGas(t.Context())
+	gasPrice, err := client.MaxPriorityFeePerGas(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, hexutil.MustHexToBigInt("0x1"), gasPrice)
@@ -1301,7 +1301,7 @@ func TestBaseClient_BlobBaseFee(t *testing.T) {
 		}, nil
 	}
 
-	gasPrice, err := client.BlobBaseFee(t.Context())
+	gasPrice, err := client.BlobBaseFee(context.Background())
 
 	require.NoError(t, err)
 	assert.Equal(t, hexutil.MustHexToBigInt("0x1"), gasPrice)
@@ -1330,7 +1330,7 @@ func TestBaseClient_SubscribeNewHeads(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	resultCh, err := client.SubscribeNewHeads(ctx)
@@ -1361,7 +1361,7 @@ func TestBaseClient_SubscribeNewPendingTransactions(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	resultCh, err := client.SubscribeNewPendingTransactions(ctx)
@@ -1402,7 +1402,7 @@ func TestBaseClient_SubscribeLogs(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	resultCh, err := client.SubscribeLogs(ctx, query)
