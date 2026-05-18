@@ -522,6 +522,126 @@ type jsonFeeHistory struct {
 	GasUsedRatio  []float64  `json:"gasUsedRatio"`
 }
 
+// AccessListResult represents the result of an eth_createAccessList call.
+type AccessListResult struct {
+	AccessList AccessList // AccessList is the list of addresses and storage keys accessed by the transaction.
+	GasUsed    uint64     // GasUsed is the gas used by the transaction with the given access list.
+	Error      string     // Error is an optional error message if the transaction would revert.
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (a AccessListResult) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jsonAccessListResult{
+		AccessList: a.AccessList,
+		GasUsed:    NumberFromUint64(a.GasUsed),
+		Error:      a.Error,
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (a *AccessListResult) UnmarshalJSON(data []byte) error {
+	j := &jsonAccessListResult{}
+	if err := json.Unmarshal(data, j); err != nil {
+		return err
+	}
+	a.AccessList = j.AccessList
+	a.GasUsed = j.GasUsed.Big().Uint64()
+	a.Error = j.Error
+	return nil
+}
+
+type jsonAccessListResult struct {
+	AccessList AccessList `json:"accessList"`
+	GasUsed    Number     `json:"gasUsed"`
+	Error      string     `json:"error,omitempty"`
+}
+
+// StorageProof represents a single storage proof entry returned by eth_getProof.
+type StorageProof struct {
+	Key   Hash    // Key is the storage key.
+	Value *big.Int // Value is the storage value.
+	Proof []Bytes  // Proof is the array of RLP-serialized MerkleTree-Nodes for this storage key.
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (s StorageProof) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jsonStorageProof{
+		Key:   s.Key,
+		Value: NumberFromBigInt(s.Value),
+		Proof: s.Proof,
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (s *StorageProof) UnmarshalJSON(data []byte) error {
+	j := &jsonStorageProof{}
+	if err := json.Unmarshal(data, j); err != nil {
+		return err
+	}
+	s.Key = j.Key
+	s.Value = j.Value.Big()
+	s.Proof = j.Proof
+	return nil
+}
+
+type jsonStorageProof struct {
+	Key   Hash   `json:"key"`
+	Value Number `json:"value"`
+	Proof []Bytes `json:"proof"`
+}
+
+// AccountProof represents the result of an eth_getProof call as defined in EIP-1186.
+//
+// https://eips.ethereum.org/EIPS/eip-1186
+type AccountProof struct {
+	Address      Address        // Address is the account address.
+	AccountProof []Bytes        // AccountProof is the array of RLP-serialized MerkleTree-Nodes from the stateRoot to the account leaf.
+	Balance      *big.Int       // Balance is the account balance.
+	CodeHash     Hash           // CodeHash is the hash of the account code, or the empty code hash.
+	Nonce        uint64         // Nonce is the account nonce.
+	StorageHash  Hash           // StorageHash is the SHA3 of the StorageTrie root, or the empty storage hash.
+	StorageProof []StorageProof // StorageProof is the array of storage proofs for requested storage keys.
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (a AccountProof) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jsonAccountProof{
+		Address:      a.Address,
+		AccountProof: a.AccountProof,
+		Balance:      NumberFromBigInt(a.Balance),
+		CodeHash:     a.CodeHash,
+		Nonce:        NumberFromUint64(a.Nonce),
+		StorageHash:  a.StorageHash,
+		StorageProof: a.StorageProof,
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (a *AccountProof) UnmarshalJSON(data []byte) error {
+	j := &jsonAccountProof{}
+	if err := json.Unmarshal(data, j); err != nil {
+		return err
+	}
+	a.Address = j.Address
+	a.AccountProof = j.AccountProof
+	a.Balance = j.Balance.Big()
+	a.CodeHash = j.CodeHash
+	a.Nonce = j.Nonce.Big().Uint64()
+	a.StorageHash = j.StorageHash
+	a.StorageProof = j.StorageProof
+	return nil
+}
+
+type jsonAccountProof struct {
+	Address      Address        `json:"address"`
+	AccountProof []Bytes        `json:"accountProof"`
+	Balance      Number         `json:"balance"`
+	CodeHash     Hash           `json:"codeHash"`
+	Nonce        Number         `json:"nonce"`
+	StorageHash  Hash           `json:"storageHash"`
+	StorageProof []StorageProof `json:"storageProof"`
+}
+
 // Log represents a contract log event.
 type Log struct {
 	Address          Address  // Address of the contract that generated the event

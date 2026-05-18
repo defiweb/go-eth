@@ -179,7 +179,7 @@ const mockSendTransactionResponse = `
 
 func TestBaseClient_SendTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsWallet{Transport: httpMock}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockSendTransactionRequest, readBody(req))

@@ -260,7 +260,7 @@ type AccessListData struct {
 	AccessList AccessList // AccessList is the EIP-2930 access list.
 }
 
-// AccessListData returns the embedded access list data.
+// GetAccessListData returns the embedded access list data.
 func (c *AccessListData) GetAccessListData() *AccessListData {
 	return c
 }
@@ -301,7 +301,7 @@ type DynamicFeeData struct {
 	MaxPriorityFeePerGas *big.Int // MaxPriorityFeePerGas is the maximum priority fee per gas.
 }
 
-// DynamicFeeData returns the embedded dynamic fee data.
+// GetDynamicFeeData returns the embedded dynamic fee data.
 func (c *DynamicFeeData) GetDynamicFeeData() *DynamicFeeData {
 	return c
 }
@@ -360,7 +360,7 @@ type BlobData struct {
 	Blobs            []BlobInfo // Blobs is the list of blobs.
 }
 
-// BlobData returns the embedded blob data.
+// GetBlobData returns the embedded blob data.
 func (c *BlobData) GetBlobData() *BlobData {
 	return c
 }

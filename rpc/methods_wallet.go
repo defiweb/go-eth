@@ -55,7 +55,7 @@ func (c *MethodsWallet) SignTransaction(ctx context.Context, tx types.Transactio
 // SendTransaction performs eth_sendTransaction RPC call.
 //
 // It sends a transaction to the network.
-func (c *MethodsCommon) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
+func (c *MethodsWallet) SendTransaction(ctx context.Context, tx types.Transaction) (*types.Hash, error) {
 	if tx == nil {
 		return nil, errors.New("rpc client: transaction is nil")
 	}

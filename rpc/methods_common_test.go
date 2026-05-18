@@ -1409,3 +1409,254 @@ func TestBaseClient_SubscribeLogs(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, resultCh)
 }
+
+const mockGetProofRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_getProof",
+	  "params": [
+	    "0x1111111111111111111111111111111111111111",
+	    ["0x0000000000000000000000000000000000000000000000000000000000000001"],
+	    "latest"
+	  ]
+	}
+`
+
+const mockGetProofResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+	    "address": "0x1111111111111111111111111111111111111111",
+	    "accountProof": ["0xaabbcc"],
+	    "balance": "0xde0b6b3a7640000",
+	    "codeHash": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+	    "nonce": "0x1",
+	    "storageHash": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+	    "storageProof": [
+	      {
+	        "key": "0x0000000000000000000000000000000000000000000000000000000000000001",
+	        "value": "0x2a",
+	        "proof": ["0xddeeff"]
+	      }
+	    ]
+	  }
+	}
+`
+
+func TestBaseClient_GetProof(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &MethodsCommon{Transport: httpMock}
+
+	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
+		assert.JSONEq(t, mockGetProofRequest, readBody(req))
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(mockGetProofResponse)),
+		}, nil
+	}
+
+	storageKeys := []types.Hash{
+		types.MustHashFromHex("0x0000000000000000000000000000000000000000000000000000000000000001", types.PadLeft),
+	}
+	proof, err := client.GetProof(
+		context.Background(),
+		types.MustAddressFromHex("0x1111111111111111111111111111111111111111"),
+		storageKeys,
+		types.LatestBlockNumber,
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, types.MustAddressFromHex("0x1111111111111111111111111111111111111111"), proof.Address)
+	assert.Equal(t, big.NewInt(1000000000000000000), proof.Balance)
+	assert.Equal(t, uint64(1), proof.Nonce)
+	assert.Equal(t, 1, len(proof.AccountProof))
+	assert.Equal(t, 1, len(proof.StorageProof))
+	assert.Equal(t, big.NewInt(42), proof.StorageProof[0].Value)
+}
+
+const mockCreateAccessListRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_createAccessList",
+	  "params": [
+	    {
+	      "from": "0x1111111111111111111111111111111111111111",
+	      "to": "0x2222222222222222222222222222222222222222"
+	    },
+	    "latest"
+	  ]
+	}
+`
+
+const mockCreateAccessListResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+	    "accessList": [
+	      {
+	        "address": "0x2222222222222222222222222222222222222222",
+	        "storageKeys": ["0x0000000000000000000000000000000000000000000000000000000000000001"]
+	      }
+	    ],
+	    "gasUsed": "0x5208"
+	  }
+	}
+`
+
+func TestBaseClient_CreateAccessList(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &MethodsCommon{Transport: httpMock}
+
+	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
+		assert.JSONEq(t, mockCreateAccessListRequest, readBody(req))
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(mockCreateAccessListResponse)),
+		}, nil
+	}
+
+	from := types.MustAddressFromHexPtr("0x1111111111111111111111111111111111111111")
+	to := types.MustAddressFromHexPtr("0x2222222222222222222222222222222222222222")
+	result, err := client.CreateAccessList(
+		context.Background(),
+		&types.CallBasic{
+			CallData: types.CallData{
+				From: from,
+				To:   to,
+			},
+		},
+		types.LatestBlockNumber,
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, uint64(21000), result.GasUsed)
+	assert.Equal(t, 1, len(result.AccessList))
+	assert.Equal(t, types.MustAddressFromHex("0x2222222222222222222222222222222222222222"), result.AccessList[0].Address)
+}
+
+const mockFeeHistoryRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_feeHistory",
+	  "params": ["0x4", "latest", [25, 75]]
+	}
+`
+
+const mockFeeHistoryResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+	    "oldestBlock": "0x1",
+	    "reward": [["0x1", "0x2"]],
+	    "baseFeePerGas": ["0x3", "0x4"],
+	    "gasUsedRatio": [0.5]
+	  }
+	}
+`
+
+func TestBaseClient_FeeHistory(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &MethodsCommon{Transport: httpMock}
+
+	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
+		// Unmarshal and compare to handle float serialization differences.
+		var got, want any
+		require.NoError(t, json.Unmarshal([]byte(readBody(req)), &got))
+		require.NoError(t, json.Unmarshal([]byte(mockFeeHistoryRequest), &want))
+		assert.Equal(t, want, got)
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(mockFeeHistoryResponse)),
+		}, nil
+	}
+
+	feeHistory, err := client.FeeHistory(
+		context.Background(),
+		4,
+		types.LatestBlockNumber,
+		[]float64{25, 75},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, uint64(1), feeHistory.OldestBlock)
+	assert.Equal(t, []*big.Int{big.NewInt(3), big.NewInt(4)}, feeHistory.BaseFeePerGas)
+	assert.Equal(t, []float64{0.5}, feeHistory.GasUsedRatio)
+	assert.Equal(t, 1, len(feeHistory.Reward))
+	assert.Equal(t, []*big.Int{big.NewInt(1), big.NewInt(2)}, feeHistory.Reward[0])
+}
+
+const mockProtocolVersionRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_protocolVersion",
+	  "params": []
+	}
+`
+
+const mockProtocolVersionResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x41"
+	}
+`
+
+func TestBaseClient_ProtocolVersion(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &MethodsCommon{Transport: httpMock}
+
+	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
+		assert.JSONEq(t, mockProtocolVersionRequest, readBody(req))
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(mockProtocolVersionResponse)),
+		}, nil
+	}
+
+	version, err := client.ProtocolVersion(context.Background())
+
+	require.NoError(t, err)
+	assert.Equal(t, "0x41", version)
+}
+
+const mockCoinbaseRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_coinbase",
+	  "params": []
+	}
+`
+
+const mockCoinbaseResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": "0x1111111111111111111111111111111111111111"
+	}
+`
+
+func TestBaseClient_Coinbase(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &MethodsCommon{Transport: httpMock}
+
+	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
+		assert.JSONEq(t, mockCoinbaseRequest, readBody(req))
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(mockCoinbaseResponse)),
+		}, nil
+	}
+
+	coinbase, err := client.Coinbase(context.Background())
+
+	require.NoError(t, err)
+	assert.Equal(t, types.MustAddressFromHex("0x1111111111111111111111111111111111111111"), coinbase)
+}

@@ -21,6 +21,18 @@ type MethodsCommon struct {
 // Account methods:
 //
 
+// GetProof performs eth_getProof RPC call.
+//
+// It returns the account and storage values of the specified account including
+// the Merkle-proof as defined in EIP-1186.
+func (c *MethodsCommon) GetProof(ctx context.Context, address types.Address, storageKeys []types.Hash, block types.BlockNumber) (*types.AccountProof, error) {
+	var res types.AccountProof
+	if err := c.Transport.Call(ctx, &res, "eth_getProof", address, storageKeys, block); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 // GetBalance performs eth_getBalance RPC call.
 //
 // It returns the balance of the account of given address in wei.
@@ -206,6 +218,26 @@ func (c *MethodsCommon) Call(ctx context.Context, call types.Call, block types.B
 	return res, nil
 }
 
+// CreateAccessList performs eth_createAccessList RPC call.
+//
+// It creates an access list for a transaction as defined in EIP-2930.
+//
+// If call also implements types.Transaction, then a Call method of the
+// transaction will be used to create a call.
+func (c *MethodsCommon) CreateAccessList(ctx context.Context, call types.Call, block types.BlockNumber) (*types.AccessListResult, error) {
+	if call == nil {
+		return nil, errors.New("rpc client: call is nil")
+	}
+	if tx, ok := call.(types.Transaction); ok {
+		call = tx.Call()
+	}
+	var res types.AccessListResult
+	if err := c.Transport.Call(ctx, &res, "eth_createAccessList", call, block); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 // EstimateGas performs eth_estimateGas RPC call.
 //
 // It estimates the gas necessary to execute a specific transaction.
@@ -379,6 +411,18 @@ func (c *MethodsCommon) MaxPriorityFeePerGas(ctx context.Context) (*big.Int, err
 	return res.Big(), nil
 }
 
+// FeeHistory performs eth_feeHistory RPC call.
+//
+// It returns historical gas information for the given block range, allowing
+// fee estimation for EIP-1559 transactions.
+func (c *MethodsCommon) FeeHistory(ctx context.Context, blockCount uint64, newestBlock types.BlockNumber, rewardPercentiles []float64) (*types.FeeHistory, error) {
+	var res types.FeeHistory
+	if err := c.Transport.Call(ctx, &res, "eth_feeHistory", types.NumberFromUint64(blockCount), newestBlock, rewardPercentiles); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 // BlobBaseFee performs eth_blobBaseFee RPC call.
 //
 // It returns the expected base fee for blobs in the next block.
@@ -388,4 +432,26 @@ func (c *MethodsCommon) BlobBaseFee(ctx context.Context) (*big.Int, error) {
 		return nil, err
 	}
 	return res.Big(), nil
+}
+
+// ProtocolVersion performs eth_protocolVersion RPC call.
+//
+// It returns the current Ethereum protocol version.
+func (c *MethodsCommon) ProtocolVersion(ctx context.Context) (string, error) {
+	var res string
+	if err := c.Transport.Call(ctx, &res, "eth_protocolVersion"); err != nil {
+		return "", err
+	}
+	return res, nil
+}
+
+// Coinbase performs eth_coinbase RPC call.
+//
+// It returns the client's coinbase address.
+func (c *MethodsCommon) Coinbase(ctx context.Context) (types.Address, error) {
+	var res types.Address
+	if err := c.Transport.Call(ctx, &res, "eth_coinbase"); err != nil {
+		return types.ZeroAddress, err
+	}
+	return res, nil
 }
