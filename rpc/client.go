@@ -11,6 +11,19 @@ import (
 	"github.com/defiweb/go-eth/wallet"
 )
 
+const (
+	OrderPost int = 100 * iota
+	OrderKeys
+	OrderSimulate
+	OrderNonce
+	OrderLegacyGasFee
+	OrderDynamicGasFee
+	OrderGasLimit
+	DefaultAddress
+	OrderChainID
+	OrderPre
+)
+
 // Client is a default RPC client that provides access to the standard Ethereum
 // JSON-RPC APIs.
 type Client struct {
@@ -63,7 +76,7 @@ func WithPostHijackers(hijackers ...transport.Hijacker) ClientOption {
 			ctx.Transport = addHijacker(ctx.Transport, hijackers...)
 			return nil
 		},
-		order: 100,
+		order: OrderPost,
 	}
 }
 
@@ -83,7 +96,7 @@ func WithKeys(keys ...wallet.Key) ClientOption {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackSign{keys: keys})
 			return nil
 		},
-		order: 200,
+		order: OrderKeys,
 	}
 }
 
@@ -98,7 +111,7 @@ func WithSimulate() ClientOption {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackSimulate{decoder: ctx.Decoder})
 			return nil
 		},
-		order: 300,
+		order: OrderSimulate,
 	}
 }
 
@@ -119,7 +132,7 @@ func WithNonce(opts NonceOptions) ClientOption {
 			})
 			return nil
 		},
-		order: 400,
+		order: OrderNonce,
 	}
 }
 
@@ -151,7 +164,7 @@ func WithLegacyGasFee(opts LegacyGasFeeOptions) ClientOption {
 			})
 			return nil
 		},
-		order: 500,
+		order: OrderLegacyGasFee,
 	}
 }
 
@@ -189,7 +202,7 @@ func WithDynamicGasFee(opts DynamicGasFeeOptions) ClientOption {
 			})
 			return nil
 		},
-		order: 600,
+		order: OrderDynamicGasFee,
 	}
 }
 
@@ -217,7 +230,7 @@ func WithGasLimit(opts GasLimitOptions) ClientOption {
 			})
 			return nil
 		},
-		order: 700,
+		order: OrderGasLimit,
 	}
 }
 
@@ -240,7 +253,7 @@ func WithDefaultAddress(opts AddressOptions) ClientOption {
 			})
 			return nil
 		},
-		order: 800,
+		order: DefaultAddress,
 	}
 }
 
@@ -262,7 +275,7 @@ func WithChainID(opts ChainIDOptions) ClientOption {
 			})
 			return nil
 		},
-		order: 900,
+		order: OrderChainID,
 	}
 }
 
@@ -274,7 +287,7 @@ func WithPreHijackers(hijackers ...transport.Hijacker) ClientOption {
 			ctx.Transport = addHijacker(ctx.Transport, hijackers...)
 			return nil
 		},
-		order: 1000,
+		order: OrderPre,
 	}
 }
 
