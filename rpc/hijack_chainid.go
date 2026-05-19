@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
@@ -18,7 +19,8 @@ type hijackChainID struct {
 // Call implements the [transport.Hijacker] interface.
 func (h *hijackChainID) Call() func(next transport.CallFunc) transport.CallFunc {
 	return func(next transport.CallFunc) transport.CallFunc {
-		chainID := h.chainID
+		var chainID atomic.Uint64
+		chainID.Store(h.chainID)
 		return func(ctx context.Context, t transport.Transport, result any, method string, args ...any) (err error) {
 			if len(args) == 0 || method != "eth_sendTransaction" {
 				return next(ctx, t, result, method, args...)
@@ -29,13 +31,15 @@ func (h *hijackChainID) Call() func(next transport.CallFunc) transport.CallFunc 
 			}
 			td := getTransactionData(tx)
 			if td != nil && (h.replace || td.ChainID == nil) {
-				if chainID == 0 {
-					chainID, err = (&MethodsCommon{Transport: t}).ChainID(ctx)
+				if chainID.Load() == 0 {
+					id, err := (&MethodsCommon{Transport: t}).ChainID(ctx)
 					if err != nil {
 						return &ErrHijackFailed{name: "chain ID", err: fmt.Errorf("failed to get chain ID: %w", err)}
 					}
+					chainID.Store(id)
 				}
-				td.ChainID = &chainID
+				id := chainID.Load()
+				td.ChainID = &id
 			}
 			return next(ctx, t, result, method, args...)
 		}
