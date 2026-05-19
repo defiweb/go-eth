@@ -30,7 +30,7 @@ func (c CallBasic) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (c CallBasic) UnmarshalJSON(bytes []byte) error {
+func (c *CallBasic) UnmarshalJSON(bytes []byte) error {
 	j := &jsonCall{}
 	if err := json.Unmarshal(bytes, &j); err != nil {
 		return err
