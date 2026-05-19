@@ -33,13 +33,13 @@ type IPCOptions struct {
 
 // NewIPC creates a new [IPC] instance.
 func NewIPC(opts IPCOptions) (*IPC, error) {
+	if opts.Context == nil {
+		return nil, errors.New("context cannot be nil")
+	}
 	var d net.Dialer
 	conn, err := d.DialContext(opts.Context, "unix", opts.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial IPC: %w", err)
-	}
-	if opts.Context == nil {
-		return nil, errors.New("context cannot be nil")
 	}
 	if opts.Timeout == 0 {
 		opts.Timeout = 60 * time.Second
