@@ -52,7 +52,7 @@ func NewIPC(opts IPCOptions) (*IPC, error) {
 		},
 		conn: conn,
 	}
-	i.stream.initStream()
+	i.initStream()
 	go i.readerRoutine()
 	go i.writerRoutine()
 	return i, nil
@@ -71,7 +71,11 @@ func (i *IPC) readerRoutine() {
 			}
 			i.errCh <- err
 		}
-		i.readerCh <- res
+		select {
+		case i.readerCh <- res:
+		case <-i.ctx.Done():
+			return
+		}
 	}
 }
 
@@ -79,18 +83,25 @@ func (i *IPC) writerRoutine() {
 	enc := json.NewEncoder(i.conn)
 	for {
 		select {
-		case <-i.ctx.Done():
-			return
-		case req := <-i.stream.writerCh:
+		case req := <-i.writerCh:
 			if err := enc.Encode(req); err != nil {
+				if i.errCh == nil {
+					return
+				}
 				if errors.Is(err, context.Canceled) {
 					return
 				}
 				if errors.Is(err, io.EOF) {
 					return
 				}
-				i.stream.errCh <- err
+				select {
+				case i.errCh <- err:
+				case <-i.ctx.Done():
+					return
+				}
 			}
+		case <-i.ctx.Done():
+			return
 		}
 	}
 }
