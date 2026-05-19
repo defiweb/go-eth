@@ -400,11 +400,17 @@ func initPtr(r reflect.Value) bool {
 }
 
 func addHijacker(t transport.Transport, hijackers ...transport.Hijacker) transport.Transport {
-	if h, ok := t.(*transport.Hijack); ok {
+	if h, ok := t.(*optionTransportHijack); ok {
 		h.Use(hijackers...)
 		return h
 	}
-	return transport.NewHijacker(t, hijackers...)
+	return optionTransportHijack{transport.NewHijacker(t, hijackers...)}
+}
+
+// optionTransportHijack wraps a Hijack transport to ensure that hijackers
+// added by the user won't be modified by the client.
+type optionTransportHijack struct {
+	*transport.Hijack
 }
 
 var (

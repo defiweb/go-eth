@@ -25,7 +25,7 @@ type IPCOptions struct {
 	Path string
 
 	// Timeout is the timeout for the IPC requests. Default is 60s.
-	Timout time.Duration
+	Timeout time.Duration
 
 	// ErrorCh is an optional channel used to report errors.
 	ErrorCh chan error
@@ -41,14 +41,14 @@ func NewIPC(opts IPCOptions) (*IPC, error) {
 	if opts.Context == nil {
 		return nil, errors.New("context cannot be nil")
 	}
-	if opts.Timout == 0 {
-		opts.Timout = 60 * time.Second
+	if opts.Timeout == 0 {
+		opts.Timeout = 60 * time.Second
 	}
 	i := &IPC{
 		stream: &stream{
 			ctx:     opts.Context,
 			errCh:   opts.ErrorCh,
-			timeout: opts.Timout,
+			timeout: opts.Timeout,
 		},
 		conn: conn,
 	}
