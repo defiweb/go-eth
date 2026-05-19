@@ -218,7 +218,11 @@ func (t *TransactionOnChain) UnmarshalJSON(data []byte) error {
 	}
 	t.Hash = ocd.Hash
 	t.BlockHash = ocd.BlockHash
-	t.BlockNumber = ocd.BlockNumber.Big()
+	if ocd.BlockNumber != nil {
+		t.BlockNumber = ocd.BlockNumber.Big()
+	} else {
+		t.BlockNumber = nil
+	}
 	if ocd.TransactionIndex != nil {
 		index := ocd.TransactionIndex.Big().Uint64()
 		t.TransactionIndex = &index
@@ -462,17 +466,20 @@ func (b *jsonBlockTransactions) UnmarshalJSON(data []byte) error {
 // FeeHistory contains information about the fee structure and gas usage
 // over a range of blocks.
 type FeeHistory struct {
-	OldestBlock   uint64       // OldestBlock is the oldest block number for which the base fee and gas used are returned.
-	Reward        [][]*big.Int // Reward is the reward for each block in the range [OldestBlock, LatestBlock].
-	BaseFeePerGas []*big.Int   // BaseFeePerGas is the base fee per gas for each block in the range [OldestBlock, LatestBlock].
-	GasUsedRatio  []float64    // GasUsedRatio is the gas used ratio for each block in the range [OldestBlock, LatestBlock].
+	OldestBlock       uint64       // OldestBlock is the oldest block number for which fees are returned.
+	Reward            [][]*big.Int // Reward is the priority fee percentiles for each block.
+	BaseFeePerGas     []*big.Int   // BaseFeePerGas is the base fee per gas for each block (len = blockCount+1).
+	GasUsedRatio      []float64    // GasUsedRatio is the gas used ratio for each block.
+	BaseFeePerBlobGas []*big.Int   // BaseFeePerBlobGas is the base fee per blob gas for each block (EIP-4844, len = blockCount+1).
+	BlobGasUsedRatio  []float64    // BlobGasUsedRatio is the blob gas used ratio for each block (EIP-4844).
 }
 
 // MarshalJSON implements the json.Marshaler interface.
 func (f FeeHistory) MarshalJSON() ([]byte, error) {
 	feeHistory := &jsonFeeHistory{
-		OldestBlock:  NumberFromUint64(f.OldestBlock),
-		GasUsedRatio: f.GasUsedRatio,
+		OldestBlock:      NumberFromUint64(f.OldestBlock),
+		GasUsedRatio:     f.GasUsedRatio,
+		BlobGasUsedRatio: f.BlobGasUsedRatio,
 	}
 	if len(f.Reward) > 0 {
 		feeHistory.Reward = make([][]Number, len(f.Reward))
@@ -487,6 +494,12 @@ func (f FeeHistory) MarshalJSON() ([]byte, error) {
 		feeHistory.BaseFeePerGas = make([]Number, len(f.BaseFeePerGas))
 		for i, b := range f.BaseFeePerGas {
 			feeHistory.BaseFeePerGas[i] = NumberFromBigInt(b)
+		}
+	}
+	if len(f.BaseFeePerBlobGas) > 0 {
+		feeHistory.BaseFeePerBlobGas = make([]Number, len(f.BaseFeePerBlobGas))
+		for i, b := range f.BaseFeePerBlobGas {
+			feeHistory.BaseFeePerBlobGas[i] = NumberFromBigInt(b)
 		}
 	}
 	return json.Marshal(feeHistory)
@@ -511,15 +524,22 @@ func (f *FeeHistory) UnmarshalJSON(input []byte) error {
 		f.BaseFeePerGas[i] = b.Big()
 	}
 	f.GasUsedRatio = feeHistory.GasUsedRatio
+	f.BaseFeePerBlobGas = make([]*big.Int, len(feeHistory.BaseFeePerBlobGas))
+	for i, b := range feeHistory.BaseFeePerBlobGas {
+		f.BaseFeePerBlobGas[i] = b.Big()
+	}
+	f.BlobGasUsedRatio = feeHistory.BlobGasUsedRatio
 	return nil
 }
 
 // jsonFeeHistory is the JSON representation of a fee history.
 type jsonFeeHistory struct {
-	OldestBlock   Number     `json:"oldestBlock"`
-	Reward        [][]Number `json:"reward"`
-	BaseFeePerGas []Number   `json:"baseFeePerGas"`
-	GasUsedRatio  []float64  `json:"gasUsedRatio"`
+	OldestBlock       Number     `json:"oldestBlock"`
+	Reward            [][]Number `json:"reward,omitempty"`
+	BaseFeePerGas     []Number   `json:"baseFeePerGas,omitempty"`
+	GasUsedRatio      []float64  `json:"gasUsedRatio,omitempty"`
+	BaseFeePerBlobGas []Number   `json:"baseFeePerBlobGas,omitempty"`
+	BlobGasUsedRatio  []float64  `json:"blobGasUsedRatio,omitempty"`
 }
 
 // AccessListResult represents the result of an eth_createAccessList call.
@@ -558,7 +578,7 @@ type jsonAccessListResult struct {
 
 // StorageProof represents a single storage proof entry returned by eth_getProof.
 type StorageProof struct {
-	Key   Hash    // Key is the storage key.
+	Key   Hash     // Key is the storage key.
 	Value *big.Int // Value is the storage value.
 	Proof []Bytes  // Proof is the array of RLP-serialized MerkleTree-Nodes for this storage key.
 }
@@ -585,8 +605,8 @@ func (s *StorageProof) UnmarshalJSON(data []byte) error {
 }
 
 type jsonStorageProof struct {
-	Key   Hash   `json:"key"`
-	Value Number `json:"value"`
+	Key   Hash    `json:"key"`
+	Value Number  `json:"value"`
 	Proof []Bytes `json:"proof"`
 }
 

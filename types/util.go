@@ -144,7 +144,7 @@ func marshalJSONMerge(vs ...any) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(b) < 2 || (b[0] != '{' && b[len(b)-1] != '}') {
+		if len(b) < 2 || b[0] != '{' || b[len(b)-1] != '}' {
 			return nil, fmt.Errorf("expected JSON object, got %s", b)
 		}
 		if n > 0 {
@@ -201,6 +201,5 @@ func copyBigInt(p *big.Int) *big.Int {
 	if p == nil {
 		return nil
 	}
-	c := new(big.Int).Set(p)
-	return c
+	return new(big.Int).Set(p)
 }

@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/big"
 	"strings"
 
@@ -426,7 +425,7 @@ func (t *Hash) DecodeRLP(data []byte) (int, error) {
 		return n, nil
 	}
 	if len(b) != HashLength {
-		return 0, fmt.Errorf("invalid hash length %d", len(t))
+		return 0, fmt.Errorf("invalid hash length %d", len(b))
 	}
 	copy(t[:], b)
 	return n, nil
@@ -640,9 +639,6 @@ func (t *BlockNumber) UnmarshalText(input []byte) error {
 		u, err := hexutil.HexToBigInt(string(input))
 		if err != nil {
 			return err
-		}
-		if u.Cmp(big.NewInt(math.MaxInt64)) > 0 {
-			return fmt.Errorf("block number larger than int64")
 		}
 		*t = BlockNumber{x: *u}
 		return nil
@@ -962,7 +958,7 @@ func NumberFromBigInt(x *big.Int) Number {
 	if x == nil {
 		return Number{}
 	}
-	return Number{x: *x}
+	return Number{x: *copyBigInt(x)}
 }
 
 // NumberFromBigIntPtr converts a big.Int to a *Number type.
@@ -1133,7 +1129,7 @@ func (l oneOrList[T]) MarshalJSON() ([]byte, error) {
 }
 
 func (l *oneOrList[T]) UnmarshalJSON(input []byte) error {
-	if len(input) >= 1 && input[0] == '[' || input[0] == '{' {
+	if len(input) >= 1 && (input[0] == '[' || input[0] == '{') {
 		return json.Unmarshal(input, l)
 	}
 	var i T
