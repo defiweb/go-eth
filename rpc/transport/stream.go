@@ -203,7 +203,11 @@ func (s *stream) callChSend(id uint64, res rpcResponse) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if ch := s.calls[id]; ch != nil {
-		ch <- res
+		select {
+		case ch <- res:
+		case <-s.ctx.Done():
+			return
+		}
 	}
 }
 
@@ -213,6 +217,10 @@ func (s *stream) subChSend(id string, res json.RawMessage) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if ch := s.subs[id]; ch != nil {
-		ch <- res
+		select {
+		case ch <- res:
+		case <-s.ctx.Done():
+			return
+		}
 	}
 }
