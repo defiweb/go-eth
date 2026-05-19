@@ -9,7 +9,9 @@ import (
 
 func assertEqualTX(t *testing.T, actual, expected Transaction) {
 	assert.Equal(t, deref(reflect.TypeOf(actual)), deref(reflect.TypeOf(expected)))
-	assert.Equal(t, actual.GetTransactionData(), expected.GetTransactionData())
+	if _, ok := expected.(HasTransactionData); ok {
+		assert.Equal(t, expected.(HasTransactionData).GetTransactionData(), actual.(HasTransactionData).GetTransactionData())
+	}
 	if _, ok := expected.(HasCallData); ok {
 		assert.Equal(t, actual.(HasCallData).GetCallData(), actual.(HasCallData).GetCallData())
 	}

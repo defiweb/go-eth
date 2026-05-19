@@ -730,7 +730,7 @@ func Test_BlockNumberFromHex(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.want, bn)
+				assert.Equal(t, tt.want.String(), bn.String())
 			}
 		})
 	}
@@ -833,7 +833,7 @@ func Test_BlockNumberType_UnmarshalJSON(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.want, *v)
+				assert.Equal(t, tt.want.String(), (*v).String())
 				assert.Equal(t, tt.isTag, v.IsTag())
 				assert.Equal(t, tt.isEarliest, v.IsEarliest())
 				assert.Equal(t, tt.isLatest, v.IsLatest())
@@ -901,7 +901,7 @@ func Test_BlockNumberType_UnmarshalText(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.want, *v)
+				assert.Equal(t, tt.want.String(), (*v).String())
 				assert.Equal(t, tt.isTag, v.IsTag())
 				assert.Equal(t, tt.isEarliest, v.IsEarliest())
 				assert.Equal(t, tt.isLatest, v.IsLatest())
@@ -1226,7 +1226,7 @@ func Test_NumberFromHex(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.want, got)
+				assert.Equal(t, tt.want.String(), got.String())
 			}
 		})
 	}
