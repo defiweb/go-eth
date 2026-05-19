@@ -87,7 +87,7 @@ func WithKeys(keys ...wallet.Key) ClientOption {
 	}
 }
 
-// WithSimulate simulates the transaction, by calling eth_call with the same
+// WithSimulate simulates the transaction by calling eth_call with the same
 // parameters before sending the transaction.
 //
 // It works with eth_sendTransaction, eth_sendRawTransaction, and
@@ -95,7 +95,7 @@ func WithKeys(keys ...wallet.Key) ClientOption {
 func WithSimulate() ClientOption {
 	return &option{
 		apply: func(ctx *ClientOptionsContext, _ any) error {
-			ctx.Transport = addHijacker(ctx.Transport, &hijackSimulate{})
+			ctx.Transport = addHijacker(ctx.Transport, &hijackSimulate{decoder: ctx.Decoder})
 			return nil
 		},
 		order: 300,
