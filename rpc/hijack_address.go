@@ -7,8 +7,8 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-// hijackAddress hijacks the "eth_sendTransaction", "eth_call" and
-// "eth_estimateGas" methods sets the "from" field.
+// hijackAddress hijacks "eth_sendTransaction", "eth_call",
+// "eth_estimateGas", and "eth_createAccessList" to set the "from" field.
 type hijackAddress struct {
 	address types.Address
 	replace bool
@@ -29,7 +29,7 @@ func (h *hijackAddress) Call() func(next transport.CallFunc) transport.CallFunc 
 					return next(ctx, t, result, method, args...)
 				}
 				ed = types.GetExecutionData(tx)
-			case "eth_call", "eth_estimateGas":
+			case "eth_call", "eth_estimateGas", "eth_createAccessList":
 				call, ok := args[0].(types.Call)
 				if !ok {
 					return next(ctx, t, result, method, args...)
