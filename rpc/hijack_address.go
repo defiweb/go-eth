@@ -21,25 +21,25 @@ func (h *hijackAddress) Call() func(next transport.CallFunc) transport.CallFunc 
 			if len(args) == 0 {
 				return next(ctx, t, result, method, args...)
 			}
-			var cd *types.CallData
+			var ed *types.ExecutionData
 			switch method {
 			case "eth_sendTransaction":
 				tx, ok := args[0].(types.Transaction)
 				if !ok {
 					return next(ctx, t, result, method, args...)
 				}
-				cd = getCallData(tx)
+				ed = types.GetExecutionData(tx)
 			case "eth_call", "eth_estimateGas":
 				call, ok := args[0].(types.Call)
 				if !ok {
 					return next(ctx, t, result, method, args...)
 				}
-				cd = getCallData(call)
+				ed = types.GetExecutionData(call)
 			default:
 				return next(ctx, t, result, method, args...)
 			}
-			if cd != nil && (h.replace || cd.From == nil) {
-				cd.From = &h.address
+			if ed != nil && (h.replace || ed.From == nil) {
+				ed.From = &h.address
 			}
 			return next(ctx, t, result, method, args...)
 		}

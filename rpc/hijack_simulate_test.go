@@ -38,7 +38,7 @@ func TestHijackSimulate(t *testing.T) {
 			},
 			request: []string{
 				`{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x9d8a62f656a8d1615c1294fd71e9cfb3e4855a4f","to":"0x3535353535353535353535353535353535353535","gas":"0x5208","gasPrice":"0x4a817c800","value":"0xde0b6b3a7640000"},"latest"]}`,
-				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"chainId":"0x1","from":"0x9d8a62f656a8d1615c1294fd71e9cfb3e4855a4f","to":"0x3535353535353535353535353535353535353535","gas":"0x5208","gasPrice":"0x4a817c800","nonce":"0x9","value":"0xde0b6b3a7640000","v":"0x25","r":"0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276","s":"0x67cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"}]}`,
+				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"chainId":"0x1","to":"0x3535353535353535353535353535353535353535","gas":"0x5208","gasPrice":"0x4a817c800","nonce":"0x9","value":"0xde0b6b3a7640000","v":"0x25","r":"0x28ef61340bd939bc2195fe537567866003e1a15d3c71ff63e1590620aa636276","s":"0x67cbe9d8997f761aecb703304b3800ccf555c9f3dc64214b297fb1966a3b6d83"}]}`,
 			},
 			response: []string{
 				`{"jsonrpc": "2.0","id": 1,"result": "0x01"}`,

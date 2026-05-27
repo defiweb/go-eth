@@ -24,19 +24,19 @@ func TestTransactionLegacy_JSON(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 				},
@@ -57,7 +57,7 @@ func TestTransactionLegacy_JSON(t *testing.T) {
 		{
 			name: "example from EIP-155",
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(9)),
 					Signature: SignatureFromVRSPtr(
@@ -76,12 +76,12 @@ func TestTransactionLegacy_JSON(t *testing.T) {
 					),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(21000)),
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(20000000000),
 					},
 				},
@@ -133,19 +133,19 @@ func TestTransactionLegacy_RLP(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 				},
@@ -155,7 +155,7 @@ func TestTransactionLegacy_RLP(t *testing.T) {
 		{
 			name: "example from EIP-155",
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(9)),
 					Signature: SignatureFromVRSPtr(
@@ -174,12 +174,12 @@ func TestTransactionLegacy_RLP(t *testing.T) {
 					),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(21000)),
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(20000000000),
 					},
 				},
@@ -221,19 +221,19 @@ func TestTransactionLegacy_CalculateSigningHash(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(1)),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 				},
@@ -243,17 +243,17 @@ func TestTransactionLegacy_CalculateSigningHash(t *testing.T) {
 		{
 			name: "example from EIP-155",
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(9)),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(21000)),
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(20000000000),
 					},
 				},
@@ -263,7 +263,7 @@ func TestTransactionLegacy_CalculateSigningHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sh, err := tt.tx.CalculateSigningHash()
+			sh, err := tt.tx.SigningHash()
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantHex, sh.String())
 		})

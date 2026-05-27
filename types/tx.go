@@ -36,13 +36,13 @@ const (
 )
 
 // Transaction is an interface that represents a generic Ethereum transaction.
+//
+// Use NewTransaction* functions to create transactions of specific types.
 type Transaction interface {
 	json.Marshaler
 	json.Unmarshaler
 	rlp.Encoder
 	rlp.Decoder
-
-	HasTransactionData
 
 	// Type returns the type of the transaction.
 	Type() TransactionType
@@ -50,21 +50,32 @@ type Transaction interface {
 	// Call returns the call associated with the transaction. The call is a
 	// copy and can be modified. It may return nil if it is impossible to
 	// create a call.
+	//
+	// Always prefer using the [Call], even if the transaction already implements
+	// the [Call] interface.
 	Call() Call
 
-	// CalculateHash computes and returns the hash of the transaction.
-	CalculateHash() (Hash, error)
+	// Hash returns the hash of the transaction.
+	Hash() (Hash, error)
+}
 
-	// CalculateSigningHash computes and returns the hash used for signing
-	// the transaction.
-	CalculateSigningHash() (Hash, error)
+// SignableTransaction is an interface that represents a transaction that can
+// be signed.
+//
+// Use NewTransaction* functions to create transactions of specific types.
+type SignableTransaction interface {
+	Transaction
+	HasSigningData
+
+	// SigningHash returns the hash used for signing the transaction.
+	SigningHash() (Hash, error)
 }
 
 // TransactionDecoder is an interface for decoding transactions from JSON or
 // RLP encoded data.
 //
 // Decoder may not set the From field of the transaction.
-// To get signer of the transaction, use txsign.Recover function.
+// To get a signer of the transaction, use txsign.Recover function.
 type TransactionDecoder interface {
 	RLPTransactionDecoder
 	JSONTransactionDecoder

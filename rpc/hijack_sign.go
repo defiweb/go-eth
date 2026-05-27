@@ -45,7 +45,7 @@ func (k *hijackSign) Call() func(next transport.CallFunc) transport.CallFunc {
 				if !ok {
 					return &ErrHijackFailed{name: "sign", err: fmt.Errorf("invalid result type: %T", result)}
 				}
-				tx, ok := args[0].(types.Transaction)
+				tx, ok := args[0].(types.SignableTransaction)
 				if !ok {
 					return &ErrHijackFailed{name: "sign", err: fmt.Errorf("invalid transaction type: %T", args[0])}
 				}
@@ -55,7 +55,7 @@ func (k *hijackSign) Call() func(next transport.CallFunc) transport.CallFunc {
 				if !ok {
 					return &ErrHijackFailed{name: "sign", err: fmt.Errorf("invalid result type: %T", args[0])}
 				}
-				tx, ok := args[0].(types.Transaction)
+				tx, ok := args[0].(types.SignableTransaction)
 				if !ok {
 					return &ErrHijackFailed{name: "sign", err: fmt.Errorf("invalid transaction type: %T", args[0])}
 				}
@@ -100,16 +100,16 @@ func (k *hijackSign) hijackSignCall(ctx context.Context, result *types.Signature
 	return &ErrHijackFailed{name: "sign", err: fmt.Errorf("no key found for address %s", account)}
 }
 
-func (k *hijackSign) hijackSignTransactionCall(ctx context.Context, result *[]byte, tx types.Transaction) error {
+func (k *hijackSign) hijackSignTransactionCall(ctx context.Context, result *[]byte, tx types.SignableTransaction) error {
 	if len(k.keys) == 0 {
 		return fmt.Errorf("no keys found")
 	}
-	txcd := getCallData(tx)
-	if txcd.From == nil {
+	ed := types.GetExecutionData(tx)
+	if ed == nil || ed.From == nil {
 		return &ErrHijackFailed{name: "sign", err: fmt.Errorf("'from' field not set")}
 	}
 	for _, key := range k.keys {
-		if key.Address() != *txcd.From {
+		if key.Address() != *ed.From {
 			continue
 		}
 		if err := key.SignTransaction(ctx, tx); err != nil {
@@ -122,19 +122,19 @@ func (k *hijackSign) hijackSignTransactionCall(ctx context.Context, result *[]by
 		*result = raw
 		return nil
 	}
-	return &ErrHijackFailed{name: "sign", err: fmt.Errorf("no key found for address %s", *txcd.From)}
+	return &ErrHijackFailed{name: "sign", err: fmt.Errorf("no key found for address %s", *ed.From)}
 }
 
-func (k *hijackSign) hijackSendTransactionCall(ctx context.Context, t transport.Transport, next transport.CallFunc, result *types.Hash, tx types.Transaction) error {
+func (k *hijackSign) hijackSendTransactionCall(ctx context.Context, t transport.Transport, next transport.CallFunc, result *types.Hash, tx types.SignableTransaction) error {
 	if len(k.keys) == 0 {
 		return fmt.Errorf("no keys found")
 	}
-	txcd := getCallData(tx)
-	if txcd.From == nil {
+	ed := types.GetExecutionData(tx)
+	if ed == nil || ed.From == nil {
 		return &ErrHijackFailed{name: "sign", err: fmt.Errorf("'from' field not set")}
 	}
 	for _, key := range k.keys {
-		if key.Address() != *txcd.From {
+		if key.Address() != *ed.From {
 			continue
 		}
 		if err := key.SignTransaction(ctx, tx); err != nil {
@@ -146,5 +146,5 @@ func (k *hijackSign) hijackSendTransactionCall(ctx context.Context, t transport.
 		}
 		return next(ctx, t, result, "eth_sendRawTransaction", types.Bytes(raw))
 	}
-	return &ErrHijackFailed{name: "sign", err: fmt.Errorf("no key found for address %s", *txcd.From)}
+	return &ErrHijackFailed{name: "sign", err: fmt.Errorf("no key found for address %s", *ed.From)}
 }

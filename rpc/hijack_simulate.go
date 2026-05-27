@@ -60,8 +60,8 @@ func (h *hijackSimulate) Unsubscribe() func(next transport.UnsubscribeFunc) tran
 }
 
 func (h *hijackSimulate) simulate(ctx context.Context, t transport.Transport, tx types.Transaction) error {
-	// If the transaction has not a corrseponding call, we cannot simulate it.
-	// This can happen for custom transactions types.
+	// If the transaction does not have a corresponding call, we cannot simulate it.
+	// This can happen for custom transaction types.
 	call := tx.Call()
 	if call == nil {
 		return nil
@@ -70,19 +70,16 @@ func (h *hijackSimulate) simulate(ctx context.Context, t transport.Transport, tx
 	// Recover the transaction sender if it is not present.
 	// This can happen if the transaction is encoded using RLP, as this format
 	// contains only the signature and not the sender address.
-	if td := tx.GetTransactionData(); td.Signature != nil && call.GetCallData().From == nil {
-		from, err := txsign.Recover(tx)
+	if stx, ok := tx.(types.SignableTransaction); ok && stx.GetSigningData().Signature != nil && call.GetExecutionData().From == nil {
+		from, err := txsign.Recover(stx)
 		if err != nil {
 			return fmt.Errorf("unable to recover transaction sender: %w", err)
 		}
-		call.GetCallData().From = from
-		if cd := getCallData(tx); cd != nil {
-			cd.From = from
-		}
+		call.GetExecutionData().From = from
 	}
 
 	// Simulate the transaction.
-	if _, err := (&MethodsCommon{Transport: t}).Call(ctx, call, types.LatestBlockNumber); err != nil {
+	if _, err := (&MethodsCommon{&ClientContext{Transport: t}}).Call(ctx, call, types.LatestBlockNumber); err != nil {
 		return err
 	}
 	return nil

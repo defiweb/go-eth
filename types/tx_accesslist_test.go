@@ -24,20 +24,20 @@ func TestTransactionAccessList_JSON(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionAccessList{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallAccessList: CallAccessList{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 					AccessListData: AccessListData{
@@ -77,7 +77,7 @@ func TestTransactionAccessList_JSON(t *testing.T) {
 		{
 			name: "invalid negative nonce",
 			tx: &TransactionAccessList{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce: ptr(uint64(18446744073709551615)), // Max uint64 value to simulate negative when interpreted incorrectly
 				},
 			},
@@ -120,20 +120,20 @@ func TestTransactionAccessList_RLP(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionAccessList{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallAccessList: CallAccessList{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 					AccessListData: AccessListData{
@@ -183,18 +183,18 @@ func TestTransactionAccessList_CalculateSigningHash(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionAccessList{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(1)),
 				},
 				CallAccessList: CallAccessList{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 				},
@@ -204,7 +204,7 @@ func TestTransactionAccessList_CalculateSigningHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sh, err := tt.tx.CalculateSigningHash()
+			sh, err := tt.tx.SigningHash()
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantHex, sh.String())
 		})

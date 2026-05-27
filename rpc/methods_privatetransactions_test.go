@@ -35,7 +35,7 @@ const mockCancelPrivateTransactionResponse = `
 
 func TestBaseClient_CancelPrivateTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsPrivateTransaction{Transport: httpMock}
+	client := &MethodsPrivateTransaction{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockCancelPrivateTransactionRequest, readBody(req))
@@ -75,7 +75,7 @@ const mockSendPrivateTransactionResponse = `
 
 func TestBaseClient_SendPrivateTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsPrivateTransaction{Transport: httpMock}
+	client := &MethodsPrivateTransaction{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockSendPrivateTransactionRequest, readBody(req))

@@ -6,15 +6,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
 )
 
 // MethodsCommon is a collection of methods that are commonly supported by
 // Ethereum JSON-RPC APIs.
 type MethodsCommon struct {
-	Transport transport.Transport
-	Decoder   types.TransactionDecoder
+	Context *ClientContext
 }
 
 //
@@ -27,7 +25,7 @@ type MethodsCommon struct {
 // the Merkle-proof as defined in EIP-1186.
 func (c *MethodsCommon) GetProof(ctx context.Context, address types.Address, storageKeys []types.Hash, block types.BlockNumber) (*types.AccountProof, error) {
 	var res types.AccountProof
-	if err := c.Transport.Call(ctx, &res, "eth_getProof", address, storageKeys, block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getProof", address, storageKeys, block); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -38,7 +36,7 @@ func (c *MethodsCommon) GetProof(ctx context.Context, address types.Address, sto
 // It returns the balance of the account of given address in wei.
 func (c *MethodsCommon) GetBalance(ctx context.Context, address types.Address, block types.BlockNumber) (*big.Int, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_getBalance", address, block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getBalance", address, block); err != nil {
 		return nil, err
 	}
 	return res.Big(), nil
@@ -49,7 +47,7 @@ func (c *MethodsCommon) GetBalance(ctx context.Context, address types.Address, b
 // It returns the contract code at the given address.
 func (c *MethodsCommon) GetCode(ctx context.Context, account types.Address, block types.BlockNumber) ([]byte, error) {
 	var res types.Bytes
-	if err := c.Transport.Call(ctx, &res, "eth_getCode", account, block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getCode", account, block); err != nil {
 		return nil, err
 	}
 	return res.Bytes(), nil
@@ -61,7 +59,7 @@ func (c *MethodsCommon) GetCode(ctx context.Context, account types.Address, bloc
 // address.
 func (c *MethodsCommon) GetStorageAt(ctx context.Context, account types.Address, key types.Hash, block types.BlockNumber) (*types.Hash, error) {
 	var res types.Hash
-	if err := c.Transport.Call(ctx, &res, "eth_getStorageAt", account, key, block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getStorageAt", account, key, block); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -72,7 +70,7 @@ func (c *MethodsCommon) GetStorageAt(ctx context.Context, account types.Address,
 // It returns the number of transactions sent from the given address.
 func (c *MethodsCommon) GetTransactionCount(ctx context.Context, account types.Address, block types.BlockNumber) (uint64, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_getTransactionCount", account, block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getTransactionCount", account, block); err != nil {
 		return 0, err
 	}
 	if !res.Big().IsUint64() {
@@ -90,7 +88,7 @@ func (c *MethodsCommon) GetTransactionCount(ctx context.Context, account types.A
 // It returns information about a block by hash.
 func (c *MethodsCommon) BlockByHash(ctx context.Context, hash types.Hash, full bool) (*types.Block, error) {
 	var res types.Block
-	if err := c.Transport.Call(ctx, &res, "eth_getBlockByHash", hash, full); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getBlockByHash", hash, full); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -101,18 +99,19 @@ func (c *MethodsCommon) BlockByHash(ctx context.Context, hash types.Hash, full b
 // It returns the block with the given number.
 func (c *MethodsCommon) BlockByNumber(ctx context.Context, number types.BlockNumber, full bool) (*types.Block, error) {
 	var res types.Block
-	if err := c.Transport.Call(ctx, &res, "eth_getBlockByNumber", number, full); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getBlockByNumber", number, full); err != nil {
 		return nil, err
 	}
 	return &res, nil
 }
 
-// GetBlockTransactionCountByHash performs eth_getBlockTransactionCountByHash RPC call.
+// GetBlockTransactionCountByHash performs
+// eth_getBlockTransactionCountByHash RPC call.
 //
 // It returns the number of transactions in the block with the given hash.
 func (c *MethodsCommon) GetBlockTransactionCountByHash(ctx context.Context, hash types.Hash) (uint64, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_getBlockTransactionCountByHash", hash); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getBlockTransactionCountByHash", hash); err != nil {
 		return 0, err
 	}
 	if !res.Big().IsUint64() {
@@ -121,10 +120,13 @@ func (c *MethodsCommon) GetBlockTransactionCountByHash(ctx context.Context, hash
 	return res.Big().Uint64(), nil
 }
 
-// GetBlockTransactionCountByNumber implements the RPC interface.
+// GetBlockTransactionCountByNumber performs
+// eth_getBlockTransactionCountByNumber RPC call.
+//
+// It returns the number of transactions in the block with the given number.
 func (c *MethodsCommon) GetBlockTransactionCountByNumber(ctx context.Context, number types.BlockNumber) (uint64, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_getBlockTransactionCountByNumber", number); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getBlockTransactionCountByNumber", number); err != nil {
 		return 0, err
 	}
 	if !res.Big().IsUint64() {
@@ -133,23 +135,25 @@ func (c *MethodsCommon) GetBlockTransactionCountByNumber(ctx context.Context, nu
 	return res.Big().Uint64(), nil
 }
 
-// GetUncleByBlockHashAndIndex performs eth_getUncleByBlockNumberAndIndex RPC call.
+// GetUncleByBlockHashAndIndex performs
+// eth_getUncleByBlockHashAndIndex RPC call.
 //
-// It returns information about an uncle of a block by number and uncle index position.
+// It returns information about an uncle identified by block hash and index.
 func (c *MethodsCommon) GetUncleByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.Block, error) {
 	var res types.Block
-	if err := c.Transport.Call(ctx, &res, "eth_getUncleByBlockHashAndIndex", hash, types.NumberFromUint64(index)); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getUncleByBlockHashAndIndex", hash, types.NumberFromUint64(index)); err != nil {
 		return nil, err
 	}
 	return &res, nil
 }
 
-// GetUncleByBlockNumberAndIndex performs eth_getUncleByBlockNumberAndIndex RPC call.
+// GetUncleByBlockNumberAndIndex performs
+// eth_getUncleByBlockNumberAndIndex RPC call.
 //
-// It returns information about an uncle of a block by hash and uncle index position.
+// It returns information about an uncle identified by block number and index.
 func (c *MethodsCommon) GetUncleByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.Block, error) {
 	var res types.Block
-	if err := c.Transport.Call(ctx, &res, "eth_getUncleByBlockNumberAndIndex", number, types.NumberFromUint64(index)); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getUncleByBlockNumberAndIndex", number, types.NumberFromUint64(index)); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -160,7 +164,7 @@ func (c *MethodsCommon) GetUncleByBlockNumberAndIndex(ctx context.Context, numbe
 // It returns the number of uncles in the block with the given hash.
 func (c *MethodsCommon) GetUncleCountByBlockHash(ctx context.Context, hash types.Hash) (uint64, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_getUncleCountByBlockHash", hash); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getUncleCountByBlockHash", hash); err != nil {
 		return 0, err
 	}
 	if !res.Big().IsUint64() {
@@ -174,7 +178,7 @@ func (c *MethodsCommon) GetUncleCountByBlockHash(ctx context.Context, hash types
 // It returns the number of uncles in the block with the given block number.
 func (c *MethodsCommon) GetUncleCountByBlockNumber(ctx context.Context, number types.BlockNumber) (uint64, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_getUncleCountByBlockNumber", number); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getUncleCountByBlockNumber", number); err != nil {
 		return 0, err
 	}
 	if !res.Big().IsUint64() {
@@ -190,7 +194,7 @@ func (c *MethodsCommon) GetUncleCountByBlockNumber(ctx context.Context, number t
 //
 // Subscription channel will be closed when the context is canceled.
 func (c *MethodsCommon) SubscribeNewHeads(ctx context.Context) (<-chan types.Block, error) {
-	return subscribe[types.Block](ctx, c.Transport, "newHeads")
+	return subscribe[types.Block](ctx, c.Context.Transport, "newHeads")
 }
 
 //
@@ -212,7 +216,7 @@ func (c *MethodsCommon) Call(ctx context.Context, call types.Call, block types.B
 		call = tx.Call()
 	}
 	var res types.Bytes
-	if err := c.Transport.Call(ctx, &res, "eth_call", call, block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_call", call, block); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -232,7 +236,7 @@ func (c *MethodsCommon) CreateAccessList(ctx context.Context, call types.Call, b
 		call = tx.Call()
 	}
 	var res types.AccessListResult
-	if err := c.Transport.Call(ctx, &res, "eth_createAccessList", call, block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_createAccessList", call, block); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -252,7 +256,7 @@ func (c *MethodsCommon) EstimateGas(ctx context.Context, call types.Call, block 
 		call = tx.Call()
 	}
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_estimateGas", call, block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_estimateGas", call, block); err != nil {
 		return 0, err
 	}
 	if !res.Big().IsUint64() {
@@ -266,7 +270,7 @@ func (c *MethodsCommon) EstimateGas(ctx context.Context, call types.Call, block 
 // It sends an encoded transaction to the network.
 func (c *MethodsCommon) SendRawTransaction(ctx context.Context, data []byte) (*types.Hash, error) {
 	var res types.Hash
-	if err := c.Transport.Call(ctx, &res, "eth_sendRawTransaction", types.Bytes(data)); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_sendRawTransaction", types.Bytes(data)); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -274,32 +278,34 @@ func (c *MethodsCommon) SendRawTransaction(ctx context.Context, data []byte) (*t
 
 // GetTransactionByHash performs eth_getTransactionByHash RPC call.
 //
-// It returns the information about a transaction requested by transaction.
+// It returns information about the transaction with the given hash.
 func (c *MethodsCommon) GetTransactionByHash(ctx context.Context, hash types.Hash) (*types.TransactionOnChain, error) {
-	res := types.TransactionOnChain{Decoder: c.Decoder}
-	if err := c.Transport.Call(ctx, &res, "eth_getTransactionByHash", hash); err != nil {
+	res := types.TransactionOnChain{Decoder: c.Context.Decoder}
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getTransactionByHash", hash); err != nil {
 		return nil, err
 	}
 	return &res, nil
 }
 
-// GetTransactionByBlockHashAndIndex performs eth_getTransactionByBlockHashAndIndex RPC call.
+// GetTransactionByBlockHashAndIndex performs
+// eth_getTransactionByBlockHashAndIndex RPC call.
 //
-// It returns the information about a transaction requested by transaction.
+// It returns the transaction at the given block hash and index.
 func (c *MethodsCommon) GetTransactionByBlockHashAndIndex(ctx context.Context, hash types.Hash, index uint64) (*types.TransactionOnChain, error) {
-	res := types.TransactionOnChain{Decoder: c.Decoder}
-	if err := c.Transport.Call(ctx, &res, "eth_getTransactionByBlockHashAndIndex", hash, types.NumberFromUint64(index)); err != nil {
+	res := types.TransactionOnChain{Decoder: c.Context.Decoder}
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getTransactionByBlockHashAndIndex", hash, types.NumberFromUint64(index)); err != nil {
 		return nil, err
 	}
 	return &res, nil
 }
 
-// GetTransactionByBlockNumberAndIndex performs eth_getTransactionByBlockNumberAndIndex RPC call.
+// GetTransactionByBlockNumberAndIndex performs
+// eth_getTransactionByBlockNumberAndIndex RPC call.
 //
-// It returns the information about a transaction requested by transaction.
+// It returns the transaction at the given block number and index.
 func (c *MethodsCommon) GetTransactionByBlockNumberAndIndex(ctx context.Context, number types.BlockNumber, index uint64) (*types.TransactionOnChain, error) {
-	res := types.TransactionOnChain{Decoder: c.Decoder}
-	if err := c.Transport.Call(ctx, &res, "eth_getTransactionByBlockNumberAndIndex", number, types.NumberFromUint64(index)); err != nil {
+	res := types.TransactionOnChain{Decoder: c.Context.Decoder}
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getTransactionByBlockNumberAndIndex", number, types.NumberFromUint64(index)); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -310,7 +316,7 @@ func (c *MethodsCommon) GetTransactionByBlockNumberAndIndex(ctx context.Context,
 // It returns the receipt of a transaction by transaction hash.
 func (c *MethodsCommon) GetTransactionReceipt(ctx context.Context, hash types.Hash) (*types.TransactionReceipt, error) {
 	var res types.TransactionReceipt
-	if err := c.Transport.Call(ctx, &res, "eth_getTransactionReceipt", hash); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getTransactionReceipt", hash); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -321,7 +327,7 @@ func (c *MethodsCommon) GetTransactionReceipt(ctx context.Context, hash types.Ha
 // It returns all transaction receipts for a given block hash or number.
 func (c *MethodsCommon) GetBlockReceipts(ctx context.Context, block types.BlockNumber) ([]*types.TransactionReceipt, error) {
 	var res []*types.TransactionReceipt
-	if err := c.Transport.Call(ctx, &res, "eth_getBlockReceipts", block); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getBlockReceipts", block); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -334,7 +340,7 @@ func (c *MethodsCommon) GetBlockReceipts(ctx context.Context, block types.BlockN
 //
 // Subscription channel will be closed when the context is canceled.
 func (c *MethodsCommon) SubscribeNewPendingTransactions(ctx context.Context) (<-chan types.Hash, error) {
-	return subscribe[types.Hash](ctx, c.Transport, "newPendingTransactions")
+	return subscribe[types.Hash](ctx, c.Context.Transport, "newPendingTransactions")
 }
 
 //
@@ -346,7 +352,7 @@ func (c *MethodsCommon) SubscribeNewPendingTransactions(ctx context.Context) (<-
 // It returns logs that match the given query.
 func (c *MethodsCommon) GetLogs(ctx context.Context, query *types.FilterLogsQuery) ([]types.Log, error) {
 	var res []types.Log
-	if err := c.Transport.Call(ctx, &res, "eth_getLogs", query); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getLogs", query); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -359,7 +365,7 @@ func (c *MethodsCommon) GetLogs(ctx context.Context, query *types.FilterLogsQuer
 //
 // Subscription channel will be closed when the context is canceled.
 func (c *MethodsCommon) SubscribeLogs(ctx context.Context, query *types.FilterLogsQuery) (<-chan types.Log, error) {
-	return subscribe[types.Log](ctx, c.Transport, "logs", query)
+	return subscribe[types.Log](ctx, c.Context.Transport, "logs", query)
 }
 
 // Network status methods:
@@ -369,7 +375,7 @@ func (c *MethodsCommon) SubscribeLogs(ctx context.Context, query *types.FilterLo
 // It returns the current chain ID.
 func (c *MethodsCommon) ChainID(ctx context.Context) (uint64, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_chainId"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_chainId"); err != nil {
 		return 0, err
 	}
 	if !res.Big().IsUint64() {
@@ -381,12 +387,12 @@ func (c *MethodsCommon) ChainID(ctx context.Context) (uint64, error) {
 // BlockNumber performs eth_blockNumber RPC call.
 //
 // It returns the current block number.
-func (c *MethodsCommon) BlockNumber(ctx context.Context) (*big.Int, error) {
+func (c *MethodsCommon) BlockNumber(ctx context.Context) (*types.BlockNumber, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_blockNumber"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_blockNumber"); err != nil {
 		return nil, err
 	}
-	return res.Big(), nil
+	return types.BlockNumberFromBigIntPtr(res.Big()), nil
 }
 
 // GasPrice performs eth_gasPrice RPC call.
@@ -394,7 +400,7 @@ func (c *MethodsCommon) BlockNumber(ctx context.Context) (*big.Int, error) {
 // It returns the current price per gas in wei.
 func (c *MethodsCommon) GasPrice(ctx context.Context) (*big.Int, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_gasPrice"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_gasPrice"); err != nil {
 		return nil, err
 	}
 	return res.Big(), nil
@@ -405,7 +411,7 @@ func (c *MethodsCommon) GasPrice(ctx context.Context) (*big.Int, error) {
 // It returns the estimated maximum priority fee per gas.
 func (c *MethodsCommon) MaxPriorityFeePerGas(ctx context.Context) (*big.Int, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_maxPriorityFeePerGas"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_maxPriorityFeePerGas"); err != nil {
 		return nil, err
 	}
 	return res.Big(), nil
@@ -417,7 +423,7 @@ func (c *MethodsCommon) MaxPriorityFeePerGas(ctx context.Context) (*big.Int, err
 // fee estimation for EIP-1559 transactions.
 func (c *MethodsCommon) FeeHistory(ctx context.Context, blockCount uint64, newestBlock types.BlockNumber, rewardPercentiles []float64) (*types.FeeHistory, error) {
 	var res types.FeeHistory
-	if err := c.Transport.Call(ctx, &res, "eth_feeHistory", types.NumberFromUint64(blockCount), newestBlock, rewardPercentiles); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_feeHistory", types.NumberFromUint64(blockCount), newestBlock, rewardPercentiles); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -428,7 +434,7 @@ func (c *MethodsCommon) FeeHistory(ctx context.Context, blockCount uint64, newes
 // It returns the expected base fee for blobs in the next block.
 func (c *MethodsCommon) BlobBaseFee(ctx context.Context) (*big.Int, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_blobBaseFee"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_blobBaseFee"); err != nil {
 		return nil, err
 	}
 	return res.Big(), nil
@@ -439,7 +445,7 @@ func (c *MethodsCommon) BlobBaseFee(ctx context.Context) (*big.Int, error) {
 // It returns the current Ethereum protocol version.
 func (c *MethodsCommon) ProtocolVersion(ctx context.Context) (string, error) {
 	var res string
-	if err := c.Transport.Call(ctx, &res, "eth_protocolVersion"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_protocolVersion"); err != nil {
 		return "", err
 	}
 	return res, nil
@@ -450,7 +456,7 @@ func (c *MethodsCommon) ProtocolVersion(ctx context.Context) (string, error) {
 // It returns the client's coinbase address.
 func (c *MethodsCommon) Coinbase(ctx context.Context) (types.Address, error) {
 	var res types.Address
-	if err := c.Transport.Call(ctx, &res, "eth_coinbase"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_coinbase"); err != nil {
 		return types.ZeroAddress, err
 	}
 	return res, nil

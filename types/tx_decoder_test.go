@@ -21,19 +21,19 @@ func TestTransactionDecoder_DecodeRLP(t *testing.T) {
 		},
 		{
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID:   ptr(uint64(38)),
 					Nonce:     ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 				},
@@ -42,7 +42,7 @@ func TestTransactionDecoder_DecodeRLP(t *testing.T) {
 		},
 		{
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(9)),
 					Signature: SignatureFromVRSPtr(
@@ -61,12 +61,12 @@ func TestTransactionDecoder_DecodeRLP(t *testing.T) {
 					),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(21000)),
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(20000000000),
 					},
 				},
@@ -79,19 +79,19 @@ func TestTransactionDecoder_DecodeRLP(t *testing.T) {
 		},
 		{
 			tx: &TransactionAccessList{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallAccessList: CallAccessList{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 					AccessListData: AccessListData{
@@ -113,13 +113,13 @@ func TestTransactionDecoder_DecodeRLP(t *testing.T) {
 		},
 		{
 			tx: &TransactionDynamicFee{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallDynamicFee: CallDynamicFee{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
@@ -148,13 +148,13 @@ func TestTransactionDecoder_DecodeRLP(t *testing.T) {
 		},
 		{
 			tx: &TransactionBlob{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallBlob: CallBlob{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
@@ -206,18 +206,18 @@ func TestTransactionDeocder_DecodeJSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 				},
@@ -238,7 +238,7 @@ func TestTransactionDeocder_DecodeJSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionLegacy{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce: ptr(uint64(9)),
 					Signature: SignatureFromVRSPtr(
 						func() *big.Int {
@@ -256,12 +256,12 @@ func TestTransactionDeocder_DecodeJSON(t *testing.T) {
 					),
 				},
 				CallLegacy: CallLegacy{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x3535353535353535353535353535353535353535"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(21000)),
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(20000000000),
 					},
 				},
@@ -289,19 +289,19 @@ func TestTransactionDeocder_DecodeJSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionAccessList{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallAccessList: CallAccessList{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
 						Input:    []byte{1, 2, 3, 4},
 					},
-					LegacyPriceData: LegacyPriceData{
+					LegacyFeeData: LegacyFeeData{
 						GasPrice: big.NewInt(1000000000),
 					},
 					AccessListData: AccessListData{
@@ -349,13 +349,13 @@ func TestTransactionDeocder_DecodeJSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionDynamicFee{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallDynamicFee: CallDynamicFee{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
@@ -411,13 +411,13 @@ func TestTransactionDeocder_DecodeJSON(t *testing.T) {
 		},
 		{
 			tx: &TransactionBlob{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallBlob: CallBlob{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),

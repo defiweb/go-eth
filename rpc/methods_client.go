@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 
-	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
 )
 
@@ -12,7 +11,7 @@ import (
 //
 // Note: Some JSON-RPC APIs do not support these methods.
 type MethodsClient struct {
-	Transport transport.Transport
+	Context *ClientContext
 }
 
 // ClientVersion performs web3_clientVersion RPC call.
@@ -20,7 +19,7 @@ type MethodsClient struct {
 // It returns the current client version.
 func (c *MethodsClient) ClientVersion(ctx context.Context) (string, error) {
 	var res string
-	if err := c.Transport.Call(ctx, &res, "web3_clientVersion"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "web3_clientVersion"); err != nil {
 		return "", err
 	}
 	return res, nil
@@ -31,7 +30,7 @@ func (c *MethodsClient) ClientVersion(ctx context.Context) (string, error) {
 // It returns the current network ID.
 func (c *MethodsClient) NetworkID(ctx context.Context) (uint64, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "net_version"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "net_version"); err != nil {
 		return 0, err
 	}
 	return res.Big().Uint64(), nil
@@ -42,7 +41,7 @@ func (c *MethodsClient) NetworkID(ctx context.Context) (uint64, error) {
 // It returns true if the client is actively listening for network.
 func (c *MethodsClient) Listening(ctx context.Context) (bool, error) {
 	var res bool
-	if err := c.Transport.Call(ctx, &res, "net_listening"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "net_listening"); err != nil {
 		return false, err
 	}
 	return res, nil
@@ -53,7 +52,7 @@ func (c *MethodsClient) Listening(ctx context.Context) (bool, error) {
 // It returns the number of connected peers.
 func (c *MethodsClient) PeerCount(ctx context.Context) (uint64, error) {
 	var res types.Number
-	if err := c.Transport.Call(ctx, &res, "net_peerCount"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "net_peerCount"); err != nil {
 		return 0, err
 	}
 	return res.Big().Uint64(), nil
@@ -64,7 +63,7 @@ func (c *MethodsClient) PeerCount(ctx context.Context) (uint64, error) {
 // It returns an object with data about the sync status or false.
 func (c *MethodsClient) Syncing(ctx context.Context) (*types.SyncStatus, error) {
 	var res types.SyncStatus
-	if err := c.Transport.Call(ctx, &res, "eth_syncing"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_syncing"); err != nil {
 		return nil, err
 	}
 	return &res, nil

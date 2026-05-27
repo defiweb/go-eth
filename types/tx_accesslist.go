@@ -15,7 +15,7 @@ import (
 // list that specifies a list of addresses and storage keys the transaction
 // plans to access.
 type TransactionAccessList struct {
-	TransactionData
+	SigningData
 	CallAccessList
 }
 
@@ -31,15 +31,11 @@ func (t *TransactionAccessList) Type() TransactionType {
 
 // Call implements the Transaction interface.
 func (t *TransactionAccessList) Call() Call {
-	return &CallAccessList{
-		CallData:        *t.CallData.Copy(),
-		LegacyPriceData: *t.LegacyPriceData.Copy(),
-		AccessListData:  *t.AccessListData.Copy(),
-	}
+	return t.CallAccessList.Copy()
 }
 
-// CalculateHash implements the Transaction interface.
-func (t *TransactionAccessList) CalculateHash() (Hash, error) {
+// Hash implements the Transaction interface.
+func (t *TransactionAccessList) Hash() (Hash, error) {
 	raw, err := t.EncodeRLP()
 	if err != nil {
 		return ZeroHash, err
@@ -47,8 +43,8 @@ func (t *TransactionAccessList) CalculateHash() (Hash, error) {
 	return Hash(crypto.Keccak256(raw)), nil
 }
 
-// CalculateSigningHash implements the Transaction interface.
-func (t *TransactionAccessList) CalculateSigningHash() (Hash, error) {
+// SigningHash implements the Transaction interface.
+func (t *TransactionAccessList) SigningHash() (Hash, error) {
 	var (
 		chainID    = rlp.Uint(0)
 		nonce      = rlp.Uint(0)
@@ -167,8 +163,8 @@ func (t TransactionAccessList) EncodeRLP() ([]byte, error) {
 // Copy creates a deep copy of the transaction.
 func (t *TransactionAccessList) Copy() *TransactionAccessList {
 	return &TransactionAccessList{
-		TransactionData: *t.TransactionData.Copy(),
-		CallAccessList:  *t.CallAccessList.Copy(),
+		SigningData:    *t.SigningData.Copy(),
+		CallAccessList: *t.CallAccessList.Copy(),
 	}
 }
 
@@ -251,9 +247,9 @@ func (t *TransactionAccessList) DecodeRLP(data []byte) (int, error) {
 // MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionAccessList) MarshalJSON() ([]byte, error) {
 	j := &jsonTransaction{}
-	t.TransactionData.toJSON(j)
-	t.CallData.toJSON(&j.jsonCall)
-	t.LegacyPriceData.toJSON(&j.jsonCall)
+	t.SigningData.toJSON(j)
+	t.ExecutionData.toJSON(&j.jsonCall)
+	t.LegacyFeeData.toJSON(&j.jsonCall)
 	t.AccessListData.toJSON(&j.jsonCall)
 	return json.Marshal(j)
 }
@@ -264,9 +260,9 @@ func (t *TransactionAccessList) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	t.TransactionData.fromJSON(j)
-	t.CallData.fromJSON(&j.jsonCall)
-	t.LegacyPriceData.fromJSON(&j.jsonCall)
+	t.SigningData.fromJSON(j)
+	t.ExecutionData.fromJSON(&j.jsonCall)
+	t.LegacyFeeData.fromJSON(&j.jsonCall)
 	t.AccessListData.fromJSON(&j.jsonCall)
 	return nil
 }

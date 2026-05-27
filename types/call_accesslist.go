@@ -9,8 +9,8 @@ import "encoding/json"
 // list that specifies a list of addresses and storage keys the transaction
 // plans to access.
 type CallAccessList struct {
-	CallData
-	LegacyPriceData
+	ExecutionData
+	LegacyFeeData
 	AccessListData
 }
 
@@ -25,17 +25,17 @@ func (c *CallAccessList) Copy() *CallAccessList {
 		return nil
 	}
 	return &CallAccessList{
-		CallData:       *c.CallData.Copy(),
-		LegacyPriceData: *c.LegacyPriceData.Copy(),
-		AccessListData:  *c.AccessListData.Copy(),
+		ExecutionData:  *c.ExecutionData.Copy(),
+		LegacyFeeData:  *c.LegacyFeeData.Copy(),
+		AccessListData: *c.AccessListData.Copy(),
 	}
 }
 
 // MarshalJSON implements the json.Marshaler interface.
 func (c *CallAccessList) MarshalJSON() ([]byte, error) {
 	j := &jsonCall{}
-	c.CallData.toJSON(j)
-	c.LegacyPriceData.toJSON(j)
+	c.ExecutionData.toJSON(j)
+	c.LegacyFeeData.toJSON(j)
 	c.AccessListData.toJSON(j)
 	return json.Marshal(j)
 }
@@ -46,8 +46,8 @@ func (c *CallAccessList) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, j); err != nil {
 		return err
 	}
-	c.CallData.fromJSON(j)
-	c.LegacyPriceData.fromJSON(j)
+	c.ExecutionData.fromJSON(j)
+	c.LegacyFeeData.fromJSON(j)
 	c.AccessListData.fromJSON(j)
 	return nil
 }

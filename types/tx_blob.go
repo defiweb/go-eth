@@ -15,7 +15,7 @@ import (
 // Introduced by EIP-4844, this transaction type adds support for blob-carrying
 // transactions.
 type TransactionBlob struct {
-	TransactionData
+	SigningData
 	CallBlob
 }
 
@@ -34,8 +34,8 @@ func (t *TransactionBlob) Call() Call {
 	return t.CallBlob.Copy()
 }
 
-// CalculateHash implements the Transaction interface.
-func (t *TransactionBlob) CalculateHash() (Hash, error) {
+// Hash implements the Transaction interface.
+func (t *TransactionBlob) Hash() (Hash, error) {
 	raw, err := t.EncodeRLP()
 	if err != nil {
 		return ZeroHash, err
@@ -43,8 +43,8 @@ func (t *TransactionBlob) CalculateHash() (Hash, error) {
 	return Hash(crypto.Keccak256(raw)), nil
 }
 
-// CalculateSigningHash implements the Transaction interface.
-func (t *TransactionBlob) CalculateSigningHash() (Hash, error) {
+// SigningHash implements the Transaction interface.
+func (t *TransactionBlob) SigningHash() (Hash, error) {
 	var (
 		chainID              = rlp.Uint(0)
 		nonce                = rlp.Uint(0)
@@ -116,8 +116,8 @@ func (t *TransactionBlob) CalculateSigningHash() (Hash, error) {
 // Copy creates a deep copy of the transaction.
 func (t *TransactionBlob) Copy() *TransactionBlob {
 	return &TransactionBlob{
-		TransactionData: *t.TransactionData.Copy(),
-		CallBlob:          *t.CallBlob.Copy(),
+		SigningData: *t.SigningData.Copy(),
+		CallBlob:    *t.CallBlob.Copy(),
 	}
 }
 
@@ -363,8 +363,8 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 // MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionBlob) MarshalJSON() ([]byte, error) {
 	j := &jsonTransaction{}
-	t.TransactionData.toJSON(j)
-	t.CallData.toJSON(&j.jsonCall)
+	t.SigningData.toJSON(j)
+	t.ExecutionData.toJSON(&j.jsonCall)
 	t.AccessListData.toJSON(&j.jsonCall)
 	t.DynamicFeeData.toJSON(&j.jsonCall)
 	t.BlobData.toJSON(&j.jsonCall)
@@ -377,8 +377,8 @@ func (t *TransactionBlob) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	t.TransactionData.fromJSON(j)
-	t.CallData.fromJSON(&j.jsonCall)
+	t.SigningData.fromJSON(j)
+	t.ExecutionData.fromJSON(&j.jsonCall)
 	t.AccessListData.fromJSON(&j.jsonCall)
 	t.DynamicFeeData.fromJSON(&j.jsonCall)
 	t.BlobData.fromJSON(&j.jsonCall)

@@ -4,7 +4,7 @@ import "encoding/json"
 
 // CallBasic represents a simplest Ethereum call.
 type CallBasic struct {
-	CallData
+	ExecutionData
 }
 
 // NewCall creates a new [CallBasic] instance.
@@ -18,14 +18,14 @@ func NewCall() *CallBasic {
 // Copy creates a deep copy of the CallBasic.
 func (c *CallBasic) Copy() *CallBasic {
 	return &CallBasic{
-		CallData: *c.CallData.Copy(),
+		ExecutionData: *c.ExecutionData.Copy(),
 	}
 }
 
 // MarshalJSON implements the json.Marshaler interface.
 func (c CallBasic) MarshalJSON() ([]byte, error) {
 	j := &jsonCall{}
-	c.CallData.toJSON(j)
+	c.ExecutionData.toJSON(j)
 	return json.Marshal(j)
 }
 
@@ -35,6 +35,6 @@ func (c *CallBasic) UnmarshalJSON(bytes []byte) error {
 	if err := json.Unmarshal(bytes, &j); err != nil {
 		return err
 	}
-	c.CallData.fromJSON(j)
+	c.ExecutionData.fromJSON(j)
 	return nil
 }

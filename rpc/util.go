@@ -9,56 +9,14 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
-// getTransactionData extracts the [types.TransactionData] from the given
-// value.
-func getTransactionData(v any) *types.TransactionData {
-	if td, ok := v.(types.HasTransactionData); ok {
-		return td.GetTransactionData()
-	}
-	return nil
-}
-
-// getCallData extracts the [types.CallData] from the given value.
-func getCallData(v any) *types.CallData {
-	if cd, ok := v.(types.HasCallData); ok {
-		return cd.GetCallData()
-	}
-	return nil
-}
-
-// getLegacyPriceData extracts the [types.LegacyPriceData] from the given
-// value.
-func getLegacyPriceData(v any) *types.LegacyPriceData {
-	if lpc, ok := v.(types.HasLegacyPriceData); ok {
-		return lpc.GetLegacyPriceData()
-	}
-	return nil
-}
-
-// getAccessListData extracts the [types.AccessListData] from the given value.
-func getAccessListData(v any) *types.AccessListData {
-	if ald, ok := v.(types.HasAccessListData); ok {
-		return ald.GetAccessListData()
-	}
-	return nil
-}
-
-// getDynamicFeeData extracts the [types.DynamicFeeData] from the given value.
-func getDynamicFeeData(v any) *types.DynamicFeeData {
-	if dfd, ok := v.(types.HasDynamicFeeData); ok {
-		return dfd.GetDynamicFeeData()
-	}
-	return nil
-}
-
 // convertTXToLegacyPrice converts a transaction to one that has legacy
 // price data.
 func convertTXToLegacyPrice(tx types.Transaction) types.Transaction {
-	if getLegacyPriceData(tx) != nil {
+	if types.GetLegacyFeeData(tx) != nil {
 		return tx
 	}
 	typ := types.LegacyTxType
-	if getAccessListData(tx) != nil {
+	if types.GetAccessListData(tx) != nil {
 		typ = types.AccessListTxType
 	}
 	return convertTX(tx, typ)
@@ -67,7 +25,7 @@ func convertTXToLegacyPrice(tx types.Transaction) types.Transaction {
 // convertTXToAccessList converts a transaction to one that has access list
 // data.
 func convertTXToDynamicFee(tx types.Transaction) types.Transaction {
-	if getDynamicFeeData(tx) != nil {
+	if types.GetDynamicFeeData(tx) != nil {
 		return tx
 	}
 	return convertTX(tx, types.DynamicFeeTxType)
@@ -81,22 +39,26 @@ func convertTX(tx types.Transaction, typ types.TransactionType) types.Transactio
 	switch typ {
 	case types.LegacyTxType:
 		ltx := types.NewTransactionLegacy()
-		ltx.SetTransactionData(*tx.GetTransactionData())
-		if tx, ok := tx.(types.HasCallData); ok {
-			ltx.SetCallData(*tx.GetCallData())
+		if tx, ok := tx.(types.HasSigningData); ok {
+			ltx.SetSigningData(*tx.GetSigningData())
 		}
-		if tx, ok := tx.(types.HasLegacyPriceData); ok {
-			ltx.SetLegacyPriceData(*tx.GetLegacyPriceData())
+		if tx, ok := tx.(types.HasExecutionData); ok {
+			ltx.SetExecutionData(*tx.GetExecutionData())
+		}
+		if tx, ok := tx.(types.HasLegacyFeeData); ok {
+			ltx.SetLegacyFeeData(*tx.GetLegacyFeeData())
 		}
 		return ltx
 	case types.AccessListTxType:
 		altx := types.NewTransactionAccessList()
-		altx.SetTransactionData(*tx.GetTransactionData())
-		if tx, ok := tx.(types.HasCallData); ok {
-			altx.SetCallData(*tx.GetCallData())
+		if tx, ok := tx.(types.HasSigningData); ok {
+			altx.SetSigningData(*tx.GetSigningData())
 		}
-		if tx, ok := tx.(types.HasLegacyPriceData); ok {
-			altx.SetLegacyPriceData(*tx.GetLegacyPriceData())
+		if tx, ok := tx.(types.HasExecutionData); ok {
+			altx.SetExecutionData(*tx.GetExecutionData())
+		}
+		if tx, ok := tx.(types.HasLegacyFeeData); ok {
+			altx.SetLegacyFeeData(*tx.GetLegacyFeeData())
 		}
 		if tx, ok := tx.(types.HasAccessListData); ok {
 			altx.SetAccessListData(*tx.GetAccessListData())
@@ -104,9 +66,11 @@ func convertTX(tx types.Transaction, typ types.TransactionType) types.Transactio
 		return altx
 	case types.DynamicFeeTxType:
 		dftx := types.NewTransactionDynamicFee()
-		dftx.SetTransactionData(*tx.GetTransactionData())
-		if tx, ok := tx.(types.HasCallData); ok {
-			dftx.SetCallData(*tx.GetCallData())
+		if tx, ok := tx.(types.HasSigningData); ok {
+			dftx.SetSigningData(*tx.GetSigningData())
+		}
+		if tx, ok := tx.(types.HasExecutionData); ok {
+			dftx.SetExecutionData(*tx.GetExecutionData())
 		}
 		if tx, ok := tx.(types.HasAccessListData); ok {
 			dftx.SetAccessListData(*tx.GetAccessListData())
@@ -117,9 +81,11 @@ func convertTX(tx types.Transaction, typ types.TransactionType) types.Transactio
 		return dftx
 	case types.BlobTxType:
 		btx := types.NewTransactionBlob()
-		btx.SetTransactionData(*tx.GetTransactionData())
-		if tx, ok := tx.(types.HasCallData); ok {
-			btx.SetCallData(*tx.GetCallData())
+		if tx, ok := tx.(types.HasSigningData); ok {
+			btx.SetSigningData(*tx.GetSigningData())
+		}
+		if tx, ok := tx.(types.HasExecutionData); ok {
+			btx.SetExecutionData(*tx.GetExecutionData())
 		}
 		if tx, ok := tx.(types.HasAccessListData); ok {
 			btx.SetAccessListData(*tx.GetAccessListData())
@@ -165,7 +131,11 @@ func subscribe[T any](ctx context.Context, t transport.Transport, method string,
 				if err := json.Unmarshal(raw, &msg); err != nil {
 					continue
 				}
-				msgCh <- msg
+				select {
+				case msgCh <- msg:
+				case <-ctx.Done():
+					return
+				}
 			}
 		}
 	}()

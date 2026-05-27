@@ -9,14 +9,14 @@ import (
 
 func assertEqualTX(t *testing.T, actual, expected Transaction) {
 	assert.Equal(t, deref(reflect.TypeOf(actual)), deref(reflect.TypeOf(expected)))
-	if _, ok := expected.(HasTransactionData); ok {
-		assert.Equal(t, expected.(HasTransactionData).GetTransactionData(), actual.(HasTransactionData).GetTransactionData())
+	if _, ok := expected.(HasSigningData); ok {
+		assert.Equal(t, expected.(HasSigningData).GetSigningData(), actual.(HasSigningData).GetSigningData())
 	}
-	if _, ok := expected.(HasCallData); ok {
-		assert.Equal(t, actual.(HasCallData).GetCallData(), actual.(HasCallData).GetCallData())
+	if _, ok := expected.(HasExecutionData); ok {
+		assert.Equal(t, actual.(HasExecutionData).GetExecutionData(), actual.(HasExecutionData).GetExecutionData())
 	}
-	if _, ok := actual.(HasLegacyPriceData); ok {
-		assert.Equal(t, expected.(HasLegacyPriceData).GetLegacyPriceData(), actual.(HasLegacyPriceData).GetLegacyPriceData())
+	if _, ok := actual.(HasLegacyFeeData); ok {
+		assert.Equal(t, expected.(HasLegacyFeeData).GetLegacyFeeData(), actual.(HasLegacyFeeData).GetLegacyFeeData())
 	}
 	if _, ok := actual.(HasAccessListData); ok {
 		assert.Equal(t, expected.(HasAccessListData).GetAccessListData(), actual.(HasAccessListData).GetAccessListData())
@@ -31,11 +31,11 @@ func assertEqualTX(t *testing.T, actual, expected Transaction) {
 
 func assertEqualCall(t *testing.T, actual, expected Call) {
 	assert.Equal(t, deref(reflect.TypeOf(actual)), deref(reflect.TypeOf(expected)))
-	if _, ok := expected.(HasCallData); ok {
-		assert.Equal(t, actual.(HasCallData).GetCallData(), actual.(HasCallData).GetCallData())
+	if _, ok := expected.(HasExecutionData); ok {
+		assert.Equal(t, actual.(HasExecutionData).GetExecutionData(), actual.(HasExecutionData).GetExecutionData())
 	}
-	if _, ok := actual.(HasLegacyPriceData); ok {
-		assert.Equal(t, expected.(HasLegacyPriceData).GetLegacyPriceData(), actual.(HasLegacyPriceData).GetLegacyPriceData())
+	if _, ok := actual.(HasLegacyFeeData); ok {
+		assert.Equal(t, expected.(HasLegacyFeeData).GetLegacyFeeData(), actual.(HasLegacyFeeData).GetLegacyFeeData())
 	}
 	if _, ok := actual.(HasAccessListData); ok {
 		assert.Equal(t, expected.(HasAccessListData).GetAccessListData(), actual.(HasAccessListData).GetAccessListData())

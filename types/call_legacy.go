@@ -4,8 +4,8 @@ import "encoding/json"
 
 // CallLegacy represents a call corresponding to the legacy transaction type.
 type CallLegacy struct {
-	CallData
-	LegacyPriceData
+	ExecutionData
+	LegacyFeeData
 }
 
 // NewCallLegacy creates a new CallLegacy.
@@ -19,16 +19,16 @@ func (c *CallLegacy) Copy() *CallLegacy {
 		return nil
 	}
 	return &CallLegacy{
-		CallData:       *c.CallData.Copy(),
-		LegacyPriceData: *c.LegacyPriceData.Copy(),
+		ExecutionData: *c.ExecutionData.Copy(),
+		LegacyFeeData: *c.LegacyFeeData.Copy(),
 	}
 }
 
 // MarshalJSON implements the json.Marshaler interface.
 func (c CallLegacy) MarshalJSON() ([]byte, error) {
 	j := &jsonCall{}
-	c.CallData.toJSON(j)
-	c.LegacyPriceData.toJSON(j)
+	c.ExecutionData.toJSON(j)
+	c.LegacyFeeData.toJSON(j)
 	return json.Marshal(j)
 }
 
@@ -38,8 +38,8 @@ func (c *CallLegacy) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	c.CallData.fromJSON(j)
-	c.LegacyPriceData.fromJSON(j)
+	c.ExecutionData.fromJSON(j)
+	c.LegacyFeeData.fromJSON(j)
 	return nil
 }
 

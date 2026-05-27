@@ -30,9 +30,9 @@ func (h *hijackGasLimit) Call() func(next transport.CallFunc) transport.CallFunc
 				return next(ctx, t, result, method, args...)
 			}
 			tc := tx.Call()
-			cd := getCallData(tx)
-			if tc != nil && cd != nil && (h.replace || cd.GasLimit == nil) {
-				gasLimit, err := (&MethodsCommon{Transport: t}).EstimateGas(ctx, tc, types.LatestBlockNumber)
+			ed := types.GetExecutionData(tx)
+			if tc != nil && ed != nil && (h.replace || ed.GasLimit == nil) {
+				gasLimit, err := (&MethodsCommon{&ClientContext{Transport: t}}).EstimateGas(ctx, tc, types.LatestBlockNumber)
 				if err != nil {
 					return &ErrHijackFailed{name: "gas limit", err: fmt.Errorf("failed to estimate gas: %w", err)}
 				}
@@ -43,7 +43,7 @@ func (h *hijackGasLimit) Call() func(next transport.CallFunc) transport.CallFunc
 				if h.maxGas > 0 && gasLimit > h.maxGas {
 					gasLimit = h.maxGas
 				}
-				cd.GasLimit = &gasLimit
+				ed.GasLimit = &gasLimit
 			}
 			return next(ctx, t, result, method, args...)
 		}

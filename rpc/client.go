@@ -33,21 +33,23 @@ type Client struct {
 	MethodsClient
 }
 
-type ClientOptionsContext struct {
-	Transport transport.Transport      // Transport instance that will be passed to the client.
-	Decoder   types.TransactionDecoder // Transaction decoder that will be passed to the client.
-	Custom    map[any]any              // Custom data that may be used by client options.
+type ClientContext struct {
+	// Transport is the transport for the client.
+	Transport transport.Transport
+
+	// Decoder is the transaction decoder for the client.
+	Decoder types.TransactionDecoder
 }
 
 type ClientOption interface {
-	Apply(cfg *ClientOptionsContext, client any) error
+	Apply(cfg *ClientContext, client any) error
 	Order() int
 }
 
 // WithTransport sets the transport for the client.
 func WithTransport(t transport.Transport) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Transport = t
 			return nil
 		},
@@ -57,11 +59,11 @@ func WithTransport(t transport.Transport) ClientOption {
 // WithTransactionDecoder sets the transaction decoder for the client.
 // The default decoder is types.DefaultTransactionDecoder.
 //
-// Using custom decoder allows to decode custom transaction types that may be
+// Using custom decoder allows decoding custom transaction types that may be
 // present in some L2 implementations.
 func WithTransactionDecoder(decoder types.TransactionDecoder) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Decoder = decoder
 			return nil
 		},
@@ -72,7 +74,7 @@ func WithTransactionDecoder(decoder types.TransactionDecoder) ClientOption {
 // applied by the client.
 func WithPostHijackers(hijackers ...transport.Hijacker) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Transport = addHijacker(ctx.Transport, hijackers...)
 			return nil
 		},
@@ -80,7 +82,7 @@ func WithPostHijackers(hijackers ...transport.Hijacker) ClientOption {
 	}
 }
 
-// WithKeys allows to emulate the behavior of the RPC methods that require
+// WithKeys allows emulating the behavior of the RPC methods that require
 // a private key to sign the data.
 //
 // The following methods are affected:
@@ -92,7 +94,7 @@ func WithPostHijackers(hijackers ...transport.Hijacker) ClientOption {
 // This option will modify the provided transaction instance.
 func WithKeys(keys ...wallet.Key) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackSign{keys: keys})
 			return nil
 		},
@@ -107,7 +109,7 @@ func WithKeys(keys ...wallet.Key) ClientOption {
 // eth_sendPrivateTransaction methods.
 func WithSimulate() ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackSimulate{decoder: ctx.Decoder})
 			return nil
 		},
@@ -116,8 +118,11 @@ func WithSimulate() ClientOption {
 }
 
 type NonceOptions struct {
-	UsePendingBlock bool // UsePendingBlock indicates whether to use the pending block.
-	Replace         bool // Replace is true if the nonce should be replaced even if it is already set.
+	// UsePendingBlock queries the nonce from the pending block.
+	UsePendingBlock bool
+
+	// Replace overwrites the nonce even if already set.
+	Replace bool
 }
 
 // WithNonce sets the nonce in the transaction.
@@ -125,7 +130,7 @@ type NonceOptions struct {
 // This option will modify the provided transaction instance.
 func WithNonce(opts NonceOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackNonce{
 				usePendingBlock: opts.UsePendingBlock,
 				replace:         opts.Replace,
@@ -137,21 +142,31 @@ func WithNonce(opts NonceOptions) ClientOption {
 }
 
 type LegacyGasFeeOptions struct {
-	Multiplier      float64  // Multiplier is applied to the gas price.
-	MinGasPrice     *big.Int // MinGasPrice is the minimum gas price, or nil if there is no lower bound.
-	MaxGasPrice     *big.Int // MaxGasPrice is the maximum gas price, or nil if there is no upper bound.
-	Replace         bool     // Replace is true if the gas price should be replaced even if it is already set.
-	AllowChangeType bool     // AllowChangeType is true if the transaction type can be changed if it does not support legacy price data.
+	// Multiplier is applied to the fetched gas price.
+	Multiplier float64
+
+	// MinGasPrice is the lower bound; nil means no lower bound.
+	MinGasPrice *big.Int
+
+	// MaxGasPrice is the upper bound; nil means no upper bound.
+	MaxGasPrice *big.Int
+
+	// Replace overwrites the gas price even if already set.
+	Replace bool
+
+	// AllowChangeType converts the transaction type when it does not
+	// support legacy fee data.
+	AllowChangeType bool
 }
 
 // WithLegacyGasFee estimates the gas price and sets it in the transaction.
 //
-// It only works with eth_sendTransaction method, raw transactions are not supported.
+// It only works with eth_sendTransaction; raw transactions are not supported.
 //
 // This option will modify the provided transaction instance.
 func WithLegacyGasFee(opts LegacyGasFeeOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			if opts.Multiplier == 0 {
 				return fmt.Errorf("rpc client: gas price multiplier must be greater than 0")
 			}
@@ -169,24 +184,40 @@ func WithLegacyGasFee(opts LegacyGasFeeOptions) ClientOption {
 }
 
 type DynamicGasFeeOptions struct {
-	GasPriceMultiplier          float64  // GasPriceMultiplier is applied to the gas price.
-	PriorityFeePerGasMultiplier float64  // PriorityFeePerGasMultiplier is applied to the priority fee per gas.
-	MinGasPrice                 *big.Int // MinGasPrice is the minimum gas price, or nil if there is no lower bound.
-	MaxGasPrice                 *big.Int // MaxGasPrice is the maximum gas price, or nil if there is no upper bound.
-	MinPriorityFeePerGas        *big.Int // MinPriorityFeePerGas is the minimum priority fee per gas, or nil if there is no lower bound.
-	MaxPriorityFeePerGas        *big.Int // MaxPriorityFeePerGas is the maximum priority fee per gas, or nil if there is no upper bound.
-	Replace                     bool     // Replace is true if the gas price should be replaced even if it is already set.
-	AllowChangeType             bool     // AllowChangeType is true if the transaction type can be changed if it does not support dynamic price data.
+	// GasPriceMultiplier is applied to the base fee.
+	GasPriceMultiplier float64
+
+	// PriorityFeePerGasMultiplier is applied to the priority fee.
+	PriorityFeePerGasMultiplier float64
+
+	// MinGasPrice is the lower bound on maxFeePerGas; nil means none.
+	MinGasPrice *big.Int
+
+	// MaxGasPrice is the upper bound on maxFeePerGas; nil means none.
+	MaxGasPrice *big.Int
+
+	// MinPriorityFeePerGas is the lower bound; nil means no lower bound.
+	MinPriorityFeePerGas *big.Int
+
+	// MaxPriorityFeePerGas is the upper bound; nil means no upper bound.
+	MaxPriorityFeePerGas *big.Int
+
+	// Replace overwrites the fee fields even if already set.
+	Replace bool
+
+	// AllowChangeType converts the transaction type when it does not
+	// support dynamic fee data.
+	AllowChangeType bool
 }
 
 // WithDynamicGasFee estimates the gas price and sets it in the transaction.
 //
-// It only works with eth_sendTransaction method, raw transactions are not supported.
+// It only works with eth_sendTransaction; raw transactions are not supported.
 //
 // This option will modify the provided transaction instance.
 func WithDynamicGasFee(opts DynamicGasFeeOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			if opts.GasPriceMultiplier == 0 || opts.PriorityFeePerGasMultiplier == 0 {
 				return fmt.Errorf("rpc client: gas price and priority fee multipliers must be greater than 0")
 			}
@@ -207,10 +238,17 @@ func WithDynamicGasFee(opts DynamicGasFeeOptions) ClientOption {
 }
 
 type GasLimitOptions struct {
-	Multiplier float64 // Multiplier is applied to the gas limit.
-	MinGas     uint64  // MinGas is the minimum gas limit, or 0 if there is no lower bound.
-	MaxGas     uint64  // MaxGas is the maximum gas limit, or 0 if there is no upper bound.
-	Replace    bool    // Replace is true if the gas limit should be replaced even if it is already set.
+	// Multiplier is applied to the estimated gas limit.
+	Multiplier float64
+
+	// MinGas is the lower bound on the gas limit. 0 means no lower bound.
+	MinGas uint64
+
+	// MaxGas is the upper bound on the gas limit. 0 means no upper bound.
+	MaxGas uint64
+
+	// Replace overwrites the gas limit even if already set.
+	Replace bool
 }
 
 // WithGasLimit estimates the gas limit and sets it in the transaction.
@@ -218,7 +256,7 @@ type GasLimitOptions struct {
 // This option will modify the provided transaction instance.
 func WithGasLimit(opts GasLimitOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			if opts.Multiplier == 0 {
 				return fmt.Errorf("rpc client: gas limit multiplier must be greater than 0")
 			}
@@ -235,8 +273,11 @@ func WithGasLimit(opts GasLimitOptions) ClientOption {
 }
 
 type AddressOptions struct {
-	Address types.Address // Address is the default address to use.
-	Replace bool          // Replace is true if the address should be replaced even if it is already set.
+	// Address is the default sender address.
+	Address types.Address
+
+	// Replace overwrites the address even if already set.
+	Replace bool
 }
 
 // WithDefaultAddress sets the default address for calls and transactions.
@@ -246,7 +287,7 @@ type AddressOptions struct {
 // This option will modify the provided transaction and call instances.
 func WithDefaultAddress(opts AddressOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackAddress{
 				address: opts.Address,
 				replace: opts.Replace,
@@ -258,8 +299,11 @@ func WithDefaultAddress(opts AddressOptions) ClientOption {
 }
 
 type ChainIDOptions struct {
-	ChainID uint64 // ChainID is the chain ID to use. If 0, then value is fetched from the node.
-	Replace bool   // Replace is true if the chain ID should be replaced even if it is already set.
+	// ChainID to set. If 0, the value is fetched from the node.
+	ChainID uint64
+
+	// Replace overwrites the chain ID even if already set.
+	Replace bool
 }
 
 // WithChainID sets the chain ID in the transaction.
@@ -268,7 +312,7 @@ type ChainIDOptions struct {
 // This option will modify the provided transaction instance.
 func WithChainID(opts ChainIDOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackChainID{
 				chainID: opts.ChainID,
 				replace: opts.Replace,
@@ -283,7 +327,7 @@ func WithChainID(opts ChainIDOptions) ClientOption {
 // applied by the client.
 func WithPreHijackers(hijackers ...transport.Hijacker) ClientOption {
 	return &option{
-		apply: func(ctx *ClientOptionsContext, _ any) error {
+		apply: func(ctx *ClientContext, _ any) error {
 			ctx.Transport = addHijacker(ctx.Transport, hijackers...)
 			return nil
 		},
@@ -291,13 +335,13 @@ func WithPreHijackers(hijackers ...transport.Hijacker) ClientOption {
 	}
 }
 
-type ClientOptions func(c *ClientOptionsContext, client any) error
+type ClientOptions func(c *ClientContext, client any) error
 
 // NewClient creates a new RPC client.
 //
 // The WithTransport option is required.
 func NewClient(opts ...ClientOption) (*Client, error) {
-	ctx := &ClientOptionsContext{}
+	ctx := &ClientContext{}
 	client := &Client{}
 	if err := applyOptions(ctx, opts); err != nil {
 		return nil, fmt.Errorf("rpc client: option error: %w", err)
@@ -308,11 +352,10 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	if ctx.Transport == nil {
 		return nil, fmt.Errorf("rpc client: transport is required")
 	}
-	client.MethodsCommon.Transport = ctx.Transport
-	client.MethodsFilter.Transport = ctx.Transport
-	client.MethodsWallet.Transport = ctx.Transport
-	client.MethodsClient.Transport = ctx.Transport
-	client.MethodsCommon.Decoder = ctx.Decoder
+	client.MethodsCommon.Context = ctx
+	client.MethodsFilter.Context = ctx
+	client.MethodsWallet.Context = ctx
+	client.MethodsClient.Context = ctx
 	return client, nil
 }
 
@@ -321,11 +364,10 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 //
 // The WithTransport option is required.
 //
-// This method automatically initializes the client fields that are nil
-// and recursively sets the all fields that are of the transport.Transport or
-// types.TransactionDecoder types.
+// This method automatically initializes nil client fields and recursively
+// sets the [ClientContext] in all nested structs.
 func NewCustomClient[T any](opts ...ClientOption) (*T, error) {
-	ctx := &ClientOptionsContext{}
+	ctx := &ClientContext{}
 	client := new(T)
 	if err := applyOptions(ctx, opts); err != nil {
 		return nil, fmt.Errorf("rpc client: option error: %w", err)
@@ -341,11 +383,11 @@ func NewCustomClient[T any](opts ...ClientOption) (*T, error) {
 }
 
 type option struct {
-	apply func(*ClientOptionsContext, any) error
+	apply func(*ClientContext, any) error
 	order int
 }
 
-func (o *option) Apply(ctx *ClientOptionsContext, client any) error {
+func (o *option) Apply(ctx *ClientContext, client any) error {
 	return o.apply(ctx, client)
 }
 
@@ -353,7 +395,7 @@ func (o *option) Order() int {
 	return o.order
 }
 
-func applyOptions(c *ClientOptionsContext, opts []ClientOption) error {
+func applyOptions(c *ClientContext, opts []ClientOption) error {
 	sort.Slice(opts, func(i, j int) bool {
 		return opts[i].Order() < opts[j].Order()
 	})
@@ -365,7 +407,7 @@ func applyOptions(c *ClientOptionsContext, opts []ClientOption) error {
 	return nil
 }
 
-func setFields(ctx *ClientOptionsContext, r reflect.Value) {
+func setFields(ctx *ClientContext, r reflect.Value) {
 	for r.Kind() == reflect.Ptr || r.Kind() == reflect.Interface {
 		r = r.Elem()
 	}
@@ -377,20 +419,12 @@ func setFields(ctx *ClientOptionsContext, r reflect.Value) {
 		if !f.CanInterface() {
 			continue
 		}
-		t := f.Type()
-		switch t {
-		case transportTy:
-			if f.CanSet() {
-				f.Set(reflect.ValueOf(ctx.Transport))
-			}
-		case decoderTy:
-			if f.CanSet() {
-				f.Set(reflect.ValueOf(ctx.Decoder))
-			}
-		default:
-			if initPtr(f) {
-				setFields(ctx, f)
-			}
+		if f.Type() == contextTy && f.CanSet() {
+			f.Set(reflect.ValueOf(ctx))
+			continue
+		}
+		if initPtr(f) {
+			setFields(ctx, f)
 		}
 	}
 }
@@ -420,13 +454,10 @@ func addHijacker(t transport.Transport, hijackers ...transport.Hijacker) transpo
 	return optionTransportHijack{transport.NewHijacker(t, hijackers...)}
 }
 
-// optionTransportHijack wraps a Hijack transport to ensure that hijackers
-// added by the user won't be modified by the client.
+// optionTransportHijack wraps a Hijack transport to distinguish user-provided
+// hijackers from those used internally by the client.
 type optionTransportHijack struct {
 	*transport.Hijack
 }
 
-var (
-	transportTy = reflect.TypeOf((*transport.Transport)(nil)).Elem()
-	decoderTy   = reflect.TypeOf((*types.TransactionDecoder)(nil)).Elem()
-)
+var contextTy = reflect.TypeOf((*ClientContext)(nil)).Elem()

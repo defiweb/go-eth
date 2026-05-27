@@ -14,7 +14,7 @@ import (
 // Introduced by EIP-1559, this transaction type supports a new fee market
 // mechanism with a base fee and a priority fee (tip).
 type TransactionDynamicFee struct {
-	TransactionData
+	SigningData
 	CallDynamicFee
 }
 
@@ -33,8 +33,8 @@ func (t *TransactionDynamicFee) Call() Call {
 	return t.CallDynamicFee.Copy()
 }
 
-// CalculateHash implements the Transaction interface.
-func (t *TransactionDynamicFee) CalculateHash() (Hash, error) {
+// Hash implements the Transaction interface.
+func (t *TransactionDynamicFee) Hash() (Hash, error) {
 	raw, err := t.EncodeRLP()
 	if err != nil {
 		return ZeroHash, err
@@ -42,8 +42,8 @@ func (t *TransactionDynamicFee) CalculateHash() (Hash, error) {
 	return Hash(crypto.Keccak256(raw)), nil
 }
 
-// CalculateSigningHash implements the Transaction interface.
-func (t *TransactionDynamicFee) CalculateSigningHash() (Hash, error) {
+// SigningHash implements the Transaction interface.
+func (t *TransactionDynamicFee) SigningHash() (Hash, error) {
 	var (
 		chainID              = rlp.Uint(0)
 		nonce                = rlp.Uint(0)
@@ -102,8 +102,8 @@ func (t *TransactionDynamicFee) CalculateSigningHash() (Hash, error) {
 // Copy creates a deep copy of the transaction.
 func (t *TransactionDynamicFee) Copy() *TransactionDynamicFee {
 	return &TransactionDynamicFee{
-		TransactionData: *t.TransactionData.Copy(),
-		CallDynamicFee:    *t.CallDynamicFee.Copy(),
+		SigningData:    *t.SigningData.Copy(),
+		CallDynamicFee: *t.CallDynamicFee.Copy(),
 	}
 }
 
@@ -260,8 +260,8 @@ func (t *TransactionDynamicFee) DecodeRLP(data []byte) (int, error) {
 // MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionDynamicFee) MarshalJSON() ([]byte, error) {
 	j := &jsonTransaction{}
-	t.TransactionData.toJSON(j)
-	t.CallData.toJSON(&j.jsonCall)
+	t.SigningData.toJSON(j)
+	t.ExecutionData.toJSON(&j.jsonCall)
 	t.AccessListData.toJSON(&j.jsonCall)
 	t.DynamicFeeData.toJSON(&j.jsonCall)
 	return json.Marshal(j)
@@ -273,8 +273,8 @@ func (t *TransactionDynamicFee) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, j); err != nil {
 		return err
 	}
-	t.TransactionData.fromJSON(j)
-	t.CallData.fromJSON(&j.jsonCall)
+	t.SigningData.fromJSON(j)
+	t.ExecutionData.fromJSON(&j.jsonCall)
 	t.AccessListData.fromJSON(&j.jsonCall)
 	t.DynamicFeeData.fromJSON(&j.jsonCall)
 	return nil

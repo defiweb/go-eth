@@ -69,7 +69,13 @@ func (i *IPC) readerRoutine() {
 			if errors.Is(err, io.EOF) {
 				return
 			}
-			i.errCh <- err
+			if i.errCh != nil {
+				select {
+				case i.errCh <- err:
+				case <-i.ctx.Done():
+					return
+				}
+			}
 		}
 		select {
 		case i.readerCh <- res:

@@ -86,20 +86,12 @@ type TransactionUnknown struct {
 	UnknownType TransactionType
 }
 
-func (t *TransactionUnknown) GetTransactionData() *TransactionData { return nil }
-
-func (t *TransactionUnknown) SetTransactionData(_ TransactionData) {}
-
 func (t *TransactionUnknown) Type() TransactionType { return t.UnknownType }
 
 func (t *TransactionUnknown) Call() Call { return nil }
 
-func (t *TransactionUnknown) CalculateHash() (Hash, error) {
+func (t *TransactionUnknown) Hash() (Hash, error) {
 	return ZeroHash, fmt.Errorf("unable to calculate hash of unknown transaction type: %d", t.UnknownType)
-}
-
-func (t *TransactionUnknown) CalculateSigningHash() (Hash, error) {
-	return ZeroHash, fmt.Errorf("unable to calculate signing hash of unknown transaction type: %d", t.UnknownType)
 }
 
 func (t *TransactionUnknown) MarshalJSON() ([]byte, error) {
@@ -120,7 +112,7 @@ func (t *TransactionUnknown) DecodeRLP(_ []byte) (int, error) {
 
 // jsonTXType returns the type of the transaction encoded in JSON.
 //
-// If type is not specified, it tries to guess the type using the same rules as
+// If the type is not specified, it tries to guess the type using the same rules as
 // in go-ethereum code:
 // https://github.com/ethereum/go-ethereum/blob/5b3e3cd2bee284db7d7deaa5986544d356410dcb/internal/ethapi/transaction_args.go#L472
 func jsonTXType(data []byte) (TransactionType, error) {

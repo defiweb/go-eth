@@ -22,7 +22,7 @@ func TestCallDynamicFee_JSON(t *testing.T) {
 		{
 			name: "all fields set",
 			call: &CallDynamicFee{
-				CallData: CallData{
+				ExecutionData: ExecutionData{
 					From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 					Value:    big.NewInt(1000000000000000000),

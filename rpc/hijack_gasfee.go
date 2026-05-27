@@ -34,9 +34,9 @@ func (h *hijackLegacyGasFee) Call() func(next transport.CallFunc) transport.Call
 				tx = convertTXToLegacyPrice(tx)
 				args[0] = tx
 			}
-			lpd := getLegacyPriceData(tx)
+			lpd := types.GetLegacyFeeData(tx)
 			if lpd != nil && (h.replace || lpd.GasPrice == nil) {
-				gasPrice, err := (&MethodsCommon{Transport: t}).GasPrice(ctx)
+				gasPrice, err := (&MethodsCommon{&ClientContext{Transport: t}}).GasPrice(ctx)
 				if err != nil {
 					return &ErrHijackFailed{name: "legacy gas price", err: fmt.Errorf("failed to get gas price: %w", err)}
 				}
@@ -95,16 +95,16 @@ func (h *hijackDynamicGasFee) Call() func(next transport.CallFunc) transport.Cal
 				tx = convertTXToDynamicFee(tx)
 				args[0] = tx
 			}
-			dfd := getDynamicFeeData(tx)
+			dfd := types.GetDynamicFeeData(tx)
 
 			// Set the dynamic fee fields if necessary.
 			if dfd != nil && (h.replace || dfd.MaxFeePerGas == nil || dfd.MaxPriorityFeePerGas == nil) {
 				// Fetch current gas prices from the RPC node.
-				maxFeePerGas, err := (&MethodsCommon{Transport: t}).GasPrice(ctx)
+				maxFeePerGas, err := (&MethodsCommon{&ClientContext{Transport: t}}).GasPrice(ctx)
 				if err != nil {
 					return &ErrHijackFailed{name: "dynamic gas fee", err: fmt.Errorf("failed to get gas price: %w", err)}
 				}
-				priorityFeePerGas, err := (&MethodsCommon{Transport: t}).MaxPriorityFeePerGas(ctx)
+				priorityFeePerGas, err := (&MethodsCommon{&ClientContext{Transport: t}}).MaxPriorityFeePerGas(ctx)
 				if err != nil {
 					return &ErrHijackFailed{name: "dynamic gas fee", err: fmt.Errorf("failed to get priority fee per gas: %w", err)}
 				}

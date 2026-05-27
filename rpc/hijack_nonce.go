@@ -25,21 +25,21 @@ func (h *hijackNonce) Call() func(next transport.CallFunc) transport.CallFunc {
 			if !ok {
 				return next(ctx, t, result, method, args...)
 			}
-			td := getTransactionData(tx) // to set the nonce
-			cd := getCallData(tx)        // to get the "from" address
-			if td != nil && cd != nil && (h.replace || td.Nonce == nil) {
-				if cd.From == nil {
+			sd := types.GetSigningData(tx)   // to set the nonce
+			ed := types.GetExecutionData(tx) // to get the "from" address
+			if sd != nil && ed != nil && (h.replace || sd.Nonce == nil) {
+				if ed.From == nil {
 					return &ErrHijackFailed{name: "nonce", err: fmt.Errorf("'from' field not set")}
 				}
 				block := types.LatestBlockNumber
 				if h.usePendingBlock {
 					block = types.PendingBlockNumber
 				}
-				nonce, err := (&MethodsCommon{Transport: t}).GetTransactionCount(ctx, *cd.From, block)
+				nonce, err := (&MethodsCommon{&ClientContext{Transport: t}}).GetTransactionCount(ctx, *ed.From, block)
 				if err != nil {
 					return &ErrHijackFailed{name: "nonce", err: fmt.Errorf("failed to get transaction count: %w", err)}
 				}
-				td.Nonce = &nonce
+				sd.Nonce = &nonce
 			}
 			return next(ctx, t, result, method, args...)
 		}

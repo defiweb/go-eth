@@ -9,7 +9,7 @@ import (
 // Introduced by EIP-4844, this transaction type adds support for blob-carrying
 // transactions.
 type CallBlob struct {
-	CallData
+	ExecutionData
 	AccessListData
 	DynamicFeeData
 	BlobData
@@ -26,7 +26,7 @@ func (c *CallBlob) Copy() *CallBlob {
 		return nil
 	}
 	return &CallBlob{
-		CallData:       *c.CallData.Copy(),
+		ExecutionData:  *c.ExecutionData.Copy(),
 		AccessListData: *c.AccessListData.Copy(),
 		DynamicFeeData: *c.DynamicFeeData.Copy(),
 		BlobData:       *c.BlobData.Copy(),
@@ -36,7 +36,7 @@ func (c *CallBlob) Copy() *CallBlob {
 // MarshalJSON implements the json.Marshaler interface.
 func (c *CallBlob) MarshalJSON() ([]byte, error) {
 	j := &jsonCall{}
-	c.CallData.toJSON(j)
+	c.ExecutionData.toJSON(j)
 	c.AccessListData.toJSON(j)
 	c.DynamicFeeData.toJSON(j)
 	c.BlobData.toJSON(j)
@@ -49,7 +49,7 @@ func (c *CallBlob) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	c.CallData.fromJSON(j)
+	c.ExecutionData.fromJSON(j)
 	c.AccessListData.fromJSON(j)
 	c.DynamicFeeData.fromJSON(j)
 	c.BlobData.fromJSON(j)

@@ -29,17 +29,17 @@ func (h *hijackChainID) Call() func(next transport.CallFunc) transport.CallFunc 
 			if !ok {
 				return next(ctx, t, result, method, args...)
 			}
-			td := getTransactionData(tx)
-			if td != nil && (h.replace || td.ChainID == nil) {
+			sd := types.GetSigningData(tx)
+			if sd != nil && (h.replace || sd.ChainID == nil) {
 				if chainID.Load() == 0 {
-					id, err := (&MethodsCommon{Transport: t}).ChainID(ctx)
+					id, err := (&MethodsCommon{&ClientContext{Transport: t}}).ChainID(ctx)
 					if err != nil {
 						return &ErrHijackFailed{name: "chain ID", err: fmt.Errorf("failed to get chain ID: %w", err)}
 					}
 					chainID.Store(id)
 				}
 				id := chainID.Load()
-				td.ChainID = &id
+				sd.ChainID = &id
 			}
 			return next(ctx, t, result, method, args...)
 		}

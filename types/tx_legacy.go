@@ -14,7 +14,7 @@ import (
 //
 // This is the original transaction format used before EIP-2718.
 type TransactionLegacy struct {
-	TransactionData
+	SigningData
 	CallLegacy
 }
 
@@ -33,8 +33,8 @@ func (t *TransactionLegacy) Call() Call {
 	return t.CallLegacy.Copy()
 }
 
-// CalculateHash implements the Transaction interface.
-func (t *TransactionLegacy) CalculateHash() (Hash, error) {
+// Hash implements the Transaction interface.
+func (t *TransactionLegacy) Hash() (Hash, error) {
 	raw, err := t.EncodeRLP()
 	if err != nil {
 		return ZeroHash, err
@@ -42,8 +42,8 @@ func (t *TransactionLegacy) CalculateHash() (Hash, error) {
 	return Hash(crypto.Keccak256(raw)), nil
 }
 
-// CalculateSigningHash implements the Transaction interface.
-func (t *TransactionLegacy) CalculateSigningHash() (Hash, error) {
+// SigningHash implements the Transaction interface.
+func (t *TransactionLegacy) SigningHash() (Hash, error) {
 	var (
 		chainID  = rlp.Uint(0)
 		nonce    = rlp.Uint(0)
@@ -99,8 +99,8 @@ func (t *TransactionLegacy) CalculateSigningHash() (Hash, error) {
 // Copy creates a deep copy of the transaction.
 func (t *TransactionLegacy) Copy() *TransactionLegacy {
 	return &TransactionLegacy{
-		TransactionData: *t.TransactionData.Copy(),
-		CallLegacy:        *t.CallLegacy.Copy(),
+		SigningData: *t.SigningData.Copy(),
+		CallLegacy:  *t.CallLegacy.Copy(),
 	}
 }
 
@@ -226,9 +226,9 @@ func (t *TransactionLegacy) DecodeRLP(data []byte) (int, error) {
 // MarshalJSON implements the json.Marshaler interface.
 func (t *TransactionLegacy) MarshalJSON() ([]byte, error) {
 	j := &jsonTransaction{}
-	t.TransactionData.toJSON(j)
-	t.CallData.toJSON(&j.jsonCall)
-	t.LegacyPriceData.toJSON(&j.jsonCall)
+	t.SigningData.toJSON(j)
+	t.ExecutionData.toJSON(&j.jsonCall)
+	t.LegacyFeeData.toJSON(&j.jsonCall)
 	return json.Marshal(j)
 }
 
@@ -238,9 +238,9 @@ func (t *TransactionLegacy) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	t.TransactionData.fromJSON(j)
-	t.CallData.fromJSON(&j.jsonCall)
-	t.LegacyPriceData.fromJSON(&j.jsonCall)
+	t.SigningData.fromJSON(j)
+	t.ExecutionData.fromJSON(&j.jsonCall)
+	t.LegacyFeeData.fromJSON(&j.jsonCall)
 	return nil
 }
 

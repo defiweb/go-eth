@@ -117,13 +117,36 @@ func MustAddressFromBytesPtr(b []byte) *Address {
 	return &a
 }
 
-// VerifyAddressChecksum verifies if the given cheksummed address is valid.
-func VerifyAddressChecksum(h string) bool {
+// AddressFromChecksum parses a checksummed address and returns an Address type.
+func AddressFromChecksum(h string) (Address, error) {
 	a, err := AddressFromHex(h)
 	if err != nil {
-		return false
+		return ZeroAddress, err
 	}
-	return a.Checksum() == h
+	if a.Checksum() != h {
+		return ZeroAddress, fmt.Errorf("invalid checksum: expected %s, got %s", a.Checksum(), h)
+	}
+	return a, nil
+}
+
+// MustAddressFromChecksum parses a checksummed address and returns an Address type.
+// It panics if the address is invalid.
+func MustAddressFromChecksum(h string) Address {
+	a, err := AddressFromChecksum(h)
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
+
+// AddressFromChecksumPtr parses a checksummed address and returns an Address type.
+// It returns nil if the address is invalid.
+func AddressFromChecksumPtr(h string) *Address {
+	a, err := AddressFromChecksum(h)
+	if err != nil {
+		return nil
+	}
+	return &a
 }
 
 // Bytes returns the byte representation of the address.

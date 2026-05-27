@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/defiweb/go-eth/crypto/ecdsa"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSign(t *testing.T) {
@@ -25,7 +26,7 @@ func TestSign(t *testing.T) {
 
 		err := Sign(&ecdsa.PrivateKey{D: key.ToECDSA().D}, tx)
 		require.NoError(t, err)
-		txData := tx.GetTransactionData()
+		txData := tx.GetSigningData()
 		require.NotNil(t, txData.Signature)
 		assert.Equal(t, "1b", txData.Signature.V.Text(16))
 		assert.Equal(t, "2bfad43ba1b40e7f3ffb6342b1a6eecc700dd344fb0aba543aed5c10fd1a9470", txData.Signature.R.Text(16))
@@ -44,7 +45,7 @@ func TestSign(t *testing.T) {
 
 		err := Sign(&ecdsa.PrivateKey{D: key.ToECDSA().D}, tx)
 		require.NoError(t, err)
-		txData := tx.GetTransactionData()
+		txData := tx.GetSigningData()
 		require.NotNil(t, txData.Signature)
 		assert.Equal(t, "0", txData.Signature.V.Text(16))
 		assert.Equal(t, "62072d055f9ceb871a47f2d81aeb5aa34df50c625da16c6d0d57d232fa3cd152", txData.Signature.R.Text(16))
@@ -60,7 +61,7 @@ func TestRecover(t *testing.T) {
 		tx.SetGasPrice(big.NewInt(20000000000))
 		tx.SetNonce(9)
 		tx.SetValue(big.NewInt(1000000000000000000))
-		txData := tx.GetTransactionData()
+		txData := tx.GetSigningData()
 		txData.SetSignature(types.SignatureFromVRS(
 			hexutil.MustHexToBigInt("1b"),
 			hexutil.MustHexToBigInt("2bfad43ba1b40e7f3ffb6342b1a6eecc700dd344fb0aba543aed5c10fd1a9470"),
@@ -81,7 +82,7 @@ func TestRecover(t *testing.T) {
 		tx.SetMaxPriorityFeePerGas(big.NewInt(20000000000))
 		tx.SetNonce(9)
 		tx.SetValue(big.NewInt(1000000000000000000))
-		txData := tx.GetTransactionData()
+		txData := tx.GetSigningData()
 		txData.SetSignature(types.SignatureFromVRS(
 			hexutil.MustHexToBigInt("0"),
 			hexutil.MustHexToBigInt("62072d055f9ceb871a47f2d81aeb5aa34df50c625da16c6d0d57d232fa3cd152"),

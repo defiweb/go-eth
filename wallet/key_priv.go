@@ -86,7 +86,7 @@ func (k *PrivateKey) SignMessage(_ context.Context, data []byte) (*types.Signatu
 }
 
 // SignTransaction implements the Key interface.
-func (k *PrivateKey) SignTransaction(_ context.Context, tx types.Transaction) error {
+func (k *PrivateKey) SignTransaction(_ context.Context, tx types.SignableTransaction) error {
 	return txsign.Sign(k.private, tx)
 }
 

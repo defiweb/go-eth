@@ -105,7 +105,7 @@ const mockGetBalanceResponse = `
 
 func TestBaseClient_GetBalance(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetBalanceRequest, readBody(req))
@@ -147,7 +147,7 @@ const mockGetCodeResponse = `
 
 func TestBaseClient_GetCode(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetCodeRequest, readBody(req))
@@ -190,7 +190,7 @@ const mockGetStorageAtResponse = `
 
 func TestBaseClient_GetStorageAt(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetStorageAtRequest, readBody(req))
@@ -233,7 +233,7 @@ const mockGetTransactionCountResponse = `
 
 func TestBaseClient_GetTransactionCount(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetTransactionCountRequest, readBody(req))
@@ -267,7 +267,7 @@ const mockBlockByHashRequest = `
 
 func TestBaseClient_BlockByHash(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockBlockByHashRequest, readBody(req))
@@ -301,7 +301,7 @@ const mockBlockByNumberRequest = `
 
 func TestBaseClient_BlockByNumber(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockBlockByNumberRequest, readBody(req))
@@ -371,7 +371,7 @@ const mockGetBlockTransactionCountByHashResponse = `
 
 func TestBaseClient_GetBlockTransactionCountByHash(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetBlockTransactionCountByHashRequest, readBody(req))
@@ -411,7 +411,7 @@ const mockGetBlockTransactionCountByNumberResponse = `
 
 func TestBaseClient_GetBlockTransactionCountByNumber(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetBlockTransactionCountByNumberRequest, readBody(req))
@@ -444,7 +444,7 @@ const mockGetUncleByBlockHashAndIndexRequest = `
 
 func TestBaseClient_GetUncleByBlockHashAndIndex(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetUncleByBlockHashAndIndexRequest, readBody(req))
@@ -478,7 +478,7 @@ const mockGetUncleByBlockNumberAndIndexRequest = `
 
 func TestBaseClient_GetUncleByBlockNumberAndIndex(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetUncleByBlockNumberAndIndexRequest, readBody(req))
@@ -519,7 +519,7 @@ const mockGetUncleCountByBlockHashResponse = `
 
 func TestBaseClient_GetUncleCountByBlockHash(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetUncleCountByBlockHashRequest, readBody(req))
@@ -559,7 +559,7 @@ const mockGetUncleCountByBlockNumberResponse = `
 
 func TestBaseClient_GetUncleCountByBlockNumber(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetUncleCountByBlockNumberRequest, readBody(req))
@@ -609,7 +609,7 @@ const mockCallResponse = `
 
 func TestBaseClient_Call(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockCallRequest, readBody(req))
@@ -628,14 +628,14 @@ func TestBaseClient_Call(t *testing.T) {
 	response, err := client.Call(
 		context.Background(),
 		&types.CallLegacy{
-			CallData: types.CallData{
+			ExecutionData: types.ExecutionData{
 				From:     from,
 				To:       to,
 				GasLimit: &gasLimit,
 				Value:    value,
 				Input:    input,
 			},
-			LegacyPriceData: types.LegacyPriceData{
+			LegacyFeeData: types.LegacyFeeData{
 				GasPrice: gasPrice,
 			},
 		},
@@ -675,7 +675,7 @@ const mockEstimateGasResponse = `
 
 func TestBaseClient_EstimateGas(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockEstimateGasRequest, readBody(req))
@@ -689,14 +689,14 @@ func TestBaseClient_EstimateGas(t *testing.T) {
 	gas, err := client.EstimateGas(
 		context.Background(),
 		&types.CallLegacy{
-			CallData: types.CallData{
+			ExecutionData: types.ExecutionData{
 				From:     types.MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 				To:       types.MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 				GasLimit: &gasLimit,
 				Value:    big.NewInt(10000000000),
 				Input:    hexutil.MustHexToBytes("0x3333333333333333333333333333333333333333333333333333333333333333333333333333333333"),
 			},
-			LegacyPriceData: types.LegacyPriceData{
+			LegacyFeeData: types.LegacyFeeData{
 				GasPrice: big.NewInt(10000000000000),
 			},
 		},
@@ -728,7 +728,7 @@ const mockSendRawTransactionResponse = `
 
 func TestBaseClient_SendRawTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockSendRawTransactionRequest, readBody(req))
@@ -760,7 +760,7 @@ const mockGetTransactionByHashRequest = `
 
 func TestBaseClient_GetTransactionByHash(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetTransactionByHashRequest, readBody(req))
@@ -808,7 +808,7 @@ const mockGetTransactionByBlockHashAndIndexRequest = `
 
 func TestBaseClient_GetTransactionByBlockHashAndIndex(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetTransactionByBlockHashAndIndexRequest, readBody(req))
@@ -845,7 +845,7 @@ const mockGetTransactionByBlockNumberAndIndexRequest = `
 
 func TestBaseClient_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetTransactionByBlockNumberAndIndexRequest, readBody(req))
@@ -918,7 +918,7 @@ const mockGetTransactionReceiptResponse = `
 
 func TestBaseClient_GetTransactionReceipt(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetTransactionReceiptRequest, readBody(req))
@@ -1011,7 +1011,7 @@ const mockGetBlockReceiptsResponse = `
 
 func TestBaseClient_GetBlockReceipts(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetBlockReceiptsRequest, readBody(req))
@@ -1097,7 +1097,7 @@ const mockGetLogsResponse = `
 
 func TestBaseClient_GetLogs(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetLogsRequest, readBody(req))
@@ -1152,7 +1152,7 @@ const mockChanIDResponse = `
 
 func TestBaseClient_ChainID(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockChanIDRequest, readBody(req))
@@ -1186,7 +1186,7 @@ const mockBlockNumberResponse = `
 
 func TestBaseClient_BlockNumber(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockBlockNumberRequest, readBody(req))
@@ -1199,7 +1199,7 @@ func TestBaseClient_BlockNumber(t *testing.T) {
 	blockNumber, err := client.BlockNumber(context.Background())
 
 	require.NoError(t, err)
-	assert.Equal(t, big.NewInt(1), blockNumber)
+	assert.Equal(t, big.NewInt(1), blockNumber.Big())
 }
 
 const mockGasPriceRequest = `
@@ -1221,7 +1221,7 @@ const mockGasPriceResponse = `
 
 func TestBaseClient_GasPrice(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGasPriceRequest, readBody(req))
@@ -1256,7 +1256,7 @@ const mockMaxPriorityFeePerGasResponse = `
 
 func TestBaseClient_MaxPriorityFeePerGas(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockMaxPriorityFeePerGasRequest, readBody(req))
@@ -1291,7 +1291,7 @@ const mockBlobBaseFeeResponse = `
 
 func TestBaseClient_BlobBaseFee(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockBlobBaseFeeRequest, readBody(req))
@@ -1311,7 +1311,7 @@ func TestBaseClient_SubscribeNewHeads(t *testing.T) {
 	// TODO: Veirify
 
 	streamMock := newStreamMock(t)
-	client := &MethodsCommon{Transport: streamMock}
+	client := &MethodsCommon{&ClientContext{Transport: streamMock}}
 
 	ch := make(chan json.RawMessage)
 	streamMock.SubscribeMocks = []subscribeMock{
@@ -1342,7 +1342,7 @@ func TestBaseClient_SubscribeNewPendingTransactions(t *testing.T) {
 	// TODO: Veirify
 
 	streamMock := newStreamMock(t)
-	client := &MethodsCommon{Transport: streamMock}
+	client := &MethodsCommon{&ClientContext{Transport: streamMock}}
 
 	ch := make(chan json.RawMessage)
 	streamMock.SubscribeMocks = []subscribeMock{
@@ -1373,7 +1373,7 @@ func TestBaseClient_SubscribeLogs(t *testing.T) {
 	// TODO: Veirify
 
 	streamMock := newStreamMock(t)
-	client := &MethodsCommon{Transport: streamMock}
+	client := &MethodsCommon{&ClientContext{Transport: streamMock}}
 
 	ch := make(chan json.RawMessage)
 	from := types.MustBlockNumberFromHex("0x1")
@@ -1447,7 +1447,7 @@ const mockGetProofResponse = `
 
 func TestBaseClient_GetProof(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetProofRequest, readBody(req))
@@ -1509,7 +1509,7 @@ const mockCreateAccessListResponse = `
 
 func TestBaseClient_CreateAccessList(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockCreateAccessListRequest, readBody(req))
@@ -1524,7 +1524,7 @@ func TestBaseClient_CreateAccessList(t *testing.T) {
 	result, err := client.CreateAccessList(
 		context.Background(),
 		&types.CallBasic{
-			CallData: types.CallData{
+			ExecutionData: types.ExecutionData{
 				From: from,
 				To:   to,
 			},
@@ -1562,7 +1562,7 @@ const mockFeeHistoryResponse = `
 
 func TestBaseClient_FeeHistory(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		// Unmarshal and compare to handle float serialization differences.
@@ -1589,6 +1589,62 @@ func TestBaseClient_FeeHistory(t *testing.T) {
 	assert.Equal(t, []float64{0.5}, feeHistory.GasUsedRatio)
 	assert.Equal(t, 1, len(feeHistory.Reward))
 	assert.Equal(t, []*big.Int{big.NewInt(1), big.NewInt(2)}, feeHistory.Reward[0])
+	assert.Empty(t, feeHistory.BaseFeePerBlobGas)
+	assert.Empty(t, feeHistory.BlobGasUsedRatio)
+}
+
+const mockFeeHistoryWithBlobFeesRequest = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "method": "eth_feeHistory",
+	  "params": ["0x2", "latest", []]
+	}
+`
+
+const mockFeeHistoryWithBlobFeesResponse = `
+	{
+	  "jsonrpc": "2.0",
+	  "id": 1,
+	  "result": {
+	    "oldestBlock": "0x1",
+	    "baseFeePerGas": ["0x5", "0x6", "0x7"],
+	    "gasUsedRatio": [0.1, 0.2],
+	    "baseFeePerBlobGas": ["0x8", "0x9", "0xa"],
+	    "blobGasUsedRatio": [0.3, 0.4]
+	  }
+	}
+`
+
+func TestBaseClient_FeeHistoryWithBlobFees(t *testing.T) {
+	httpMock := newHTTPMock()
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
+
+	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
+		var got, want any
+		require.NoError(t, json.Unmarshal([]byte(readBody(req)), &got))
+		require.NoError(t, json.Unmarshal([]byte(mockFeeHistoryWithBlobFeesRequest), &want))
+		assert.Equal(t, want, got)
+		return &http.Response{
+			StatusCode: 200,
+			Body:       io.NopCloser(bytes.NewBufferString(mockFeeHistoryWithBlobFeesResponse)),
+		}, nil
+	}
+
+	feeHistory, err := client.FeeHistory(
+		context.Background(),
+		2,
+		types.LatestBlockNumber,
+		[]float64{},
+	)
+
+	require.NoError(t, err)
+	assert.Equal(t, uint64(1), feeHistory.OldestBlock)
+	assert.Equal(t, []*big.Int{big.NewInt(5), big.NewInt(6), big.NewInt(7)}, feeHistory.BaseFeePerGas)
+	assert.Equal(t, []float64{0.1, 0.2}, feeHistory.GasUsedRatio)
+	assert.Equal(t, []*big.Int{big.NewInt(8), big.NewInt(9), big.NewInt(10)}, feeHistory.BaseFeePerBlobGas)
+	assert.Equal(t, []float64{0.3, 0.4}, feeHistory.BlobGasUsedRatio)
+	assert.Empty(t, feeHistory.Reward)
 }
 
 const mockProtocolVersionRequest = `
@@ -1610,7 +1666,7 @@ const mockProtocolVersionResponse = `
 
 func TestBaseClient_ProtocolVersion(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockProtocolVersionRequest, readBody(req))
@@ -1645,7 +1701,7 @@ const mockCoinbaseResponse = `
 
 func TestBaseClient_Coinbase(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsCommon{Transport: httpMock}
+	client := &MethodsCommon{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockCoinbaseRequest, readBody(req))

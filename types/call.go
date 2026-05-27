@@ -7,7 +7,7 @@ type Call interface {
 	json.Marshaler
 	json.Unmarshaler
 
-	HasCallData
+	HasExecutionData
 }
 
 type jsonCall struct {

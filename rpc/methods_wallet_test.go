@@ -36,7 +36,7 @@ const mockAccountsResponse = `
 
 func TestBaseClient_Accounts(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsWallet{Transport: httpMock}
+	client := &MethodsWallet{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockAccountsRequest, readBody(req))
@@ -76,7 +76,7 @@ const mockSignResponse = `
 
 func TestBaseClient_Sign(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsWallet{Transport: httpMock}
+	client := &MethodsWallet{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockSignRequest, readBody(req))
@@ -128,7 +128,7 @@ const mockSignTransactionResponse = `
 
 func TestBaseClient_SignTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsWallet{Transport: httpMock}
+	client := &MethodsWallet{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockSignTransactionRequest, readBody(req))
@@ -179,7 +179,7 @@ const mockSendTransactionResponse = `
 
 func TestBaseClient_SendTransaction(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsWallet{Transport: httpMock}
+	client := &MethodsWallet{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockSendTransactionRequest, readBody(req))

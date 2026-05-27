@@ -12,12 +12,16 @@ import (
 )
 
 // Sign signs the given transaction with the given private key.
-func Sign(key *ecdsa.PrivateKey, tx types.Transaction) error {
+func Sign(key *ecdsa.PrivateKey, tx types.SignableTransaction) error {
 	if key == nil {
 		return fmt.Errorf("missing private key")
 	}
-	txd := tx.GetTransactionData()
-	hash, err := tx.CalculateSigningHash()
+	if tx == nil {
+		return fmt.Errorf("missing transaction")
+	}
+	sd := tx.GetSigningData()
+	ed := types.GetExecutionData(sd)
+	hash, err := tx.SigningHash()
 	if err != nil {
 		return err
 	}
@@ -27,35 +31,35 @@ func Sign(key *ecdsa.PrivateKey, tx types.Transaction) error {
 	}
 	sv, sr, ss := sig.V, sig.R, sig.S
 	if tx.Type() == types.LegacyTxType {
-		if txd.ChainID != nil {
-			sv = new(big.Int).Add(sv, new(big.Int).SetUint64(*txd.ChainID*2))
+		if sd.ChainID != nil {
+			sv = new(big.Int).Add(sv, new(big.Int).SetUint64(*sd.ChainID*2))
 			sv = new(big.Int).Add(sv, big.NewInt(35))
 		} else {
 			sv = new(big.Int).Add(sv, big.NewInt(27))
 		}
 	}
-	txd.SetSignature(types.SignatureFromVRS(sv, sr, ss))
-	if cd, ok := tx.(types.HasCallData); ok {
-		cd.GetCallData().SetFrom(types.Address(crypto.ECPublicKeyToAddress(crypto.ECPrivateKeyToPublicKey(key))))
+	sd.SetSignature(types.SignatureFromVRS(sv, sr, ss))
+	if ed != nil {
+		ed.SetFrom(types.Address(crypto.ECPublicKeyToAddress(crypto.ECPrivateKeyToPublicKey(key))))
 	}
 	return nil
 }
 
 // Recover recovers the Ethereum address from the given transaction's
 // signature.
-func Recover(tx types.Transaction) (*types.Address, error) {
-	txd := tx.GetTransactionData()
-	if txd.Signature == nil {
+func Recover(tx types.SignableTransaction) (*types.Address, error) {
+	std := tx.GetSigningData()
+	if std.Signature == nil {
 		return nil, fmt.Errorf("signature is missing")
 	}
-	sig := *txd.Signature
+	sig := *std.Signature
 	if tx.Type() == types.LegacyTxType {
 		if sig.V.Cmp(big.NewInt(35)) >= 0 {
 			x := new(big.Int).Sub(sig.V, big.NewInt(35))
 
 			// Derive the chain ID from the signature.
 			chainID := new(big.Int).Div(x, big.NewInt(2))
-			if txd.ChainID != nil && *txd.ChainID != chainID.Uint64() {
+			if std.ChainID != nil && *std.ChainID != chainID.Uint64() {
 				return nil, fmt.Errorf("invalid chain ID: %d", chainID)
 			}
 
@@ -65,7 +69,7 @@ func Recover(tx types.Transaction) (*types.Address, error) {
 			sig.V = new(big.Int).Sub(sig.V, big.NewInt(27))
 		}
 	}
-	hash, err := tx.CalculateSigningHash()
+	hash, err := tx.SigningHash()
 	if err != nil {
 		return nil, err
 	}

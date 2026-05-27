@@ -14,19 +14,19 @@ import (
 func TestTransactionData_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     *TransactionData
+		data     *SigningData
 		want     *jsonTransaction
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &TransactionData{},
+			data:     &SigningData{},
 			want:     &jsonTransaction{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "all fields set",
-			data: &TransactionData{
+			data: &SigningData{
 				ChainID: ptr(uint64(1)),
 				Nonce:   ptr(uint64(2)),
 				Signature: &Signature{
@@ -52,7 +52,7 @@ func TestTransactionData_JSON(t *testing.T) {
 		},
 		{
 			name: "nil signature",
-			data: &TransactionData{
+			data: &SigningData{
 				ChainID:   ptr(uint64(1)),
 				Nonce:     ptr(uint64(2)),
 				Signature: nil,
@@ -71,7 +71,7 @@ func TestTransactionData_JSON(t *testing.T) {
 		},
 		{
 			name: "max uint64 values",
-			data: &TransactionData{
+			data: &SigningData{
 				ChainID: ptr(^uint64(0)),
 				Nonce:   ptr(^uint64(0)),
 			},
@@ -86,7 +86,7 @@ func TestTransactionData_JSON(t *testing.T) {
 		},
 		{
 			name: "zero values",
-			data: &TransactionData{
+			data: &SigningData{
 				ChainID: ptr(uint64(0)),
 				Nonce:   ptr(uint64(0)),
 				Signature: &Signature{
@@ -128,7 +128,7 @@ func TestTransactionData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
 			// Test fromJSON
-			var data TransactionData
+			var data SigningData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)
@@ -149,19 +149,19 @@ func TestTransactionData_JSON(t *testing.T) {
 func TestCallData_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     *CallData
+		data     *ExecutionData
 		want     *jsonCall
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &CallData{},
+			data:     &ExecutionData{},
 			want:     &jsonCall{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "all fields set",
-			data: &CallData{
+			data: &ExecutionData{
 				From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 				To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 				GasLimit: ptr(uint64(21000)),
@@ -185,7 +185,7 @@ func TestCallData_JSON(t *testing.T) {
 		},
 		{
 			name: "max values",
-			data: &CallData{
+			data: &ExecutionData{
 				From:     MustAddressFromHexPtr("0xffffffffffffffffffffffffffffffffffffffff"),
 				To:       MustAddressFromHexPtr("0xffffffffffffffffffffffffffffffffffffffff"),
 				GasLimit: ptr(^uint64(0)),
@@ -209,7 +209,7 @@ func TestCallData_JSON(t *testing.T) {
 		},
 		{
 			name: "zero values",
-			data: &CallData{
+			data: &ExecutionData{
 				From:     MustAddressFromHexPtr("0x0000000000000000000000000000000000000000"),
 				To:       MustAddressFromHexPtr("0x0000000000000000000000000000000000000000"),
 				GasLimit: ptr(uint64(0)),
@@ -248,7 +248,7 @@ func TestCallData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
 			// Test fromJSON
-			var data CallData
+			var data ExecutionData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)
@@ -264,19 +264,19 @@ func TestCallData_JSON(t *testing.T) {
 func TestLegacyPriceData_JSON(t *testing.T) {
 	tests := []struct {
 		name     string
-		data     *LegacyPriceData
+		data     *LegacyFeeData
 		want     *jsonCall
 		wantJSON string
 	}{
 		{
 			name:     "all fields nil",
-			data:     &LegacyPriceData{},
+			data:     &LegacyFeeData{},
 			want:     &jsonCall{},
 			wantJSON: `{}`,
 		},
 		{
 			name: "all fields set",
-			data: &LegacyPriceData{
+			data: &LegacyFeeData{
 				GasPrice: big.NewInt(2000000000),
 			},
 			want: &jsonCall{
@@ -288,7 +288,7 @@ func TestLegacyPriceData_JSON(t *testing.T) {
 		},
 		{
 			name: "zero value",
-			data: &LegacyPriceData{
+			data: &LegacyFeeData{
 				GasPrice: big.NewInt(0),
 			},
 			want: &jsonCall{
@@ -312,7 +312,7 @@ func TestLegacyPriceData_JSON(t *testing.T) {
 			assert.JSONEq(t, tt.wantJSON, string(jsonBytes))
 
 			// Test fromJSON
-			var data LegacyPriceData
+			var data LegacyFeeData
 			err = json.Unmarshal(jsonBytes, &j)
 			assert.NoError(t, err)
 			data.fromJSON(&j)

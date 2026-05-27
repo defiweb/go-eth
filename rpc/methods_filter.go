@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
 )
 
@@ -12,13 +11,13 @@ import (
 //
 // Note: Some JSON-RPC APIs do not support these methods.
 type MethodsFilter struct {
-	Transport transport.Transport
+	Context *ClientContext
 }
 
 // NewFilter implements the RPC interface.
 func (c *MethodsFilter) NewFilter(ctx context.Context, query *types.FilterLogsQuery) (*big.Int, error) {
 	var res *types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_newFilter", query); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_newFilter", query); err != nil {
 		return nil, err
 	}
 	return res.Big(), nil
@@ -27,7 +26,7 @@ func (c *MethodsFilter) NewFilter(ctx context.Context, query *types.FilterLogsQu
 // NewBlockFilter implements the RPC interface.
 func (c *MethodsFilter) NewBlockFilter(ctx context.Context) (*big.Int, error) {
 	var res *types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_newBlockFilter"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_newBlockFilter"); err != nil {
 		return nil, err
 	}
 	return res.Big(), nil
@@ -37,7 +36,7 @@ func (c *MethodsFilter) NewBlockFilter(ctx context.Context) (*big.Int, error) {
 // NewPendingTransactionFilter implements the RPC interface.
 func (c *MethodsFilter) NewPendingTransactionFilter(ctx context.Context) (*big.Int, error) {
 	var res *types.Number
-	if err := c.Transport.Call(ctx, &res, "eth_newPendingTransactionFilter"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_newPendingTransactionFilter"); err != nil {
 		return nil, err
 	}
 	return res.Big(), nil
@@ -46,7 +45,7 @@ func (c *MethodsFilter) NewPendingTransactionFilter(ctx context.Context) (*big.I
 // UninstallFilter implements the RPC interface.
 func (c *MethodsFilter) UninstallFilter(ctx context.Context, id *big.Int) (bool, error) {
 	var res bool
-	if err := c.Transport.Call(ctx, &res, "eth_uninstallFilter", types.NumberFromBigInt(id)); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_uninstallFilter", types.NumberFromBigInt(id)); err != nil {
 		return false, err
 	}
 	return res, nil
@@ -55,7 +54,7 @@ func (c *MethodsFilter) UninstallFilter(ctx context.Context, id *big.Int) (bool,
 // GetFilterChanges implements the RPC interface.
 func (c *MethodsFilter) GetFilterChanges(ctx context.Context, id *big.Int) ([]types.Log, error) {
 	var res []types.Log
-	if err := c.Transport.Call(ctx, &res, "eth_getFilterChanges", types.NumberFromBigInt(id)); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getFilterChanges", types.NumberFromBigInt(id)); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -64,7 +63,7 @@ func (c *MethodsFilter) GetFilterChanges(ctx context.Context, id *big.Int) ([]ty
 // GetFilterLogs implements the RPC interface.
 func (c *MethodsFilter) GetFilterLogs(ctx context.Context, id *big.Int) ([]types.Log, error) {
 	var res []types.Log
-	if err := c.Transport.Call(ctx, &res, "eth_getFilterLogs", types.NumberFromBigInt(id)); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getFilterLogs", types.NumberFromBigInt(id)); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -73,7 +72,7 @@ func (c *MethodsFilter) GetFilterLogs(ctx context.Context, id *big.Int) ([]types
 // GetBlockFilterChanges implements the RPC interface.
 func (c *MethodsFilter) GetBlockFilterChanges(ctx context.Context, id *big.Int) ([]types.Hash, error) {
 	var res []types.Hash
-	if err := c.Transport.Call(ctx, &res, "eth_getFilterChanges", types.NumberFromBigInt(id)); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_getFilterChanges", types.NumberFromBigInt(id)); err != nil {
 		return nil, err
 	}
 	return res, nil

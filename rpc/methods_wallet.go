@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
 )
 
@@ -13,7 +12,7 @@ import (
 //
 // Note: Public JSON-RPC APIs do not support these methods.
 type MethodsWallet struct {
-	Transport transport.Transport
+	Context *ClientContext
 }
 
 // Accounts performs eth_accounts RPC call.
@@ -21,7 +20,7 @@ type MethodsWallet struct {
 // It returns the list of addresses owned by the client.
 func (c *MethodsWallet) Accounts(ctx context.Context) ([]types.Address, error) {
 	var res []types.Address
-	if err := c.Transport.Call(ctx, &res, "eth_accounts"); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_accounts"); err != nil {
 		return nil, err
 	}
 	return res, nil
@@ -32,7 +31,7 @@ func (c *MethodsWallet) Accounts(ctx context.Context) ([]types.Address, error) {
 // It signs the given data with the given address.
 func (c *MethodsWallet) Sign(ctx context.Context, account types.Address, data []byte) (*types.Signature, error) {
 	var res types.Signature
-	if err := c.Transport.Call(ctx, &res, "eth_sign", account, types.Bytes(data)); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_sign", account, types.Bytes(data)); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -46,7 +45,7 @@ func (c *MethodsWallet) SignTransaction(ctx context.Context, tx types.Transactio
 		return nil, errors.New("rpc client: transaction is nil")
 	}
 	var res signTransactionResult
-	if err := c.Transport.Call(ctx, &res, "eth_signTransaction", tx); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_signTransaction", tx); err != nil {
 		return nil, err
 	}
 	return res.Raw, nil
@@ -60,7 +59,7 @@ func (c *MethodsWallet) SendTransaction(ctx context.Context, tx types.Transactio
 		return nil, errors.New("rpc client: transaction is nil")
 	}
 	var res types.Hash
-	if err := c.Transport.Call(ctx, &res, "eth_sendTransaction", tx); err != nil {
+	if err := c.Context.Transport.Call(ctx, &res, "eth_sendTransaction", tx); err != nil {
 		return nil, err
 	}
 	return &res, nil

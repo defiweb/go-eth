@@ -24,13 +24,13 @@ func TestTransactionDynamicFee_JSON(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionDynamicFee{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallDynamicFee: CallDynamicFee{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
@@ -111,13 +111,13 @@ func TestTransactionDynamicFee_RLP(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionDynamicFee{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					Nonce:     ptr(uint64(1)),
 					ChainID:   ptr(uint64(1)),
 					Signature: MustSignatureFromHexPtr("0xa3a7b12762dbc5df6cfbedbecdf8a821929c6112d2634abbb0d99dc63ad914908051b2c8c7d159db49ad19bd01026156eedab2f3d8c1dfdd07d21c07a4bbdd846f"),
 				},
 				CallDynamicFee: CallDynamicFee{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
@@ -176,12 +176,12 @@ func TestTransactionDynamicFee_CalculateSigningHash(t *testing.T) {
 		{
 			name: "all fields set",
 			tx: &TransactionDynamicFee{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(1)),
 				},
 				CallDynamicFee: CallDynamicFee{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
@@ -198,12 +198,12 @@ func TestTransactionDynamicFee_CalculateSigningHash(t *testing.T) {
 		{
 			name: "all fields set with access list",
 			tx: &TransactionDynamicFee{
-				TransactionData: TransactionData{
+				SigningData: SigningData{
 					ChainID: ptr(uint64(1)),
 					Nonce:   ptr(uint64(1)),
 				},
 				CallDynamicFee: CallDynamicFee{
-					CallData: CallData{
+					ExecutionData: ExecutionData{
 						To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 						Value:    big.NewInt(1000000000000000000),
 						GasLimit: ptr(uint64(100000)),
@@ -231,7 +231,7 @@ func TestTransactionDynamicFee_CalculateSigningHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sh, err := tt.tx.CalculateSigningHash()
+			sh, err := tt.tx.SigningHash()
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantHex, sh.String())
 		})

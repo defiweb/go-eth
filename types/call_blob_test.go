@@ -24,7 +24,7 @@ func TestCallBlob_JSON(t *testing.T) {
 		{
 			name: "all fields set",
 			call: &CallBlob{
-				CallData: CallData{
+				ExecutionData: ExecutionData{
 					From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 					Value:    big.NewInt(1000000000000000000),
@@ -79,7 +79,7 @@ func TestCallBlob_JSON(t *testing.T) {
 		{
 			name: "blobs with shortened zero fields",
 			call: &CallBlob{
-				CallData: CallData{
+				ExecutionData: ExecutionData{
 					From:     MustAddressFromHexPtr("0x1111111111111111111111111111111111111111"),
 					To:       MustAddressFromHexPtr("0x2222222222222222222222222222222222222222"),
 					Value:    big.NewInt(1000000000000000000),

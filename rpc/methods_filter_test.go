@@ -40,7 +40,7 @@ const mockNewFilterResponse = `
 
 func TestBaseClient_NewFilter(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsFilter{Transport: httpMock}
+	client := &MethodsFilter{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockNewFilterRequest, readBody(req))
@@ -84,7 +84,7 @@ const mockNewBlockFilterResponse = `
 
 func TestBaseClient_NewBlockFilter(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsFilter{Transport: httpMock}
+	client := &MethodsFilter{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockNewBlockFilterRequest, readBody(req))
@@ -119,7 +119,7 @@ const mockNewPendingTransactionFilterResponse = `
 
 func TestBaseClient_NewPendingTransactionFilter(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsFilter{Transport: httpMock}
+	client := &MethodsFilter{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockNewPendingTransactionFilterRequest, readBody(req))
@@ -154,7 +154,7 @@ const mockUninstallFilterResponse = `
 
 func TestBaseClient_UninstallFilter(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsFilter{Transport: httpMock}
+	client := &MethodsFilter{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockUninstallFilterRequest, readBody(req))
@@ -203,7 +203,7 @@ const mockGetFilterChangesResponse = `
 
 func TestBaseClient_GetFilterChanges(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsFilter{Transport: httpMock}
+	client := &MethodsFilter{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetFilterChangesRequest, readBody(req))
@@ -254,7 +254,7 @@ const mockGetFilterLogsResponse = `
 
 func TestBaseClient_GetFilterLogs(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsFilter{Transport: httpMock}
+	client := &MethodsFilter{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetFilterLogsRequest, readBody(req))
@@ -295,7 +295,7 @@ const mockGetBlockFilterChangesResponse = `
 
 func TestBaseClient_GetBlockFilterChanges(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsFilter{Transport: httpMock}
+	client := &MethodsFilter{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockGetBlockFilterChangesRequest, readBody(req))

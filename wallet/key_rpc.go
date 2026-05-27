@@ -44,7 +44,7 @@ func (k *KeyRPC) SignMessage(ctx context.Context, data []byte) (*types.Signature
 }
 
 // SignTransaction implements the Key interface.
-func (k *KeyRPC) SignTransaction(ctx context.Context, tx types.Transaction) error {
+func (k *KeyRPC) SignTransaction(ctx context.Context, tx types.SignableTransaction) error {
 	raw, err := k.client.SignTransaction(ctx, tx)
 	if err != nil {
 		return err
@@ -53,7 +53,11 @@ func (k *KeyRPC) SignTransaction(ctx context.Context, tx types.Transaction) erro
 	if err != nil {
 		return fmt.Errorf("failed to decode signed transaction: %w", err)
 	}
-	tx.SetTransactionData(*stx.GetTransactionData())
+	sd := types.GetSigningData(stx)
+	if sd == nil {
+		return fmt.Errorf("failed to get signed transaction data")
+	}
+	tx.SetSigningData(*sd)
 	addr, err := txsign.Recover(tx)
 	if err != nil {
 		return fmt.Errorf("failed to verify signed transaction: %w", err)
@@ -61,7 +65,7 @@ func (k *KeyRPC) SignTransaction(ctx context.Context, tx types.Transaction) erro
 	if *addr != k.address {
 		return fmt.Errorf("failed to verify signed transaction: recovered address does not match key address")
 	}
-	return err
+	return nil
 }
 
 // VerifyMessage implements the Key interface.

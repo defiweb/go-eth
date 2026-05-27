@@ -8,7 +8,7 @@ import "encoding/json"
 // Introduced by EIP-1559, this transaction type supports a new fee market
 // mechanism with a base fee and a priority fee (tip).
 type CallDynamicFee struct {
-	CallData
+	ExecutionData
 	DynamicFeeData
 	AccessListData
 }
@@ -24,16 +24,16 @@ func (c *CallDynamicFee) Copy() *CallDynamicFee {
 		return nil
 	}
 	return &CallDynamicFee{
-		CallData:       *c.CallData.Copy(),
+		ExecutionData:  *c.ExecutionData.Copy(),
 		DynamicFeeData: *c.DynamicFeeData.Copy(),
-		AccessListData:  *c.AccessListData.Copy(),
+		AccessListData: *c.AccessListData.Copy(),
 	}
 }
 
 // MarshalJSON implements the json.Marshaler interface.
 func (c *CallDynamicFee) MarshalJSON() ([]byte, error) {
 	j := &jsonCall{}
-	c.CallData.toJSON(j)
+	c.ExecutionData.toJSON(j)
 	c.DynamicFeeData.toJSON(j)
 	c.AccessListData.toJSON(j)
 	return json.Marshal(j)
@@ -45,7 +45,7 @@ func (c *CallDynamicFee) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &j); err != nil {
 		return err
 	}
-	c.CallData.fromJSON(j)
+	c.ExecutionData.fromJSON(j)
 	c.DynamicFeeData.fromJSON(j)
 	c.AccessListData.fromJSON(j)
 	return nil

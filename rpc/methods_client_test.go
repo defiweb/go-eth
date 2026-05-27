@@ -30,7 +30,7 @@ const mockClientVersionResponse = `
 
 func TestBaseClient_ClientVersion(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsClient{Transport: httpMock}
+	client := &MethodsClient{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockClientVersionRequest, readBody(req))
@@ -65,7 +65,7 @@ const mockNetworkIDResponse = `
 
 func TestBaseClient_NetworkID(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsClient{Transport: httpMock}
+	client := &MethodsClient{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockNetworkIDRequest, readBody(req))
@@ -100,7 +100,7 @@ const mockListeningResponse = `
 
 func TestBaseClient_Listening(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsClient{Transport: httpMock}
+	client := &MethodsClient{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockListeningRequest, readBody(req))
@@ -135,7 +135,7 @@ const mockPeerCountResponse = `
 
 func TestBaseClient_PeerCount(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsClient{Transport: httpMock}
+	client := &MethodsClient{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockPeerCountRequest, readBody(req))
@@ -174,7 +174,7 @@ const mockSyncingResponse = `
 
 func TestBaseClient_Syncing(t *testing.T) {
 	httpMock := newHTTPMock()
-	client := &MethodsClient{Transport: httpMock}
+	client := &MethodsClient{&ClientContext{Transport: httpMock}}
 
 	httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 		assert.JSONEq(t, mockSyncingRequest, readBody(req))
