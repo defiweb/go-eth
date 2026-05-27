@@ -97,10 +97,10 @@ func (t *TransactionLegacy) SigningHash() (Hash, error) {
 }
 
 // Copy creates a deep copy of the transaction.
-func (t *TransactionLegacy) Copy() *TransactionLegacy {
+func (t *TransactionLegacy) Copy() Transaction {
 	return &TransactionLegacy{
 		SigningData: *t.SigningData.Copy(),
-		CallLegacy:  *t.CallLegacy.Copy(),
+		CallLegacy:  *t.CallLegacy.Copy().(*CallLegacy),
 	}
 }
 

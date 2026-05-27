@@ -20,7 +20,7 @@ func NewCallAccessList() *CallAccessList {
 }
 
 // Copy creates a deep copy of the CallAccessList.
-func (c *CallAccessList) Copy() *CallAccessList {
+func (c *CallAccessList) Copy() Call {
 	if c == nil {
 		return nil
 	}

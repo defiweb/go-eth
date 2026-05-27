@@ -212,9 +212,6 @@ func (c *MethodsCommon) Call(ctx context.Context, call types.Call, block types.B
 	if call == nil {
 		return nil, errors.New("rpc client: call is nil")
 	}
-	if tx, ok := call.(types.Transaction); ok {
-		call = tx.Call()
-	}
 	var res types.Bytes
 	if err := c.Context.Transport.Call(ctx, &res, "eth_call", call, block); err != nil {
 		return nil, err
@@ -225,15 +222,9 @@ func (c *MethodsCommon) Call(ctx context.Context, call types.Call, block types.B
 // CreateAccessList performs eth_createAccessList RPC call.
 //
 // It creates an access list for a transaction as defined in EIP-2930.
-//
-// If call also implements types.Transaction, then a Call method of the
-// transaction will be used to create a call.
 func (c *MethodsCommon) CreateAccessList(ctx context.Context, call types.Call, block types.BlockNumber) (*types.AccessListResult, error) {
 	if call == nil {
 		return nil, errors.New("rpc client: call is nil")
-	}
-	if tx, ok := call.(types.Transaction); ok {
-		call = tx.Call()
 	}
 	var res types.AccessListResult
 	if err := c.Context.Transport.Call(ctx, &res, "eth_createAccessList", call, block); err != nil {
@@ -245,15 +236,9 @@ func (c *MethodsCommon) CreateAccessList(ctx context.Context, call types.Call, b
 // EstimateGas performs eth_estimateGas RPC call.
 //
 // It estimates the gas necessary to execute a specific transaction.
-//
-// If call also implements types.Transaction, then a Call method of the
-// transaction will be used to create a call.
 func (c *MethodsCommon) EstimateGas(ctx context.Context, call types.Call, block types.BlockNumber) (uint64, error) {
 	if call == nil {
 		return 0, errors.New("rpc client: call is nil")
-	}
-	if tx, ok := call.(types.Transaction); ok {
-		call = tx.Call()
 	}
 	var res types.Number
 	if err := c.Context.Transport.Call(ctx, &res, "eth_estimateGas", call, block); err != nil {

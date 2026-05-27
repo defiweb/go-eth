@@ -19,7 +19,7 @@ func NewCallDynamicFee() *CallDynamicFee {
 }
 
 // Copy creates a deep copy of the CallDynamicFee.
-func (c *CallDynamicFee) Copy() *CallDynamicFee {
+func (c *CallDynamicFee) Copy() Call {
 	if c == nil {
 		return nil
 	}

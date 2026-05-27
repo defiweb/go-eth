@@ -100,10 +100,10 @@ func (t *TransactionDynamicFee) SigningHash() (Hash, error) {
 }
 
 // Copy creates a deep copy of the transaction.
-func (t *TransactionDynamicFee) Copy() *TransactionDynamicFee {
+func (t *TransactionDynamicFee) Copy() Transaction {
 	return &TransactionDynamicFee{
 		SigningData:    *t.SigningData.Copy(),
-		CallDynamicFee: *t.CallDynamicFee.Copy(),
+		CallDynamicFee: *t.CallDynamicFee.Copy().(*CallDynamicFee),
 	}
 }
 

@@ -16,7 +16,7 @@ func NewCall() *CallBasic {
 }
 
 // Copy creates a deep copy of the CallBasic.
-func (c *CallBasic) Copy() *CallBasic {
+func (c *CallBasic) Copy() Call {
 	return &CallBasic{
 		ExecutionData: *c.ExecutionData.Copy(),
 	}

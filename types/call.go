@@ -6,8 +6,9 @@ import "encoding/json"
 type Call interface {
 	json.Marshaler
 	json.Unmarshaler
-
 	HasExecutionData
+
+	Copy() Call
 }
 
 type jsonCall struct {

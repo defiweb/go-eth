@@ -94,6 +94,10 @@ func (t *TransactionUnknown) Hash() (Hash, error) {
 	return ZeroHash, fmt.Errorf("unable to calculate hash of unknown transaction type: %d", t.UnknownType)
 }
 
+func (t *TransactionUnknown) Copy() Transaction {
+	return &TransactionUnknown{UnknownType: t.UnknownType}
+}
+
 func (t *TransactionUnknown) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("unable to marshal unknown transaction type: %d", t.UnknownType)
 }

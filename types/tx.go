@@ -50,13 +50,13 @@ type Transaction interface {
 	// Call returns the call associated with the transaction. The call is a
 	// copy and can be modified. It may return nil if it is impossible to
 	// create a call.
-	//
-	// Always prefer using the [Call], even if the transaction already implements
-	// the [Call] interface.
 	Call() Call
 
 	// Hash returns the hash of the transaction.
 	Hash() (Hash, error)
+
+	// Copy returns a deep copy of the transaction.
+	Copy() Transaction
 }
 
 // SignableTransaction is an interface that represents a transaction that can

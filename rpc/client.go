@@ -27,6 +27,8 @@ const (
 // Client is a default RPC client that provides access to the standard Ethereum
 // JSON-RPC APIs.
 type Client struct {
+	Context *ClientContext
+
 	MethodsCommon
 	MethodsFilter
 	MethodsWallet
@@ -82,14 +84,16 @@ func WithPostHijackers(hijackers ...transport.Hijacker) ClientOption {
 	}
 }
 
-// WithKeys allows emulating the behavior of the RPC methods that require
-// a private key to sign the data.
+// WithKeys intercepts account and signing RPC methods and handles them
+// locally using the provided keys instead of delegating to the node.
 //
-// The following methods are affected:
-//   - Accounts - returns the addresses of the provided keys
-//   - Sign - signs the data with the provided key
-//   - SignTransaction - signs transaction
-//   - SendTransaction - signs transaction and sends it using SendRawTransaction
+// The following methods are intercepted:
+//   - eth_accounts - returns the addresses of the provided keys
+//   - eth_sign - signs data with the matching key
+//   - eth_signTransaction - signs the transaction and returns raw bytes
+//   - eth_sendTransaction - signs the transaction and re-issues it as
+//     eth_sendRawTransaction; downstream hijackers observe the substituted
+//     method name, not the original
 //
 // This option will modify the provided transaction instance.
 func WithKeys(keys ...wallet.Key) ClientOption {
@@ -341,21 +345,20 @@ type ClientOptions func(c *ClientContext, client any) error
 //
 // The WithTransport option is required.
 func NewClient(opts ...ClientOption) (*Client, error) {
-	ctx := &ClientContext{}
-	client := &Client{}
-	if err := applyOptions(ctx, opts); err != nil {
+	client := &Client{Context: &ClientContext{}}
+	if err := applyOptions(client.Context, opts); err != nil {
 		return nil, fmt.Errorf("rpc client: option error: %w", err)
 	}
-	if ctx.Decoder == nil {
-		ctx.Decoder = types.DefaultTransactionDecoder
+	if client.Context.Decoder == nil {
+		client.Context.Decoder = types.DefaultTransactionDecoder
 	}
-	if ctx.Transport == nil {
+	if client.Context.Transport == nil {
 		return nil, fmt.Errorf("rpc client: transport is required")
 	}
-	client.MethodsCommon.Context = ctx
-	client.MethodsFilter.Context = ctx
-	client.MethodsWallet.Context = ctx
-	client.MethodsClient.Context = ctx
+	client.MethodsCommon.Context = client.Context
+	client.MethodsFilter.Context = client.Context
+	client.MethodsWallet.Context = client.Context
+	client.MethodsClient.Context = client.Context
 	return client, nil
 }
 
@@ -404,6 +407,11 @@ func applyOptions(c *ClientContext, opts []ClientOption) error {
 			return err
 		}
 	}
+	if h, ok := c.Transport.(clientTransportHijacker); ok {
+		// If any hijackers were added, add a copy hijacker to ensure that
+		// method arguments are not modified.
+		h.Use(&hijackCopy{})
+	}
 	return nil
 }
 
@@ -447,16 +455,16 @@ func initPtr(r reflect.Value) bool {
 }
 
 func addHijacker(t transport.Transport, hijackers ...transport.Hijacker) transport.Transport {
-	if h, ok := t.(*optionTransportHijack); ok {
+	if h, ok := t.(clientTransportHijacker); ok {
 		h.Use(hijackers...)
 		return h
 	}
-	return optionTransportHijack{transport.NewHijacker(t, hijackers...)}
+	return clientTransportHijacker{transport.NewHijacker(t, hijackers...)}
 }
 
-// optionTransportHijack wraps a Hijack transport to distinguish user-provided
+// clientTransportHijacker wraps a Hijack transport to distinguish user-provided
 // hijackers from those used internally by the client.
-type optionTransportHijack struct {
+type clientTransportHijacker struct {
 	*transport.Hijack
 }
 

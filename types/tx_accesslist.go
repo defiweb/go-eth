@@ -161,10 +161,10 @@ func (t TransactionAccessList) EncodeRLP() ([]byte, error) {
 }
 
 // Copy creates a deep copy of the transaction.
-func (t *TransactionAccessList) Copy() *TransactionAccessList {
+func (t *TransactionAccessList) Copy() Transaction {
 	return &TransactionAccessList{
 		SigningData:    *t.SigningData.Copy(),
-		CallAccessList: *t.CallAccessList.Copy(),
+		CallAccessList: *t.CallAccessList.Copy().(*CallAccessList),
 	}
 }
 

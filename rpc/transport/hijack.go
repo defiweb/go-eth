@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 )
 
-// Hijacker intercepts and modifies calls to the underlying [Transport] using
-// the middleware pattern.
+// Hijacker intercepts and modifies calls to an underlying [Transport]
+// using the middleware pattern.
 //
-// The 'next' function should be called to continue the call chain.
+// The 'next' function must be called to continue the call chain.
 //
-// The transport provided to 'next' is the underlying [Transport] instance;
-// using it will bypass any subsequent hijackers.
+// The transport passed to 'next' is the underlying [Transport] instance;
+// calling it will bypass any subsequent hijackers.
+//
+// Hijackers must not modify received arguments; instead, they should create
+// and modify copies if necessary.
 type Hijacker interface {
 	// Call returns a [CallFunc] that intercepts and modifies
 	// the 'Call' method.
@@ -41,8 +44,6 @@ type (
 // Hijack is a wrapper around another [Transport] that allows hijacking
 // and modifying the behavior of the underlying [Transport] using the
 // middleware pattern.
-//
-// Hijackers must implement one or more of the Hijacker interface methods.
 type Hijack struct {
 	transport Transport
 	callFunc  CallFunc

@@ -148,10 +148,14 @@ func (c *SigningData) SetSignature(signature Signature) {
 
 // Copy creates a deep copy of the SigningData.
 func (c *SigningData) Copy() *SigningData {
+	var s *Signature
+	if c.Signature != nil {
+		s = c.Signature.Copy()
+	}
 	return &SigningData{
 		ChainID:   copyPtr(c.ChainID),
 		Nonce:     copyPtr(c.Nonce),
-		Signature: c.Signature.Copy(),
+		Signature: s,
 	}
 }
 

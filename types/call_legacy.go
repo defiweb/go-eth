@@ -14,7 +14,7 @@ func NewCallLegacy() *CallLegacy {
 }
 
 // Copy creates a deep copy of the CallLegacy.
-func (c *CallLegacy) Copy() *CallLegacy {
+func (c *CallLegacy) Copy() Call {
 	if c == nil {
 		return nil
 	}

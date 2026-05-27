@@ -114,10 +114,10 @@ func (t *TransactionBlob) SigningHash() (Hash, error) {
 }
 
 // Copy creates a deep copy of the transaction.
-func (t *TransactionBlob) Copy() *TransactionBlob {
+func (t *TransactionBlob) Copy() Transaction {
 	return &TransactionBlob{
 		SigningData: *t.SigningData.Copy(),
-		CallBlob:    *t.CallBlob.Copy(),
+		CallBlob:    *t.CallBlob.Copy().(*CallBlob),
 	}
 }
 

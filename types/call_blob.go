@@ -21,7 +21,7 @@ func NewCallBlob() *CallBlob {
 }
 
 // Copy creates a deep copy of the CallBlob.
-func (c *CallBlob) Copy() *CallBlob {
+func (c *CallBlob) Copy() Call {
 	if c == nil {
 		return nil
 	}
