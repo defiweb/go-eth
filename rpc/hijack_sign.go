@@ -23,7 +23,7 @@ func (k *hijackSign) Call() func(next transport.CallFunc) transport.CallFunc {
 			case method == "eth_accounts":
 				accounts, ok := result.(*[]types.Address)
 				if !ok {
-					return &ErrHijackFailed{name: "sign", err: fmt.Errorf("invalid result type: %T", args[0])}
+					return &ErrHijackFailed{name: "sign", err: fmt.Errorf("invalid result type: %T", result)}
 				}
 				k.hijackAccountsCall(accounts)
 			case method == "eth_sign" && len(args) == 2:
@@ -37,7 +37,7 @@ func (k *hijackSign) Call() func(next transport.CallFunc) transport.CallFunc {
 				}
 				data, ok := args[1].([]byte)
 				if !ok {
-					return &ErrHijackFailed{name: "sign", err: fmt.Errorf("invalid data type: %T", args[0])}
+					return &ErrHijackFailed{name: "sign", err: fmt.Errorf("invalid data type: %T", args[1])}
 				}
 				return k.hijackSignCall(ctx, signature, account, data)
 			case method == "eth_signTransaction" && len(args) == 1:
