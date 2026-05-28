@@ -44,14 +44,14 @@ type ClientContext struct {
 }
 
 type ClientOption interface {
-	Apply(cfg *ClientContext, client any) error
+	Apply(cfg *ClientContext) error
 	Order() int
 }
 
 // WithTransport sets the transport for the client.
 func WithTransport(t transport.Transport) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Transport = t
 			return nil
 		},
@@ -65,7 +65,7 @@ func WithTransport(t transport.Transport) ClientOption {
 // present in some L2 implementations.
 func WithTransactionDecoder(decoder types.TransactionDecoder) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Decoder = decoder
 			return nil
 		},
@@ -76,7 +76,7 @@ func WithTransactionDecoder(decoder types.TransactionDecoder) ClientOption {
 // applied by the client.
 func WithPostHijackers(hijackers ...transport.Hijacker) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Transport = addHijacker(ctx.Transport, hijackers...)
 			return nil
 		},
@@ -98,7 +98,7 @@ func WithPostHijackers(hijackers ...transport.Hijacker) ClientOption {
 // This option will modify the provided transaction instance.
 func WithKeys(keys ...wallet.Key) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackSign{keys: keys})
 			return nil
 		},
@@ -113,7 +113,7 @@ func WithKeys(keys ...wallet.Key) ClientOption {
 // eth_sendPrivateTransaction methods.
 func WithSimulate() ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackSimulate{decoder: ctx.Decoder})
 			return nil
 		},
@@ -134,7 +134,7 @@ type NonceOptions struct {
 // This option will modify the provided transaction instance.
 func WithNonce(opts NonceOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackNonce{
 				usePendingBlock: opts.UsePendingBlock,
 				replace:         opts.Replace,
@@ -170,7 +170,7 @@ type LegacyGasFeeOptions struct {
 // This option will modify the provided transaction instance.
 func WithLegacyGasFee(opts LegacyGasFeeOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			if opts.Multiplier == 0 {
 				return fmt.Errorf("rpc client: gas price multiplier must be greater than 0")
 			}
@@ -221,7 +221,7 @@ type DynamicGasFeeOptions struct {
 // This option will modify the provided transaction instance.
 func WithDynamicGasFee(opts DynamicGasFeeOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			if opts.GasPriceMultiplier == 0 || opts.PriorityFeePerGasMultiplier == 0 {
 				return fmt.Errorf("rpc client: gas price and priority fee multipliers must be greater than 0")
 			}
@@ -260,7 +260,7 @@ type GasLimitOptions struct {
 // This option will modify the provided transaction instance.
 func WithGasLimit(opts GasLimitOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			if opts.Multiplier == 0 {
 				return fmt.Errorf("rpc client: gas limit multiplier must be greater than 0")
 			}
@@ -291,7 +291,7 @@ type AddressOptions struct {
 // This option will modify the provided transaction and call instances.
 func WithDefaultAddress(opts AddressOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackAddress{
 				address: opts.Address,
 				replace: opts.Replace,
@@ -316,7 +316,7 @@ type ChainIDOptions struct {
 // This option will modify the provided transaction instance.
 func WithChainID(opts ChainIDOptions) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Transport = addHijacker(ctx.Transport, &hijackChainID{
 				chainID: opts.ChainID,
 				replace: opts.Replace,
@@ -331,15 +331,13 @@ func WithChainID(opts ChainIDOptions) ClientOption {
 // applied by the client.
 func WithPreHijackers(hijackers ...transport.Hijacker) ClientOption {
 	return &option{
-		apply: func(ctx *ClientContext, _ any) error {
+		apply: func(ctx *ClientContext) error {
 			ctx.Transport = addHijacker(ctx.Transport, hijackers...)
 			return nil
 		},
 		order: OrderPre,
 	}
 }
-
-type ClientOptions func(c *ClientContext, client any) error
 
 // NewClient creates a new RPC client.
 //
@@ -367,8 +365,9 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 //
 // The WithTransport option is required.
 //
-// This method automatically initializes nil client fields and recursively
-// sets the [ClientContext] in all nested structs.
+// NewCustomClient sets the ClientContext field in the provided struct and in
+// its directly nested structs. Nested structs must be either embedded or
+// exported fields; if they are pointer fields, they must be non-nil.
 func NewCustomClient[T any](opts ...ClientOption) (*T, error) {
 	ctx := &ClientContext{}
 	client := new(T)
@@ -381,17 +380,17 @@ func NewCustomClient[T any](opts ...ClientOption) (*T, error) {
 	if ctx.Transport == nil {
 		return nil, fmt.Errorf("rpc client: transport is required")
 	}
-	setFields(ctx, reflect.ValueOf(client))
+	setClientContext(ctx, reflect.ValueOf(client), 2)
 	return client, nil
 }
 
 type option struct {
-	apply func(*ClientContext, any) error
+	apply func(*ClientContext) error
 	order int
 }
 
-func (o *option) Apply(ctx *ClientContext, client any) error {
-	return o.apply(ctx, client)
+func (o *option) Apply(ctx *ClientContext) error {
+	return o.apply(ctx)
 }
 
 func (o *option) Order() int {
@@ -403,7 +402,7 @@ func applyOptions(c *ClientContext, opts []ClientOption) error {
 		return opts[i].Order() < opts[j].Order()
 	})
 	for _, opt := range opts {
-		if err := opt.Apply(c, nil); err != nil {
+		if err := opt.Apply(c); err != nil {
 			return err
 		}
 	}
@@ -415,8 +414,14 @@ func applyOptions(c *ClientContext, opts []ClientOption) error {
 	return nil
 }
 
-func setFields(ctx *ClientContext, r reflect.Value) {
-	for r.Kind() == reflect.Ptr || r.Kind() == reflect.Interface {
+func setClientContext(ctx *ClientContext, r reflect.Value, maxDepth int) {
+	if maxDepth <= 0 {
+		return
+	}
+	for r.Kind() == reflect.Ptr {
+		if r.IsNil() {
+			return
+		}
 		r = r.Elem()
 	}
 	if r.Kind() != reflect.Struct {
@@ -431,27 +436,10 @@ func setFields(ctx *ClientContext, r reflect.Value) {
 			f.Set(reflect.ValueOf(ctx))
 			continue
 		}
-		if initPtr(f) {
-			setFields(ctx, f)
+		if f.Kind() == reflect.Struct || f.Kind() == reflect.Ptr {
+			setClientContext(ctx, f, maxDepth-1)
 		}
 	}
-}
-
-func initPtr(r reflect.Value) bool {
-	if !r.CanInterface() {
-		return false
-	}
-	if r.Kind() != reflect.Ptr {
-		return true
-	}
-	if !r.IsNil() {
-		return true
-	}
-	if r.CanSet() {
-		r.Set(reflect.New(r.Type().Elem()))
-		return true
-	}
-	return false
 }
 
 func addHijacker(t transport.Transport, hijackers ...transport.Hijacker) transport.Transport {
