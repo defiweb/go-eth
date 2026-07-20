@@ -120,7 +120,7 @@ func (e *Error) Is(data []byte) bool {
 // DecodeValue decodes the error into a map or structure. If a structure is
 // given, it must have fields with the same names as error arguments.
 func (e *Error) DecodeValue(data []byte, val any) error {
-	if e.fourBytes.Match(data) {
+	if !e.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", e.name)
 	}
 	return e.abi.DecodeValue(e.inputs, data[4:], val)
@@ -137,7 +137,7 @@ func (e *Error) MustDecodeValue(data []byte, val any) {
 // DecodeValues decodes the error into a map or structure. If a structure is
 // given, it must have fields with the same names as error arguments.
 func (e *Error) DecodeValues(data []byte, vals ...any) error {
-	if e.fourBytes.Match(data) {
+	if !e.fourBytes.Match(data) {
 		return fmt.Errorf("abi: selector mismatch for error %s", e.name)
 	}
 	return e.abi.DecodeValues(e.inputs, data[4:], vals...)
