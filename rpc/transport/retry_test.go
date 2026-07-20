@@ -192,6 +192,57 @@ func TestRetry(t *testing.T) {
 				require.Equal(t, 2, f.unsubCount)
 			},
 		},
+		// Zero retries - single attempt, no retry on error (call).
+		{
+			retry: RetryOptions{
+				Transport:   newMockTransport(),
+				MaxRetries:  0,
+				RetryFunc:   RetryOnAnyError,
+				BackoffFunc: LinearBackoff(0),
+			},
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
+				go func() {
+					f.callResult <- fmt.Errorf("foo")
+				}()
+				err := r.Call(context.Background(), nil, "foo")
+				require.Error(t, err)
+				require.Equal(t, 1, f.callCount)
+			},
+		},
+		// Zero retries - single attempt, no retry on error (subscribe).
+		{
+			retry: RetryOptions{
+				Transport:   newMockTransport(),
+				MaxRetries:  0,
+				RetryFunc:   RetryOnAnyError,
+				BackoffFunc: LinearBackoff(0),
+			},
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
+				go func() {
+					f.subResult <- fmt.Errorf("foo")
+				}()
+				_, _, err := r.Subscribe(context.Background(), "foo")
+				require.Error(t, err)
+				require.Equal(t, 1, f.subCount)
+			},
+		},
+		// Zero retries - single attempt, no retry on error (unsubscribe).
+		{
+			retry: RetryOptions{
+				Transport:   newMockTransport(),
+				MaxRetries:  0,
+				RetryFunc:   RetryOnAnyError,
+				BackoffFunc: LinearBackoff(0),
+			},
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
+				go func() {
+					f.unsubResult <- fmt.Errorf("foo")
+				}()
+				err := r.Unsubscribe(context.Background(), "foo")
+				require.Error(t, err)
+				require.Equal(t, 1, f.unsubCount)
+			},
+		},
 		// Infinite retries until success
 		{
 			retry: RetryOptions{

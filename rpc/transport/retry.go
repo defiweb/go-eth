@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-var ErrNotSubscriptionTransport = errors.New("transport does not implement SubscriptionTransport")
-
 var (
 	// RetryOnAnyError retries on any error except for the following cases,
 	// where retrying does not make sense:
@@ -120,8 +118,9 @@ type RetryOptions struct {
 	// It takes the current retry count as an argument.
 	BackoffFunc func(int) time.Duration
 
-	// MaxRetries is the maximum number of retries.
-	// If negative, there is no limit.
+	// MaxRetries is the maximum number of retries after the initial
+	// attempt. 0 means no retries (one attempt total). Negative means
+	// unlimited retries.
 	MaxRetries int
 }
 
@@ -135,9 +134,6 @@ func NewRetry(opts RetryOptions) (*Retry, error) {
 	}
 	if opts.BackoffFunc == nil {
 		return nil, errors.New("backoff function cannot be nil")
-	}
-	if opts.MaxRetries == 0 {
-		return nil, errors.New("max retries cannot be zero")
 	}
 	return &Retry{opts: opts}, nil
 }

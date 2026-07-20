@@ -12,7 +12,7 @@ import (
 
 // IPC is a [Transport] implementation that uses the IPC protocol.
 type IPC struct {
-	*stream
+	stream
 	conn net.Conn
 }
 
@@ -36,26 +36,23 @@ func NewIPC(opts IPCOptions) (*IPC, error) {
 	if opts.Context == nil {
 		return nil, errors.New("context cannot be nil")
 	}
+	if opts.Timeout == 0 {
+		opts.Timeout = time.Minute
+	}
 	var d net.Dialer
 	conn, err := d.DialContext(opts.Context, "unix", opts.Path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial IPC: %w", err)
 	}
-	if opts.Timeout == 0 {
-		opts.Timeout = 60 * time.Second
-	}
-	i := &IPC{
-		stream: &stream{
-			ctx:     opts.Context,
-			errCh:   opts.ErrorCh,
-			timeout: opts.Timeout,
-		},
-		conn: conn,
-	}
-	i.initStream()
-	go i.readerRoutine()
-	go i.writerRoutine()
-	return i, nil
+	ipc := &IPC{conn: conn}
+	ipc.stream.initStream(
+		opts.Context,
+		withStreamTimeout(opts.Timeout),
+		withStreamErrorCh(opts.ErrorCh),
+	)
+	go ipc.readerRoutine()
+	go ipc.writerRoutine()
+	return ipc, nil
 }
 
 func (i *IPC) readerRoutine() {
@@ -63,51 +60,40 @@ func (i *IPC) readerRoutine() {
 	for {
 		var res rpcResponse
 		if err := dec.Decode(&res); err != nil {
-			if errors.Is(err, context.Canceled) {
+			if i.ctx.Err() != nil {
 				return
 			}
 			if errors.Is(err, io.EOF) {
 				return
 			}
-			if i.errCh != nil {
-				select {
-				case i.errCh <- err:
-				case <-i.ctx.Done():
-					return
-				}
-			}
-		}
-		select {
-		case i.readerCh <- res:
-		case <-i.ctx.Done():
+			i.error(fmt.Errorf("ipc reading error: %w", err))
 			return
 		}
+		i.read(res)
 	}
 }
 
 func (i *IPC) writerRoutine() {
+	defer i.close()
 	enc := json.NewEncoder(i.conn)
 	for {
-		select {
-		case req := <-i.writerCh:
-			if err := enc.Encode(req); err != nil {
-				if i.errCh == nil {
-					return
-				}
-				if errors.Is(err, context.Canceled) {
-					return
-				}
-				if errors.Is(err, io.EOF) {
-					return
-				}
-				select {
-				case i.errCh <- err:
-				case <-i.ctx.Done():
-					return
-				}
-			}
-		case <-i.ctx.Done():
+		req, ok := i.write()
+		if !ok {
 			return
 		}
+		if err := i.conn.SetWriteDeadline(time.Now().Add(i.timeout)); err != nil {
+			i.error(fmt.Errorf("ipc writing error: %w", err))
+			continue
+		}
+		if err := enc.Encode(req); err != nil {
+			i.error(fmt.Errorf("ipc writing error: %w", err))
+			continue
+		}
+	}
+}
+
+func (i *IPC) close() {
+	if err := i.conn.Close(); err != nil {
+		i.error(fmt.Errorf("ipc close error: %w", err))
 	}
 }

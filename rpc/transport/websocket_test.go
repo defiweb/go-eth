@@ -11,13 +11,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
 
 	"github.com/defiweb/go-eth/types"
 )
+
+var testUpgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
 
 //nolint:funlen
 func TestWebsocket(t *testing.T) {
@@ -72,11 +75,7 @@ func TestWebsocket(t *testing.T) {
 
 				ctx := context.Background()
 				res := &types.Number{}
-				err := ws.Call(
-					ctx,
-					res,
-					"eth_call",
-				)
+				err := ws.Call(ctx, res, "eth_call")
 				assert.Error(t, err)
 			},
 		},
@@ -128,13 +127,12 @@ func TestWebsocket(t *testing.T) {
 			resCh := make(chan string)     // Responses from server.
 			closeCh := make(chan struct{}) // Stops the server.
 
-			// Websocket server.
+			// WebSocket server.
 			server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				// Handle websocket requests.
-				ctx := context.Background()
-				conn, err := websocket.Accept(w, r, nil)
+				conn, err := testUpgrader.Upgrade(w, r, nil)
 				if err != nil {
 					require.NoError(t, err)
+					return
 				}
 
 				// Request reader.
@@ -142,46 +140,63 @@ func TestWebsocket(t *testing.T) {
 				go func() {
 					defer wg.Done()
 					for {
-						var req json.RawMessage
-						if err := wsjson.Read(ctx, conn, &req); err != nil {
-							if errors.As(err, &websocket.CloseError{}) {
+						_, msg, err := conn.ReadMessage()
+						if err != nil {
+							if websocket.IsCloseError(err,
+								websocket.CloseNormalClosure,
+								websocket.CloseGoingAway,
+							) {
 								return
 							}
-							require.NoError(t, err)
+							if !errors.Is(err, net.ErrClosed) {
+								require.NoError(t, err)
+							}
+							return
 						}
-						reqCh <- string(req)
+						reqCh <- string(msg)
 					}
 				}()
 
-				// Response writer.
+				// Response writer. All writes to the connection, including the
+				// closing handshake, happen in this single goroutine, because
+				// gorilla does not allow concurrent writers.
+				writerDone := make(chan struct{})
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
+					defer close(writerDone)
 					for {
 						select {
 						case <-closeCh:
+							msg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
+							conn.WriteMessage(websocket.CloseMessage, msg) //nolint:errcheck
 							return
 						case res := <-resCh:
-							if err := wsjson.Write(ctx, conn, json.RawMessage(res)); err != nil {
-								if errors.As(err, &websocket.CloseError{}) {
-									return
+							if err := conn.WriteMessage(
+								websocket.TextMessage,
+								[]byte(res),
+							); err != nil {
+								if !websocket.IsCloseError(err,
+									websocket.CloseNormalClosure,
+									websocket.CloseGoingAway,
+								) {
+									require.NoError(t, err)
 								}
-								require.NoError(t, err)
+								return
 							}
 						}
 					}
 				}()
 
-				// Close the connection after the test.
-				<-closeCh
-				conn.Close(websocket.StatusNormalClosure, "")
+				// Close the connection after the writer goroutine has stopped,
+				// so that Close does not race with an in-flight write.
+				<-writerDone
+				conn.Close() //nolint:errcheck
 			})}
 
 			// Start HTTP server.
 			ln, err := net.Listen("tcp", "127.0.0.1:0")
-			if err != nil {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -192,13 +207,13 @@ func TestWebsocket(t *testing.T) {
 				}
 			}()
 
-			// Create a websocket client.
+			// Create a WebSocket client.
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 			defer cancel()
 			ws, err := NewWebsocket(WebsocketOptions{
 				Context: ctx,
 				URL:     "ws://" + ln.Addr().String(),
-				Timout:  time.Second,
+				Timeout: time.Second,
 			})
 			require.NoError(t, err)
 

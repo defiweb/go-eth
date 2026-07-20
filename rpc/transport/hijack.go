@@ -28,7 +28,7 @@ type Hijacker interface {
 	// If nil is returned, no middleware is applied.
 	Subscribe() func(next SubscribeFunc) SubscribeFunc
 
-	// Unsubscribe returns an [UnsubscribeFunc that intercepts and modifies
+	// Unsubscribe returns an [UnsubscribeFunc] that intercepts and modifies
 	// the 'Unsubscribe' method.
 	//
 	// If nil is returned, no middleware is applied.
@@ -63,7 +63,9 @@ func NewHijacker(t Transport, hs ...Hijacker) *Hijack {
 	return h
 }
 
-// Use adds hijackers in the order they are provided.
+// Use wraps the hijacker chain with the provided hijackers. Hijackers
+// are applied left to right - each one becomes the new outermost layer,
+// so the last hijacker in the slice executes first on every call.
 func (h *Hijack) Use(hs ...Hijacker) {
 	for _, m := range hs {
 		if m == nil {
@@ -123,10 +125,9 @@ func (h *Hijack) Unsubscribe(ctx context.Context, id string) error {
 	return ErrNotSubscriptionTransport
 }
 
-// WithHijackers returns a new context with the provided hijackers added to it.
-//
-// This allows you to pass hijackers down the call chain. The provided hijackers
-// will be appended to any existing hijackers in the context.
+// WithHijackers returns a new context with the provided hijackers added.
+// These hijackers supplement those registered via [Hijack.Use] and are
+// applied on every call that uses this context.
 func WithHijackers(ctx context.Context, hs ...Hijacker) context.Context {
 	return context.WithValue(ctx, hijackerContextKey{}, append(getHijackers(ctx), hs...))
 }

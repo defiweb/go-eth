@@ -12,32 +12,53 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+type streamOption func(*stream)
+
+func withStreamTimeout(timeout time.Duration) streamOption {
+	return func(s *stream) {
+		s.timeout = timeout
+	}
+}
+
+func withStreamCloseFunc(fn func()) streamOption {
+	return func(s *stream) {
+		s.closeFunc = fn
+	}
+}
+
+func withStreamErrorCh(errCh chan error) streamOption {
+	return func(s *stream) {
+		s.errCh = errCh
+	}
+}
+
 // stream is a helper for handling JSON-RPC streams.
 type stream struct {
-	mu  sync.RWMutex
 	ctx context.Context
 
-	writerCh chan rpcRequest  // Channel for sending requests used by structs that embed stream.
-	readerCh chan rpcResponse // Channel for receiving responses used by structs that embed stream.
-	errCh    chan error       // Channel to which errors are sent.
-	timeout  time.Duration    // Timeout for requests.
-	onClose  func()           // Callback that is called when the stream is closed.
+	writeCh   chan rpcRequest  // Channel for sending requests used by structs that embed stream.
+	readCh    chan rpcResponse // Channel for receiving responses used by structs that embed stream.
+	errCh     chan error       // Channel to which errors are sent.
+	timeout   time.Duration    // Timeout for requests.
+	closeFunc func()           // Callback that is called when the stream is closed.
 
 	// State fields. Should not be accessed by structs that embed stream.
-	id    uint64                          // Request ID counter.
-	calls map[uint64]chan rpcResponse     // Map of request IDs to channels.
-	subs  map[string]chan json.RawMessage // Map of subscription IDs to channels.
+	id  uint64          // Request ID counter.
+	chs *streamChannels // Channels for handling requests and subscriptions.
 }
 
 // initStream initializes the stream struct with default values and starts
 // the required goroutines.
-func (s *stream) initStream() *stream {
-	s.writerCh = make(chan rpcRequest)
-	s.readerCh = make(chan rpcResponse)
-	s.calls = make(map[uint64]chan rpcResponse)
-	s.subs = make(map[string]chan json.RawMessage)
+func (s *stream) initStream(ctx context.Context, opts ...streamOption) *stream {
+	s.ctx = ctx
+	s.writeCh = make(chan rpcRequest)
+	s.readCh = make(chan rpcResponse)
+	s.timeout = time.Minute
+	s.chs = newStreamChannels()
+	for _, opt := range opts {
+		opt(s)
+	}
 	go s.streamRoutine()
-	go s.contextHandlerRoutine()
 	return s
 }
 
@@ -54,12 +75,20 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 	}
 
 	// Prepare the channel for the response.
-	ch := make(chan rpcResponse)
-	s.addCallCh(id, ch)
-	defer s.delCallCh(id)
+	ch, ok := s.chs.addCallCh(id)
+	if !ok {
+		return errors.New("stream closed")
+	}
+	defer s.chs.delCallCh(id)
 
 	// Send the request.
-	s.writerCh <- req
+	select {
+	case s.writeCh <- req:
+	case <-s.ctx.Done():
+		return s.ctx.Err()
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 
 	// Wait for the response.
 	// The response is handled by streamRoutine, which sends the response
@@ -78,6 +107,8 @@ func (s *stream) Call(ctx context.Context, result any, method string, args ...an
 				return fmt.Errorf("failed to unmarshal RPC result: %w", err)
 			}
 		}
+	case <-s.ctx.Done():
+		return s.ctx.Err()
 	case <-ctx.Done():
 		return ctx.Err()
 	}
@@ -97,13 +128,15 @@ func (s *stream) Subscribe(ctx context.Context, method string, args ...any) (cha
 	}
 	id := rawID.String()
 	ch := make(chan json.RawMessage)
-	s.addSubCh(id, ch)
+	if !s.chs.addSubCh(id, ch) {
+		return nil, "", errors.New("stream closed")
+	}
 	return ch, id, nil
 }
 
 // Unsubscribe implements the [SubscriptionTransport] interface.
 func (s *stream) Unsubscribe(ctx context.Context, id string) error {
-	if !s.delSubCh(id) {
+	if !s.chs.delSubCh(id) {
 		return errors.New("unknown subscription")
 	}
 	num, err := types.NumberFromHex(id)
@@ -113,81 +146,113 @@ func (s *stream) Unsubscribe(ctx context.Context, id string) error {
 	return s.Call(ctx, nil, "eth_unsubscribe", num)
 }
 
-// streamRoutine reads messages from the stream connection and dispatches
-// them to the appropriate channels.
 func (s *stream) streamRoutine() {
+	defer func() {
+		s.chs.close()
+		if s.closeFunc != nil {
+			s.closeFunc()
+		}
+	}()
 	for {
-		res, ok := <-s.readerCh
-		if !ok {
+		select {
+		case res, ok := <-s.readCh:
+			if !ok {
+				return
+			}
+			switch {
+			case res.ID == nil:
+				// If the ID is nil, it is a subscription notification.
+				sub := &rpcSubscription{}
+				if err := json.Unmarshal(res.Params, sub); err != nil {
+					s.error(fmt.Errorf("failed to unmarshal subscription: %w", err))
+					continue
+				}
+				s.chs.subChSend(s.ctx, sub.Subscription.String(), sub.Result)
+			default:
+				// If the ID is not nil, it is a response to a request.
+				s.chs.callChSend(s.ctx, *res.ID, res)
+			}
+		case <-s.ctx.Done():
 			return
 		}
-		switch {
-		case res.ID == nil:
-			// If the ID is nil, it is a subscription notification.
-			sub := &rpcSubscription{}
-			if err := json.Unmarshal(res.Params, sub); err != nil {
-				if s.errCh != nil {
-					s.errCh <- fmt.Errorf("failed to unmarshal subscription: %w", err)
-				}
-				continue
-			}
-			s.subChSend(sub.Subscription.String(), sub.Result)
-		default:
-			// If the ID is not nil, it is a response to a request.
-			s.callChSend(*res.ID, res)
+	}
+}
+
+func (s *stream) read(res rpcResponse) {
+	select {
+	case s.readCh <- res:
+	case <-s.ctx.Done():
+	}
+}
+
+func (s *stream) write() (rpcRequest, bool) {
+	select {
+	case req, ok := <-s.writeCh:
+		return req, ok
+	case <-s.ctx.Done():
+		return rpcRequest{}, false
+	}
+}
+
+func (s *stream) error(err error) {
+	if s.errCh != nil {
+		select {
+		case s.errCh <- err:
+		case <-s.ctx.Done():
 		}
 	}
 }
 
-// contextHandlerRoutine closes the connection when the context is canceled.
-func (s *stream) contextHandlerRoutine() {
-	<-s.ctx.Done()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, ch := range s.calls {
-		close(ch)
-	}
-	for _, ch := range s.subs {
-		close(ch)
-	}
-	s.calls = nil
-	s.subs = nil
-	if s.onClose != nil {
-		s.onClose()
+var callChPool = sync.Pool{New: func() any { return make(chan rpcResponse) }}
+
+type streamChannels struct {
+	mu sync.RWMutex
+
+	calls map[uint64]chan rpcResponse     // Map of request IDs to channels.
+	subs  map[string]chan json.RawMessage // Map of subscription IDs to channels.
+}
+
+func newStreamChannels() *streamChannels {
+	return &streamChannels{
+		calls: make(map[uint64]chan rpcResponse),
+		subs:  make(map[string]chan json.RawMessage),
 	}
 }
 
-// addCallCh adds a channel to the calls map. Incoming responses that match
-// the id will be sent to the given channel. Because message ids are unique,
-// the channel must be deleted after the response is received using delCallCh.
-func (s *stream) addCallCh(id uint64, ch chan rpcResponse) {
+func (s *streamChannels) addCallCh(id uint64) (chan rpcResponse, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.calls == nil {
+		return nil, false
+	}
+	ch := callChPool.Get().(chan rpcResponse)
 	s.calls[id] = ch
+	return ch, true
 }
 
-// addSubCh adds a channel to the subs map. Incoming subscription
-// notifications that match the id will be sent to the given channel.
-func (s *stream) addSubCh(id string, ch chan json.RawMessage) {
+func (s *streamChannels) addSubCh(id string, ch chan json.RawMessage) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.subs[id] = ch
-}
-
-// delCallCh deletes a channel from the calls map.
-func (s *stream) delCallCh(id uint64) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if ch, ok := s.calls[id]; ok {
-		close(ch)
-		delete(s.calls, id)
-		return true
+	if s.subs == nil {
+		return false
 	}
-	return false
+	s.subs[id] = ch
+	return true
 }
 
-// delSubCh deletes a channel from the subs map.
-func (s *stream) delSubCh(id string) bool {
+func (s *streamChannels) delCallCh(id uint64) {
+	s.mu.Lock()
+	ch, ok := s.calls[id]
+	if ok {
+		delete(s.calls, id)
+	}
+	s.mu.Unlock()
+	if ok {
+		callChPool.Put(ch)
+	}
+}
+
+func (s *streamChannels) delSubCh(id string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if ch, ok := s.subs[id]; ok {
@@ -198,29 +263,37 @@ func (s *stream) delSubCh(id string) bool {
 	return false
 }
 
-// callChSend sends a response to the channel that matches the id.
-func (s *stream) callChSend(id uint64, res rpcResponse) {
+func (s *streamChannels) callChSend(ctx context.Context, id uint64, res rpcResponse) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if ch := s.calls[id]; ch != nil {
 		select {
 		case ch <- res:
-		case <-s.ctx.Done():
-			return
+		case <-ctx.Done():
 		}
 	}
 }
 
-// subChSend sends a subscription notification to the channel that matches
-// the id.
-func (s *stream) subChSend(id string, res json.RawMessage) {
+func (s *streamChannels) subChSend(ctx context.Context, id string, res json.RawMessage) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if ch := s.subs[id]; ch != nil {
 		select {
 		case ch <- res:
-		case <-s.ctx.Done():
-			return
+		case <-ctx.Done():
 		}
 	}
+}
+
+func (s *streamChannels) close() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, ch := range s.calls {
+		callChPool.Put(ch)
+	}
+	for _, ch := range s.subs {
+		close(ch)
+	}
+	s.calls = nil
+	s.subs = nil
 }

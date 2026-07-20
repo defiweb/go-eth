@@ -12,10 +12,10 @@ require (
 	github.com/defiweb/go-anymapper v0.3.0
 	github.com/defiweb/go-rlp v0.4.0
 	github.com/defiweb/go-sigparser v0.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/stretchr/testify v1.8.4
 	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.18.0
-	nhooyr.io/websocket v1.8.10
 )
 
 require (
