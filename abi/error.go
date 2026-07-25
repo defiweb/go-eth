@@ -164,7 +164,7 @@ func (e *Error) ToError(data []byte) error {
 }
 
 // HandleError converts an error returned by a contract call to a custom error
-// if possible. If provider error is nil, it returns nil.
+// if possible. If the provided error is nil, it returns nil.
 func (e *Error) HandleError(err error) error {
 	if err == nil {
 		return nil
