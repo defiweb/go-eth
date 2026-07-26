@@ -3,13 +3,12 @@ package wallet
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/defiweb/go-eth/crypto/ecdsa"
-
-	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/tyler-smith/go-bip39"
+
+	"github.com/defiweb/go-eth/crypto/ecdsa"
 )
 
 // The code below is based on:
@@ -21,7 +20,7 @@ type Mnemonic struct {
 	// Internally, we only need a master key to derive private keys, but to
 	// keep package API easier to understand, the whole structure is called
 	// mnemonic because it is the name that users are familiar with.
-	masterKey *hdkeychain.ExtendedKey
+	masterKey *hdKey
 }
 
 // DerivationPath represents derivation path as internal binary format.
@@ -96,28 +95,27 @@ func NewMnemonic(mnemonic, password string) (Mnemonic, error) {
 	if err != nil {
 		return Mnemonic{}, err
 	}
-	masterKey, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
+	masterKey, err := newMasterKey(seed)
 	if err != nil {
 		return Mnemonic{}, err
 	}
 	return Mnemonic{masterKey: masterKey}, nil
 }
 
-// Derive derives a private key from the mnemonic using given derivation path.
+// Derive derives a private key from the mnemonic using a given derivation path.
 func (m Mnemonic) Derive(path DerivationPath) (*PrivateKey, error) {
+	if m.masterKey == nil {
+		return nil, errors.New("mnemonic is not initialized")
+	}
 	var err error
 	key := m.masterKey
 	for _, n := range path {
-		key, err = key.Derive(n)
+		key, err = key.derive(n)
 		if err != nil {
 			return nil, err
 		}
 	}
-	privKey, err := key.ECPrivKey()
-	if err != nil {
-		return nil, err
-	}
-	return NewKeyFromECDSA(&ecdsa.PrivateKey{D: privKey.ToECDSA().D}), nil
+	return NewKeyFromECDSA(&ecdsa.PrivateKey{D: new(big.Int).SetBytes(key.key[:])}), nil
 }
 
 // ParseDerivationPath converts a BIP-33 derivation path string into the

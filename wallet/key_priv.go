@@ -3,8 +3,9 @@ package wallet
 import (
 	"context"
 	"encoding/json"
+	"math/big"
 
-	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 
 	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/crypto/ecdsa"
@@ -30,8 +31,8 @@ func NewKeyFromECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
 
 // NewKeyFromBytes creates a new private key from private key bytes.
 func NewKeyFromBytes(prv []byte) *PrivateKey {
-	key, _ := btcec.PrivKeyFromBytes(prv)
-	return NewKeyFromECDSA(&ecdsa.PrivateKey{D: key.ToECDSA().D})
+	key := secp256k1.PrivKeyFromBytes(prv)
+	return NewKeyFromECDSA(&ecdsa.PrivateKey{D: new(big.Int).SetBytes(key.Serialize())})
 }
 
 // NewRandomKey creates a random private key.

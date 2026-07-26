@@ -2,20 +2,25 @@ package ecdsa
 
 import (
 	"bytes"
+	"math/big"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/hexutil"
 )
 
+// testPrivateKey returns a deterministic private key (32 bytes of 0x01) used
+// across the tests.
+func testPrivateKey() *PrivateKey {
+	return &PrivateKey{D: new(big.Int).SetBytes(bytes.Repeat([]byte{0x01}, 32))}
+}
+
 func TestSignHash(t *testing.T) {
-	key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
 	hash := Hash{}
 	copy(hash[:], bytes.Repeat([]byte{0x02}, 32))
-	signature, err := SignHash(&PrivateKey{D: key.ToECDSA().D}, hash)
+	signature, err := SignHash(testPrivateKey(), hash)
 
 	require.NoError(t, err)
 	require.NotNil(t, signature)
@@ -25,8 +30,7 @@ func TestSignHash(t *testing.T) {
 }
 
 func TestSignMessage(t *testing.T) {
-	key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
-	signature, err := SignMessage(&PrivateKey{D: key.ToECDSA().D}, []byte("hello world"))
+	signature, err := SignMessage(testPrivateKey(), []byte("hello world"))
 
 	require.NoError(t, err)
 	require.NotNil(t, signature)
@@ -64,9 +68,7 @@ func TestRecoverMessage(t *testing.T) {
 }
 
 func TestPublicKeyToAddress(t *testing.T) {
-	key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
-	publicKey := key.PubKey()
-	addr := PublicKeyToAddress(&PublicKey{publicKey.X(), publicKey.Y()})
+	addr := PublicKeyToAddress(PrivateKeyToPublicKey(testPrivateKey()))
 
 	assert.Equal(t, "0x1a642f0e3c3af545e7acbd38b07251b3990914f1", hexutil.BytesToHex(addr[:]))
 }

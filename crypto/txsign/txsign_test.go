@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -16,7 +15,7 @@ import (
 
 func TestSign(t *testing.T) {
 	t.Run("legacy", func(t *testing.T) {
-		key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
+		key := new(big.Int).SetBytes(bytes.Repeat([]byte{0x01}, 32))
 		tx := types.NewTransactionLegacy()
 		tx.SetTo(types.MustAddressFromHex("0x3535353535353535353535353535353535353535"))
 		tx.SetGasLimit(21000)
@@ -24,7 +23,7 @@ func TestSign(t *testing.T) {
 		tx.SetNonce(9)
 		tx.SetValue(big.NewInt(1000000000000000000))
 
-		err := Sign(&ecdsa.PrivateKey{D: key.ToECDSA().D}, tx)
+		err := Sign(&ecdsa.PrivateKey{D: key}, tx)
 		require.NoError(t, err)
 		txData := tx.GetSigningData()
 		require.NotNil(t, txData.Signature)
@@ -33,7 +32,7 @@ func TestSign(t *testing.T) {
 		assert.Equal(t, "615bff48c483d368ed4f6e327a6ddd8831e544d0ca08f1345433e4ed204f8537", txData.Signature.S.Text(16))
 	})
 	t.Run("dynamic-fee", func(t *testing.T) {
-		key, _ := btcec.PrivKeyFromBytes(bytes.Repeat([]byte{0x01}, 32))
+		key := new(big.Int).SetBytes(bytes.Repeat([]byte{0x01}, 32))
 		tx := types.NewTransactionDynamicFee()
 		tx.SetChainID(1)
 		tx.SetTo(types.MustAddressFromHex("0x3535353535353535353535353535353535353535"))
@@ -43,7 +42,7 @@ func TestSign(t *testing.T) {
 		tx.SetNonce(9)
 		tx.SetValue(big.NewInt(1000000000000000000))
 
-		err := Sign(&ecdsa.PrivateKey{D: key.ToECDSA().D}, tx)
+		err := Sign(&ecdsa.PrivateKey{D: key}, tx)
 		require.NoError(t, err)
 		txData := tx.GetSigningData()
 		require.NotNil(t, txData.Signature)
