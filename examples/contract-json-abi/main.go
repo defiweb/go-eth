@@ -28,7 +28,7 @@ func main() {
 
 func abiPath() string {
 	if _, err := os.Stat("./erc20.json"); err == nil {
-		return "./key.json"
+		return "./erc20.json"
 	}
 	return "./examples/contract-json-abi/erc20.json"
 }

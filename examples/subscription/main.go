@@ -36,9 +36,9 @@ func main() {
 	transfer := abi.MustParseEvent("event Transfer(address indexed src, address indexed dst, uint256 wad)")
 
 	// Create a filter query.
-	query := types.NewFilterLogsQuery().
-		SetAddresses(types.MustAddressFromHex("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")).
-		SetTopics([]types.Hash{transfer.Topic0()})
+	query := types.NewFilterLogsQuery()
+	query.SetAddresses(types.MustAddressFromHex("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"))
+	query.SetTopics([]types.Hash{transfer.Topic0()})
 
 	// Fetch logs for WETH transfer events.
 	logs, err := c.SubscribeLogs(ctx, query)

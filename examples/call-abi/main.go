@@ -73,7 +73,7 @@ func main() {
 	})
 
 	// Prepare a call.
-	call := types.NewCallLegacy()
+	call := types.NewCall()
 	call.SetTo(types.MustAddressFromHex("0xcA11bde05977b3631167028862bE2a173976CA11"))
 	call.SetInput(calldata)
 

@@ -31,7 +31,7 @@ func main() {
 	calldata := balanceOf.MustEncodeArgs("0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
 
 	// Prepare a call.
-	call := types.NewCallLegacy()
+	call := types.NewCall()
 	call.SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"))
 	call.SetInput(calldata)
 

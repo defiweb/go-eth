@@ -58,7 +58,7 @@ func (b BoolFlagsValue) EncodeABI() (abi.Words, error) {
 // DecodeABI decodes the value from the ABI format.
 func (b *BoolFlagsValue) DecodeABI(words abi.Words) (int, error) {
 	if len(words) == 0 {
-		return 0, fmt.Errorf("abi: cannot decode BytesFlags from empty data")
+		return 0, fmt.Errorf("abi: cannot decode BoolFlags from empty data")
 	}
 	for i, v := range words[0] {
 		for j := 0; j < 8; j++ {
@@ -74,8 +74,8 @@ func (b *BoolFlagsValue) DecodeABI(words abi.Words) (int, error) {
 // The abi.Mapper is the instance of the internal mapper that is used to
 // perform the mapping. It can be used to map nested types.
 //
-// Note, that you want to use reflection to implement following methods because
-// it would allow to write more generic code mapping functions.
+// Note that you may want to use reflection to implement the following methods,
+// as it would let you write more generic mapping code.
 
 // MapFrom maps value from a different type.
 func (b *BoolFlagsValue) MapFrom(_ abi.Mapper, src any) error {
@@ -84,7 +84,7 @@ func (b *BoolFlagsValue) MapFrom(_ abi.Mapper, src any) error {
 		*b = src
 	case []bool:
 		if len(src) > 256 {
-			return fmt.Errorf("abi: cannot map []bool of length %d to BytesFlags", len(src))
+			return fmt.Errorf("abi: cannot map []bool of length %d to BoolFlags", len(src))
 		}
 		for i, v := range src {
 			b[i] = v
