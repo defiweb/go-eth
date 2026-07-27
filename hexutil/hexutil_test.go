@@ -48,7 +48,7 @@ func TestHexToBigInt(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := HexToBigInt(tt.input)
 			assert.Equal(t, tt.err, err)
-			assert.Equal(t, tt.expected, result)
+			assertBigIntEqual(t, tt.expected, result)
 		})
 	}
 }
@@ -91,4 +91,16 @@ func TestHexToBytes(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func assertBigIntEqual(t *testing.T, expected, actual *big.Int) {
+	t.Helper()
+	if expected == nil {
+		assert.Nil(t, actual)
+		return
+	}
+	if !assert.NotNil(t, actual) {
+		return
+	}
+	assert.Zerof(t, expected.Cmp(actual), "expected %s, got %s", expected, actual)
 }
