@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/defiweb/go-eth/crypto"
-	"github.com/defiweb/go-eth/crypto/ecdsa"
 	"github.com/defiweb/go-eth/crypto/txsign"
 	"github.com/defiweb/go-eth/types"
 )
@@ -70,7 +69,7 @@ func (k *KeyRPC) SignTransaction(ctx context.Context, tx types.SignableTransacti
 
 // VerifyMessage implements the Key interface.
 func (k *KeyRPC) VerifyMessage(_ context.Context, data []byte, sig types.Signature) bool {
-	addr, err := crypto.ECRecoverMessage(data, ecdsa.Signature(sig))
+	addr, err := crypto.ECRecoverMessage(data, crypto.Signature(sig))
 	if err != nil {
 		return false
 	}

@@ -6,15 +6,12 @@ import (
 	"sync"
 
 	"golang.org/x/crypto/sha3"
+
+	"github.com/defiweb/go-eth/crypto/primitives"
 )
 
-// Hash is a 32-byte Keccak256 hash.
-//
-// For most use cases, the [types.Hash] type should be used instead.
-type Hash [32]byte
-
 // Keccak256 calculates the Keccak256 hash of the given data.
-func Keccak256(data ...[]byte) (h Hash) {
+func Keccak256(data ...[]byte) (h primitives.Hash) {
 	k := keccakPool.Get().(hash.Hash)
 	k.Reset()
 	for _, i := range data {

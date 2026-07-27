@@ -11,7 +11,6 @@ import (
 	"github.com/defiweb/go-rlp"
 
 	"github.com/defiweb/go-eth/crypto"
-	"github.com/defiweb/go-eth/crypto/kzg4844"
 )
 
 // AccessList represents an Ethereum access list as defined in EIP-2930.
@@ -144,13 +143,13 @@ type BlobInfo struct {
 // layer.
 type BlobSidecar struct {
 	// Blob is the blob data.
-	Blob kzg4844.Blob
+	Blob crypto.KZGBlob
 
 	// Commitment is the KZG commitment for the blob.
-	Commitment kzg4844.Commitment
+	Commitment crypto.KZGCommitment
 
 	// Proof is the KZG proof for the blob.
-	Proof kzg4844.Proof
+	Proof crypto.KZGProof
 }
 
 // ComputeHash computes the blob hash of the given blob sidecar.
@@ -170,7 +169,7 @@ func (sc *BlobSidecar) ComputeHash() Hash {
 //
 // Returns an error if the blob is nil or if the commitment/proof computation
 // fails.
-func NewBlobInfo(b *kzg4844.Blob) (BlobInfo, error) {
+func NewBlobInfo(b *crypto.KZGBlob) (BlobInfo, error) {
 	if b == nil {
 		return BlobInfo{}, errors.New("blob is nil")
 	}

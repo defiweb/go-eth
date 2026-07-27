@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/defiweb/go-eth/crypto/kzg4844"
+	"github.com/defiweb/go-eth/crypto"
 )
 
 func TestTransactionData_JSON(t *testing.T) {
@@ -498,9 +498,9 @@ func TestBlobData_JSON(t *testing.T) {
 					{
 						Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
 						Sidecar: &BlobSidecar{
-							Blob:       kzg4844.Blob{0x01, 0x02, 0x03},
-							Commitment: kzg4844.Commitment{0x04, 0x05, 0x06},
-							Proof:      kzg4844.Proof{0x07, 0x08, 0x09},
+							Blob:       crypto.KZGBlob{0x01, 0x02, 0x03},
+							Commitment: crypto.KZGCommitment{0x04, 0x05, 0x06},
+							Proof:      crypto.KZGProof{0x07, 0x08, 0x09},
 						},
 					},
 				},

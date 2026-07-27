@@ -5,12 +5,37 @@ import (
 	"github.com/defiweb/go-eth/crypto/ecdsa"
 	"github.com/defiweb/go-eth/crypto/keccak"
 	"github.com/defiweb/go-eth/crypto/kzg4844"
+	"github.com/defiweb/go-eth/crypto/primitives"
+)
+
+const (
+	PrivateKeySize    = primitives.PrivateKeySize
+	PublicKeySize     = primitives.PublicKeySize
+	KZGScalarsPerBlob = primitives.KZGScalarsPerBlob
+	KZGScalarSize     = primitives.KZGScalarSize
+	KZGBlobSize       = primitives.KZGBlobSize
+	KZGCommitmentSize = primitives.KZGCommitmentSize
+	KZGProofSize      = primitives.KZGProofSize
+	KZGPointSize      = primitives.KZGPointSize
+)
+
+type (
+	Hash          = primitives.Hash
+	Address       = primitives.Address
+	PublicKey     = primitives.PublicKey
+	PrivateKey    = primitives.PrivateKey
+	Signature     = primitives.Signature
+	KZGBlob       = primitives.KZGBlob
+	KZGCommitment = primitives.KZGCommitment
+	KZGProof      = primitives.KZGProof
+	KZGPoint      = primitives.KZGPoint
 )
 
 // Default implementations of the crypto functions. Can be overridden to use
 // alternative implementations.
 var (
 	Keccak256               = keccak.Keccak256
+	ECGenerateKey           = ecdsa.GenerateKey
 	ECPublicKeyToAddress    = ecdsa.PublicKeyToAddress
 	ECPrivateKeyToPublicKey = ecdsa.PrivateKeyToPublicKey
 	ECSignHash              = ecdsa.SignHash

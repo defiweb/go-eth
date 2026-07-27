@@ -6,47 +6,28 @@ import (
 	"sync"
 
 	kzg4844 "github.com/crate-crypto/go-kzg-4844"
-)
 
-const (
-	ScalarLength     = 4096
-	ScalarSize       = 32
-	BlobLength       = ScalarLength * ScalarSize // 128 KiB
-	CommitmentLength = 48
-	ProofLength      = 48
-	PointLength      = 32
+	"github.com/defiweb/go-eth/crypto/primitives"
 )
 
 // BLSModulus is the BLS12-381 scalar field modulus.
 var BLSModulus = new(big.Int).SetBytes(kzg4844.BlsModulus[:])
 
-// Blob represents a 4844 data blob.
-type Blob [BlobLength]byte
-
-// Commitment is a serialized commitment to a polynomial.
-type Commitment [CommitmentLength]byte
-
-// Proof is a serialized commitment to the quotient polynomial.
-type Proof [ProofLength]byte
-
-// Point is a BLS field element.
-type Point [PointLength]byte
-
 // BlobToCommitment computes the KZG commitment for the given blob.
-func BlobToCommitment(blob *Blob) (Commitment, error) {
+func BlobToCommitment(blob *primitives.KZGBlob) (primitives.KZGCommitment, error) {
 	initContext()
 	commitment, err := context.BlobToKZGCommitment(
 		(*kzg4844.Blob)(blob),
 		0,
 	)
 	if err != nil {
-		return Commitment{}, err
+		return primitives.KZGCommitment{}, err
 	}
-	return (Commitment)(commitment), nil
+	return (primitives.KZGCommitment)(commitment), nil
 }
 
 // ComputeProof computes the KZG proof and claim for the given blob and point.
-func ComputeProof(blob *Blob, point Point) (Proof, Point, error) {
+func ComputeProof(blob *primitives.KZGBlob, point primitives.KZGPoint) (primitives.KZGProof, primitives.KZGPoint, error) {
 	initContext()
 	proof, claim, err := context.ComputeKZGProof(
 		(*kzg4844.Blob)(blob),
@@ -54,14 +35,14 @@ func ComputeProof(blob *Blob, point Point) (Proof, Point, error) {
 		0,
 	)
 	if err != nil {
-		return Proof{}, Point{}, err
+		return primitives.KZGProof{}, primitives.KZGPoint{}, err
 	}
-	return (Proof)(proof), (Point)(claim), nil
+	return (primitives.KZGProof)(proof), (primitives.KZGPoint)(claim), nil
 }
 
 // VerifyProof verifies the KZG proof for the given commitment, point, claim,
 // and proof.
-func VerifyProof(commitment Commitment, point Point, claim Point, proof Proof) error {
+func VerifyProof(commitment primitives.KZGCommitment, point primitives.KZGPoint, claim primitives.KZGPoint, proof primitives.KZGProof) error {
 	initContext()
 	return context.VerifyKZGProof(
 		(kzg4844.KZGCommitment)(commitment),
@@ -72,7 +53,7 @@ func VerifyProof(commitment Commitment, point Point, claim Point, proof Proof) e
 }
 
 // ComputeBlobProof computes the KZG proof for the given blob and commitment.
-func ComputeBlobProof(blob *Blob, commitment Commitment) (Proof, error) {
+func ComputeBlobProof(blob *primitives.KZGBlob, commitment primitives.KZGCommitment) (primitives.KZGProof, error) {
 	initContext()
 	proof, err := context.ComputeBlobKZGProof(
 		(*kzg4844.Blob)(blob),
@@ -80,13 +61,13 @@ func ComputeBlobProof(blob *Blob, commitment Commitment) (Proof, error) {
 		0,
 	)
 	if err != nil {
-		return Proof{}, err
+		return primitives.KZGProof{}, err
 	}
-	return (Proof)(proof), nil
+	return (primitives.KZGProof)(proof), nil
 }
 
 // VerifyBlobProof verifies the KZG proof for the given blob, commitment, and proof.
-func VerifyBlobProof(blob *Blob, commitment Commitment, proof Proof) error {
+func VerifyBlobProof(blob *primitives.KZGBlob, commitment primitives.KZGCommitment, proof primitives.KZGProof) error {
 	initContext()
 	return context.VerifyBlobKZGProof(
 		(*kzg4844.Blob)(blob),
@@ -96,7 +77,7 @@ func VerifyBlobProof(blob *Blob, commitment Commitment, proof Proof) error {
 }
 
 // ComputeBlobHashV1 calculates the 'versioned blob hash' of a commitment.
-func ComputeBlobHashV1(commit Commitment) (h [32]byte) {
+func ComputeBlobHashV1(commit primitives.KZGCommitment) (h [32]byte) {
 	k := sha256.New()
 	k.Write(commit[:])
 	k.Sum(h[:0])

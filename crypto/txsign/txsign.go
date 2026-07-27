@@ -7,14 +7,13 @@ import (
 	"math/big"
 
 	"github.com/defiweb/go-eth/crypto"
-	"github.com/defiweb/go-eth/crypto/ecdsa"
 	"github.com/defiweb/go-eth/types"
 )
 
 // Sign signs the given transaction with the given private key.
-func Sign(key *ecdsa.PrivateKey, tx types.SignableTransaction) error {
-	if key == nil {
-		return fmt.Errorf("missing private key")
+func Sign(key crypto.PrivateKey, tx types.SignableTransaction) error {
+	if key.IsZero() {
+		return fmt.Errorf("invalid private key")
 	}
 	if tx == nil {
 		return fmt.Errorf("missing transaction")
@@ -25,7 +24,7 @@ func Sign(key *ecdsa.PrivateKey, tx types.SignableTransaction) error {
 	if err != nil {
 		return err
 	}
-	sig, err := crypto.ECSignHash(key, ecdsa.Hash(hash))
+	sig, err := crypto.ECSignHash(key, crypto.Hash(hash))
 	if err != nil {
 		return err
 	}
@@ -73,7 +72,7 @@ func Recover(tx types.SignableTransaction) (*types.Address, error) {
 	if err != nil {
 		return nil, err
 	}
-	addr, err := crypto.ECRecoverHash(ecdsa.Hash(hash), ecdsa.Signature(sig))
+	addr, err := crypto.ECRecoverHash(crypto.Hash(hash), crypto.Signature(sig))
 	if err != nil {
 		return nil, err
 	}

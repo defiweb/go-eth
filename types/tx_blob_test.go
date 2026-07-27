@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/crypto"
-	"github.com/defiweb/go-eth/crypto/kzg4844"
 	"github.com/defiweb/go-eth/hexutil"
 )
 
@@ -436,7 +435,7 @@ func TestTransactionBlob_CalculateSigningHash(t *testing.T) {
 }
 
 func newBlob(data string) BlobInfo {
-	d := new(kzg4844.Blob)
+	d := new(crypto.KZGBlob)
 	copy(d[:], data)
 	b, err := NewBlobInfo(d)
 	if err != nil {

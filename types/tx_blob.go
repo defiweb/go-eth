@@ -7,7 +7,6 @@ import (
 	"github.com/defiweb/go-rlp"
 
 	"github.com/defiweb/go-eth/crypto"
-	"github.com/defiweb/go-eth/crypto/kzg4844"
 )
 
 // TransactionBlob is the blob transaction type (Type 3).
@@ -342,9 +341,9 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 			blob := BlobInfo{Hash: *hash}
 			if i < len(*blobs) && i < len(*commitments) && i < len(*proofs) {
 				blob.Sidecar = &BlobSidecar{
-					Blob:       kzg4844.Blob(*(*blobs)[i]),
-					Commitment: kzg4844.Commitment(*(*commitments)[i]),
-					Proof:      kzg4844.Proof(*(*proofs)[i]),
+					Blob:       crypto.KZGBlob(*(*blobs)[i]),
+					Commitment: crypto.KZGCommitment(*(*commitments)[i]),
+					Proof:      crypto.KZGProof(*(*proofs)[i]),
 				}
 			}
 			t.Blobs[i] = blob

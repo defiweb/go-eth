@@ -14,7 +14,6 @@ import (
 	"golang.org/x/crypto/scrypt"
 
 	"github.com/defiweb/go-eth/crypto"
-	"github.com/defiweb/go-eth/crypto/ecdsa"
 	"github.com/defiweb/go-eth/types"
 )
 
@@ -30,7 +29,7 @@ const (
 	scryptDKLen     = 32
 )
 
-func encryptV3Key(key *ecdsa.PrivateKey, passphrase string, scryptN, scryptP int) (*jsonKey, error) {
+func encryptV3Key(key crypto.PrivateKey, passphrase string, scryptN, scryptP int) (*jsonKey, error) {
 	// Generate a random salt.
 	salt := make([]byte, 32)
 	if _, err := rand.Read(salt); err != nil {
@@ -50,10 +49,7 @@ func encryptV3Key(key *ecdsa.PrivateKey, passphrase string, scryptN, scryptP int
 	}
 
 	// Encrypt the key with AES-128-CTR.
-	d := key.D.Bytes()
-	data := make([]byte, 32)
-	copy(data[32-len(d):], d)
-	cipherText, err := aesCTRXOR(derivedKey[:16], data, iv)
+	cipherText, err := aesCTRXOR(derivedKey[:16], key.Bytes(), iv)
 	if err != nil {
 		return nil, err
 	}

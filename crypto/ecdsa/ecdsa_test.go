@@ -2,23 +2,23 @@ package ecdsa
 
 import (
 	"bytes"
-	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/defiweb/go-eth/crypto/primitives"
 	"github.com/defiweb/go-eth/hexutil"
 )
 
 // testPrivateKey returns a deterministic private key (32 bytes of 0x01) used
 // across the tests.
-func testPrivateKey() *PrivateKey {
-	return &PrivateKey{D: new(big.Int).SetBytes(bytes.Repeat([]byte{0x01}, 32))}
+func testPrivateKey() primitives.PrivateKey {
+	return primitives.PrivateKey([32]byte(bytes.Repeat([]byte{0x01}, 32)))
 }
 
 func TestSignHash(t *testing.T) {
-	hash := Hash{}
+	hash := primitives.Hash{}
 	copy(hash[:], bytes.Repeat([]byte{0x02}, 32))
 	signature, err := SignHash(testPrivateKey(), hash)
 
@@ -40,9 +40,9 @@ func TestSignMessage(t *testing.T) {
 }
 
 func TestRecoverHash(t *testing.T) {
-	hash := Hash{}
+	hash := primitives.Hash{}
 	copy(hash[:], bytes.Repeat([]byte{0x02}, 32))
-	signature := Signature{
+	signature := primitives.Signature{
 		V: hexutil.MustHexToBigInt("1b"),
 		R: hexutil.MustHexToBigInt("97ef30233ead25d10f7bb2bf9eaf571a16f2deb33a75f20819284f0cb8ff3cc1"),
 		S: hexutil.MustHexToBigInt("4870ca05940199c113b4dc77866f001702691cde269f6835581e7aea1ead2660"),
@@ -55,7 +55,7 @@ func TestRecoverHash(t *testing.T) {
 }
 
 func TestRecoverMessage(t *testing.T) {
-	signature := Signature{
+	signature := primitives.Signature{
 		V: hexutil.MustHexToBigInt("1b"),
 		R: hexutil.MustHexToBigInt("f2b67e452d18ce781203f10380ea5a2726494162c49c495069cf99118bcf199"),
 		S: hexutil.MustHexToBigInt("51601fe3219055482c45a14bf616c3e2bc7914c953f438627de2aa541eef61b5"),

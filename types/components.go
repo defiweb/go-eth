@@ -3,7 +3,7 @@ package types
 import (
 	"math/big"
 
-	"github.com/defiweb/go-eth/crypto/kzg4844"
+	"github.com/defiweb/go-eth/crypto"
 )
 
 // The following interfaces are used to determine if a given call or
@@ -523,9 +523,9 @@ func (c *BlobData) fromJSON(j *jsonCall) {
 			b := BlobInfo{Hash: h}
 			if i < len(j.Blobs) && i < len(j.Commitments) && i < len(j.Proofs) {
 				b.Sidecar = &BlobSidecar{
-					Blob:       kzg4844.Blob(j.Blobs[i]),
-					Commitment: kzg4844.Commitment(j.Commitments[i]),
-					Proof:      kzg4844.Proof(j.Proofs[i]),
+					Blob:       crypto.KZGBlob(j.Blobs[i]),
+					Commitment: crypto.KZGCommitment(j.Commitments[i]),
+					Proof:      crypto.KZGProof(j.Proofs[i]),
 				}
 			}
 			c.Blobs[i] = b

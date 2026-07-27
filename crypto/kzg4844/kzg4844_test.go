@@ -6,23 +6,24 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/defiweb/go-eth/crypto/primitives"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func getRandBlob(seed int64) *Blob {
-	blob := Blob{}
-	for i := 0; i < BlobLength; i += ScalarSize {
+func getRandBlob(seed int64) *primitives.KZGBlob {
+	blob := primitives.KZGBlob{}
+	for i := 0; i < primitives.KZGBlobSize; i += primitives.KZGScalarSize {
 		h := sha256.Sum256([]byte{byte(seed + int64(i))})
 		p := new(big.Int).SetBytes(h[:])
 		p = p.Mod(p, BLSModulus)
-		p.FillBytes(blob[i : i+ScalarSize])
+		p.FillBytes(blob[i : i+primitives.KZGScalarSize])
 	}
 	return &blob
 }
 
-func getPoint(blob *Blob) (p Point) {
+func getPoint(blob *primitives.KZGBlob) (p primitives.KZGPoint) {
 	h := sha256.Sum256(blob[:])
 	i := new(big.Int).SetBytes(h[:])
 	i = i.Mod(i, BLSModulus)
@@ -83,7 +84,7 @@ func TestComputeBlobHashV1(t *testing.T) {
 	}
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
-			var commitment Commitment
+			var commitment primitives.KZGCommitment
 			copy(commitment[:], hexutil.MustHexToBytes(tt.commitment))
 
 			hash := ComputeBlobHashV1(commitment)

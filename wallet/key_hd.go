@@ -3,12 +3,11 @@ package wallet
 import (
 	"errors"
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"github.com/tyler-smith/go-bip39"
 
-	"github.com/defiweb/go-eth/crypto/ecdsa"
+	"github.com/defiweb/go-eth/crypto"
 )
 
 // The code below is based on:
@@ -115,7 +114,7 @@ func (m Mnemonic) Derive(path DerivationPath) (*PrivateKey, error) {
 			return nil, err
 		}
 	}
-	return NewKeyFromECDSA(&ecdsa.PrivateKey{D: new(big.Int).SetBytes(key.key[:])}), nil
+	return NewKeyFromECDSA(crypto.PrivateKey(key.key)), nil
 }
 
 // ParseDerivationPath converts a BIP-33 derivation path string into the

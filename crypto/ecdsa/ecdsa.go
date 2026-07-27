@@ -10,37 +10,8 @@ import (
 	secpecdsa "github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 
 	"github.com/defiweb/go-eth/crypto/keccak"
+	"github.com/defiweb/go-eth/crypto/primitives"
 )
-
-// PublicKey is an ECDSA public key.
-type PublicKey struct {
-	X *big.Int
-	Y *big.Int
-}
-
-// PrivateKey is an ECDSA private key.
-type PrivateKey struct {
-	D *big.Int
-}
-
-// Signature is an ECDSA signature.
-//
-// For most use cases, the [types.Signature] type should be used instead.
-type Signature struct {
-	V *big.Int
-	R *big.Int
-	S *big.Int
-}
-
-// Hash is a 32-byte hash.
-//
-// For most use cases, the [types.Hash] type should be used instead.
-type Hash [32]byte
-
-// Address is a 20-byte Ethereum address.
-//
-// For most use cases, the [types.Address] type should be used instead.
-type Address [20]byte
 
 // AddMessagePrefix adds the Ethereum message prefix to the given data as
 // defined in EIP-191.
@@ -49,48 +20,48 @@ func AddMessagePrefix(data []byte) []byte {
 }
 
 // GenerateKey generates a new ECDSA private key.
-func GenerateKey() (*PrivateKey, error) {
+func GenerateKey() (primitives.PrivateKey, error) {
 	pk, err := secp256k1.GeneratePrivateKey()
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate ECDSA key: %w", err)
+		return primitives.PrivateKey{}, fmt.Errorf("failed to generate ECDSA key: %w", err)
 	}
-	return &PrivateKey{D: new(big.Int).SetBytes(pk.Serialize())}, nil
+	defer pk.Zero()
+	return primitives.PrivateKey(pk.Serialize()), nil
 }
 
 // PublicKeyToAddress returns the Ethereum address for the given ECDSA
 // public key.
-func PublicKeyToAddress(publicKey *PublicKey) (addr Address) {
+func PublicKeyToAddress(publicKey primitives.PublicKey) (addr primitives.Address) {
 	// The address is the last 20 bytes of the Keccak-256 hash of the 64-byte
 	// public key: X and Y, each left-padded to 32 bytes.
-	var b [64]byte
-	publicKey.X.FillBytes(b[:32])
-	publicKey.Y.FillBytes(b[32:])
-	h := keccak.Keccak256(b[:])
+	h := keccak.Keccak256(publicKey[:])
 	copy(addr[:], h[12:])
 	return
 }
 
 // PrivateKeyToPublicKey converts a private key to a public key.
-// If the private key is nil, it returns nil.
-func PrivateKeyToPublicKey(privateKey *PrivateKey) *PublicKey {
-	if privateKey == nil {
-		return nil
+// If the private key is the zero value, it returns the zero public key.
+func PrivateKeyToPublicKey(privateKey primitives.PrivateKey) primitives.PublicKey {
+	if privateKey.IsZero() {
+		return primitives.PublicKey{}
 	}
-	priv := secp256k1.PrivKeyFromBytes(privateKey.D.Bytes())
+	priv := secp256k1.PrivKeyFromBytes(privateKey[:])
+	defer priv.Zero()
 	return newPublicKey(priv.PubKey())
 }
 
 // SignHash signs the given hash with the given private key.
-func SignHash(privateKey *PrivateKey, hash Hash) (*Signature, error) {
-	if privateKey == nil {
-		return nil, fmt.Errorf("missing private key")
+func SignHash(privateKey primitives.PrivateKey, hash primitives.Hash) (*primitives.Signature, error) {
+	if privateKey.IsZero() {
+		return nil, fmt.Errorf("invalid private key")
 	}
-	priv := secp256k1.PrivKeyFromBytes(privateKey.D.Bytes())
+	priv := secp256k1.PrivKeyFromBytes(privateKey[:])
+	defer priv.Zero()
 	sig := secpecdsa.SignCompact(priv, hash[:], false)
 	v := sig[0] - 27
 	copy(sig, sig[1:])
 	sig[64] = v
-	return &Signature{
+	return &primitives.Signature{
 		V: new(big.Int).SetBytes(sig[64:]),
 		R: new(big.Int).SetBytes(sig[:32]),
 		S: new(big.Int).SetBytes(sig[32:64]),
@@ -99,7 +70,7 @@ func SignHash(privateKey *PrivateKey, hash Hash) (*Signature, error) {
 
 // RecoverHash recovers the Ethereum address from the given hash and
 // signature.
-func RecoverHash(hash Hash, signature Signature) (*Address, error) {
+func RecoverHash(hash primitives.Hash, signature primitives.Signature) (*primitives.Address, error) {
 	if signature.V.BitLen() > 8 {
 		return nil, errors.New("invalid signature: V has more than 8 bits")
 	}
@@ -128,11 +99,11 @@ func RecoverHash(hash Hash, signature Signature) (*Address, error) {
 }
 
 // SignMessage signs the given message with the given private key.
-func SignMessage(key *PrivateKey, data []byte) (*Signature, error) {
-	if key == nil {
-		return nil, fmt.Errorf("missing private key")
+func SignMessage(key primitives.PrivateKey, data []byte) (*primitives.Signature, error) {
+	if key.IsZero() {
+		return nil, fmt.Errorf("invalid private key")
 	}
-	sig, err := SignHash(key, Hash(keccak.Keccak256(AddMessagePrefix(data))))
+	sig, err := SignHash(key, keccak.Keccak256(AddMessagePrefix(data)))
 	if err != nil {
 		return nil, err
 	}
@@ -142,18 +113,16 @@ func SignMessage(key *PrivateKey, data []byte) (*Signature, error) {
 
 // RecoverMessage recovers the Ethereum address from the given message and
 // signature.
-func RecoverMessage(data []byte, sig Signature) (*Address, error) {
+func RecoverMessage(data []byte, sig primitives.Signature) (*primitives.Address, error) {
 	sig.V = new(big.Int).Sub(sig.V, big.NewInt(27))
-	return RecoverHash(Hash(keccak.Keccak256(AddMessagePrefix(data))), sig)
+	return RecoverHash(keccak.Keccak256(AddMessagePrefix(data)), sig)
 }
 
-func newPublicKey(pub *secp256k1.PublicKey) *PublicKey {
+func newPublicKey(pub *secp256k1.PublicKey) (key primitives.PublicKey) {
 	// SerializeUncompressed returns 0x04 || X (32 bytes) || Y (32 bytes).
 	b := pub.SerializeUncompressed()
-	return &PublicKey{
-		X: new(big.Int).SetBytes(b[1:33]),
-		Y: new(big.Int).SetBytes(b[33:65]),
-	}
+	copy(key[:], b[1:])
+	return
 }
 
 func recoveryByte(v byte) (byte, error) {

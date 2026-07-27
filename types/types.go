@@ -9,7 +9,6 @@ import (
 	"github.com/defiweb/go-rlp"
 
 	"github.com/defiweb/go-eth/crypto"
-	"github.com/defiweb/go-eth/crypto/kzg4844"
 	"github.com/defiweb/go-eth/hexutil"
 )
 
@@ -679,6 +678,8 @@ type Signature struct {
 	S *big.Int
 }
 
+var _ = crypto.Signature(Signature{})
+
 // SignatureFromHex parses a hex string into a Signature.
 // Hex representation of the signature is hex([R || S || V]).
 func SignatureFromHex(h string) (Signature, error) {
@@ -1164,7 +1165,7 @@ func (l *oneOrList[T]) UnmarshalJSON(input []byte) error {
 }
 
 // kzgBlob is a fixed-length byte array used for KZG blob.
-type kzgBlob [kzg4844.BlobLength]byte
+type kzgBlob [crypto.KZGBlobSize]byte
 
 func (t kzgBlob) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
@@ -1183,7 +1184,7 @@ func (t *kzgBlob) DecodeRLP(data []byte) (int, error) {
 }
 
 // kzgCommitment is a fixed-length byte array used for KZG commitment.
-type kzgCommitment [kzg4844.CommitmentLength]byte
+type kzgCommitment [crypto.KZGCommitmentSize]byte
 
 func (t kzgCommitment) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
@@ -1202,7 +1203,7 @@ func (t *kzgCommitment) DecodeRLP(data []byte) (int, error) {
 }
 
 // kzgProof is a fixed-length byte array used for KZG proof.
-type kzgProof [kzg4844.ProofLength]byte
+type kzgProof [crypto.KZGProofSize]byte
 
 func (t kzgProof) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil

@@ -8,14 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/defiweb/go-eth/crypto/ecdsa"
+	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
 )
 
 func TestSign(t *testing.T) {
 	t.Run("legacy", func(t *testing.T) {
-		key := new(big.Int).SetBytes(bytes.Repeat([]byte{0x01}, 32))
+		key := crypto.PrivateKey([32]byte(bytes.Repeat([]byte{0x01}, 32)))
 		tx := types.NewTransactionLegacy()
 		tx.SetTo(types.MustAddressFromHex("0x3535353535353535353535353535353535353535"))
 		tx.SetGasLimit(21000)
@@ -23,7 +23,7 @@ func TestSign(t *testing.T) {
 		tx.SetNonce(9)
 		tx.SetValue(big.NewInt(1000000000000000000))
 
-		err := Sign(&ecdsa.PrivateKey{D: key}, tx)
+		err := Sign(key, tx)
 		require.NoError(t, err)
 		txData := tx.GetSigningData()
 		require.NotNil(t, txData.Signature)
@@ -32,7 +32,7 @@ func TestSign(t *testing.T) {
 		assert.Equal(t, "615bff48c483d368ed4f6e327a6ddd8831e544d0ca08f1345433e4ed204f8537", txData.Signature.S.Text(16))
 	})
 	t.Run("dynamic-fee", func(t *testing.T) {
-		key := new(big.Int).SetBytes(bytes.Repeat([]byte{0x01}, 32))
+		key := crypto.PrivateKey([32]byte(bytes.Repeat([]byte{0x01}, 32)))
 		tx := types.NewTransactionDynamicFee()
 		tx.SetChainID(1)
 		tx.SetTo(types.MustAddressFromHex("0x3535353535353535353535353535353535353535"))
@@ -42,7 +42,7 @@ func TestSign(t *testing.T) {
 		tx.SetNonce(9)
 		tx.SetValue(big.NewInt(1000000000000000000))
 
-		err := Sign(&ecdsa.PrivateKey{D: key}, tx)
+		err := Sign(key, tx)
 		require.NoError(t, err)
 		txData := tx.GetSigningData()
 		require.NotNil(t, txData.Signature)
