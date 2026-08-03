@@ -252,8 +252,11 @@ func (i *uintX) SetBigInt(x *big.Int) error {
 		i.val = big.NewInt(0)
 		return nil
 	}
+	if x.Sign() < 0 {
+		return fmt.Errorf("abi: cannot set negative integer to %d-bit unsigned int", i.size)
+	}
 	if x.BitLen() > i.size {
-		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit signed int", signedBitLen(x), i.size)
+		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit unsigned int", x.BitLen(), i.size)
 	}
 	i.val.Set(x)
 	return nil

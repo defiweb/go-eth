@@ -304,11 +304,12 @@ func (s *StringValue) EncodeABI() (Words, error) {
 // DecodeABI implements the Value interface.
 func (s *StringValue) DecodeABI(data Words) (int, error) {
 	var b []byte
-	if _, err := decodeBytes(&b, data); err != nil {
+	n, err := decodeBytes(&b, data)
+	if err != nil {
 		return 0, err
 	}
 	*s = StringValue(b)
-	return 1, nil
+	return n, nil
 }
 
 // MapFrom implements the anymapper.MapFrom interface.
