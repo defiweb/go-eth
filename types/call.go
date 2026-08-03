@@ -22,7 +22,7 @@ type jsonCall struct {
 	Input                Bytes           `json:"input,omitempty"`
 	Value                *Number         `json:"value,omitempty"`
 	AccessList           AccessList      `json:"accessList,omitempty"`
-	BlobHashes           []Hash          `json:"blobVersionedHashes,omitempty"`
+	BlobHashes           []kzgHash       `json:"blobVersionedHashes,omitempty"`
 	Blobs                []kzgBlob       `json:"blobs,omitempty"`
 	Commitments          []kzgCommitment `json:"commitments,omitempty"`
 	Proofs               []kzgProof      `json:"proofs,omitempty"`

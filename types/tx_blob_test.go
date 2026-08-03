@@ -56,8 +56,8 @@ func TestTransactionBlob_JSON(t *testing.T) {
 					BlobData: BlobData{
 						MaxFeePerBlobGas: big.NewInt(3000000000),
 						Blobs: []BlobInfo{
-							{Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone)},
-							{Hash: MustHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777", PadNone)},
+							{Hash: mustKZGHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666")},
+							{Hash: mustKZGHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777")},
 						},
 					},
 				},
@@ -235,8 +235,8 @@ func TestTransactionBlob_RLP(t *testing.T) {
 					BlobData: BlobData{
 						MaxFeePerBlobGas: big.NewInt(3000000000),
 						Blobs: []BlobInfo{
-							{Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone)},
-							{Hash: MustHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777", PadNone)},
+							{Hash: mustKZGHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666")},
+							{Hash: mustKZGHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777")},
 						},
 					},
 				},
@@ -376,7 +376,7 @@ func TestTransactionBlob_CalculateSigningHash(t *testing.T) {
 						MaxFeePerBlobGas: big.NewInt(3000000000),
 						Blobs: []BlobInfo{
 							{
-								Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+								Hash: mustKZGHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666"),
 							},
 						},
 					},

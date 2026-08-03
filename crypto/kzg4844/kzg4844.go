@@ -77,7 +77,7 @@ func VerifyBlobProof(blob *primitives.KZGBlob, commitment primitives.KZGCommitme
 }
 
 // ComputeBlobHashV1 calculates the 'versioned blob hash' of a commitment.
-func ComputeBlobHashV1(commit primitives.KZGCommitment) (h [32]byte) {
+func ComputeBlobHashV1(commit primitives.KZGCommitment) (h primitives.KZGHash) {
 	k := sha256.New()
 	k.Write(commit[:])
 	k.Sum(h[:0])

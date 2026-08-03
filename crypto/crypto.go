@@ -9,8 +9,11 @@ import (
 )
 
 const (
+	HashSize          = primitives.HashSize
+	AddressSize       = primitives.AddressSize
 	PrivateKeySize    = primitives.PrivateKeySize
 	PublicKeySize     = primitives.PublicKeySize
+	KZGHashSize       = primitives.KZGHashSize
 	KZGScalarsPerBlob = primitives.KZGScalarsPerBlob
 	KZGScalarSize     = primitives.KZGScalarSize
 	KZGBlobSize       = primitives.KZGBlobSize
@@ -25,6 +28,7 @@ type (
 	PublicKey     = primitives.PublicKey
 	PrivateKey    = primitives.PrivateKey
 	Signature     = primitives.Signature
+	KZGHash       = primitives.KZGHash
 	KZGBlob       = primitives.KZGBlob
 	KZGCommitment = primitives.KZGCommitment
 	KZGProof      = primitives.KZGProof

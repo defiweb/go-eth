@@ -18,12 +18,15 @@ const (
 
 	// AddressSize is the size of an Ethereum address in bytes.
 	AddressSize = 20
+
 	// PrivateKeySize is the size of an ECDSA private key in bytes.
-
 	PrivateKeySize = 32
-	// PublicKeySize is the size of an ECDSA public key in bytes.
 
+	// PublicKeySize is the size of an ECDSA public key in bytes.
 	PublicKeySize = 64
+
+	// KZGHashSize is the size of a blob hash in bytes.
+	KZGHashSize = 32
 
 	// KZGScalarsPerBlob is the number of field elements in a blob.
 	KZGScalarsPerBlob = 4096
@@ -65,6 +68,9 @@ type Signature struct {
 	S *big.Int
 }
 
+// KZGHash is a blob hash.
+type KZGHash [KZGHashSize]byte
+
 // KZGBlob represents a 4844 data blob.
 type KZGBlob [KZGBlobSize]byte
 
@@ -96,17 +102,6 @@ func (k PrivateKey) Bytes() []byte {
 // Scalar returns the key as a big integer.
 func (k PrivateKey) Scalar() *big.Int {
 	return new(big.Int).SetBytes(k[:])
-}
-
-// PrivateKeyFromScalar returns the private key for the given big integer.
-//
-// It returns false if the integer does not fit in 32 bytes.
-func PrivateKeyFromScalar(d *big.Int) (k PrivateKey, ok bool) {
-	if d == nil || d.Sign() < 0 || d.BitLen() > PrivateKeySize*8 {
-		return PrivateKey{}, false
-	}
-	d.FillBytes(k[:])
-	return k, true
 }
 
 // Zero wipes the key material.

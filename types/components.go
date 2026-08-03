@@ -498,13 +498,13 @@ func (c *BlobData) toJSON(j *jsonCall) {
 	if len(c.Blobs) > 0 && c.Blobs[0].Sidecar != nil {
 		// If the first blob has a sidecar, then all blobs should have
 		// sidecars, so we can allocate memory for them.
-		j.BlobHashes = make([]Hash, 0, len(c.Blobs))
+		j.BlobHashes = make([]kzgHash, 0, len(c.Blobs))
 		j.Blobs = make([]kzgBlob, 0, len(c.Blobs))
 		j.Commitments = make([]kzgCommitment, 0, len(c.Blobs))
 		j.Proofs = make([]kzgProof, 0, len(c.Blobs))
 	}
 	for _, b := range c.Blobs {
-		j.BlobHashes = append(j.BlobHashes, b.Hash)
+		j.BlobHashes = append(j.BlobHashes, kzgHash(b.Hash))
 		if b.Sidecar != nil {
 			j.Blobs = append(j.Blobs, kzgBlob(b.Sidecar.Blob))
 			j.Commitments = append(j.Commitments, kzgCommitment(b.Sidecar.Commitment))
@@ -520,7 +520,7 @@ func (c *BlobData) fromJSON(j *jsonCall) {
 	if len(j.BlobHashes) > 0 {
 		c.Blobs = make([]BlobInfo, len(j.BlobHashes))
 		for i, h := range j.BlobHashes {
-			b := BlobInfo{Hash: h}
+			b := BlobInfo{Hash: crypto.KZGHash(h)}
 			if i < len(j.Blobs) && i < len(j.Commitments) && i < len(j.Proofs) {
 				b.Sidecar = &BlobSidecar{
 					Blob:       crypto.KZGBlob(j.Blobs[i]),

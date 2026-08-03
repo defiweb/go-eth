@@ -1,11 +1,11 @@
 package wallet
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -27,6 +27,14 @@ const (
 	LightScryptP    = 6
 	scryptR         = 8
 	scryptDKLen     = 32
+)
+
+// Upper bounds on the KDF parameters accepted from a keystore file.
+const (
+	maxScryptN     = 1 << 22
+	maxScryptR     = 32
+	maxScryptP     = 16
+	maxPBKDF2Count = 10_000_000
 )
 
 func encryptV3Key(key crypto.PrivateKey, passphrase string, scryptN, scryptP int) (*jsonKey, error) {
@@ -99,10 +107,10 @@ func decryptV3Key(cryptoJson jsonKeyCrypto, passphrase []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// VerifyHash the derived key matches the key in the JSON. If not, the
+	// Verify that the derived key matches the key in the JSON. If not, the
 	// passphrase is incorrect.
 	calculatedMAC := crypto.Keccak256(derivedKey[16:32], cryptoJson.CipherText)
-	if !bytes.Equal(calculatedMAC[:], cryptoJson.MAC) {
+	if subtle.ConstantTimeCompare(calculatedMAC[:], cryptoJson.MAC) != 1 {
 		return nil, fmt.Errorf("invalid passphrase or keyfile")
 	}
 
@@ -117,8 +125,19 @@ func decryptV3Key(cryptoJson jsonKeyCrypto, passphrase []byte) ([]byte, error) {
 
 // deriveKey returns the derived key from the JSON keyfile.
 func deriveKey(cryptoJSON jsonKeyCrypto, passphrase []byte) ([]byte, error) {
+	if cryptoJSON.KDFParams.DKLen != scryptDKLen {
+		return nil, fmt.Errorf("invalid KDF key length: got %d, want %d", cryptoJSON.KDFParams.DKLen, scryptDKLen)
+	}
 	switch cryptoJSON.KDF {
 	case "scrypt":
+		switch {
+		case cryptoJSON.KDFParams.N <= 1 || cryptoJSON.KDFParams.N > maxScryptN:
+			return nil, fmt.Errorf("invalid scrypt N: %d", cryptoJSON.KDFParams.N)
+		case cryptoJSON.KDFParams.R <= 0 || cryptoJSON.KDFParams.R > maxScryptR:
+			return nil, fmt.Errorf("invalid scrypt r: %d", cryptoJSON.KDFParams.R)
+		case cryptoJSON.KDFParams.P <= 0 || cryptoJSON.KDFParams.P > maxScryptP:
+			return nil, fmt.Errorf("invalid scrypt p: %d", cryptoJSON.KDFParams.P)
+		}
 		return scrypt.Key(
 			passphrase,
 			cryptoJSON.KDFParams.Salt,
@@ -130,6 +149,9 @@ func deriveKey(cryptoJSON jsonKeyCrypto, passphrase []byte) ([]byte, error) {
 	case "pbkdf2":
 		if cryptoJSON.KDFParams.PRF != "hmac-sha256" {
 			return nil, fmt.Errorf("unsupported PBKDF2 PRF: %s", cryptoJSON.KDFParams.PRF)
+		}
+		if cryptoJSON.KDFParams.C <= 0 || cryptoJSON.KDFParams.C > maxPBKDF2Count {
+			return nil, fmt.Errorf("invalid PBKDF2 iteration count: %d", cryptoJSON.KDFParams.C)
 		}
 		key := pbkdf2.Key(
 			passphrase,

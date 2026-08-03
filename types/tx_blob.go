@@ -55,7 +55,7 @@ func (t *TransactionBlob) SigningHash() (Hash, error) {
 		input                = (rlp.Bytes)(nil)
 		accessList           = (AccessList)(nil)
 		maxFeePerBlobGas     = &rlp.BigInt{}
-		blobHashes           = (rlp.TypedList[Hash])(nil)
+		blobHashes           = (rlp.TypedList[kzgHash])(nil)
 	)
 	if t.ChainID != nil {
 		chainID = rlp.Uint(*t.ChainID)
@@ -88,9 +88,9 @@ func (t *TransactionBlob) SigningHash() (Hash, error) {
 		maxFeePerBlobGas = (*rlp.BigInt)(t.MaxFeePerBlobGas)
 	}
 	if len(t.Blobs) > 0 {
-		blobHashes = make(rlp.TypedList[Hash], len(t.Blobs))
+		blobHashes = make(rlp.TypedList[kzgHash], len(t.Blobs))
 		for i := range t.Blobs {
-			blobHashes[i] = &t.Blobs[i].Hash
+			blobHashes[i] = (*kzgHash)(&t.Blobs[i].Hash)
 		}
 	}
 	bin, err := rlp.List{
@@ -135,7 +135,7 @@ func (t TransactionBlob) EncodeRLP() ([]byte, error) {
 		input                = (rlp.Bytes)(nil)
 		accessList           = (AccessList)(nil)
 		maxFeePerBlobGas     = &rlp.BigInt{}
-		blobHashes           = (rlp.TypedList[Hash])(nil)
+		blobHashes           = (rlp.TypedList[kzgHash])(nil)
 		blobs                = (rlp.TypedList[kzgBlob])(nil)
 		commitments          = (rlp.TypedList[kzgCommitment])(nil)
 		proofs               = (rlp.TypedList[kzgProof])(nil)
@@ -174,11 +174,10 @@ func (t TransactionBlob) EncodeRLP() ([]byte, error) {
 		maxFeePerBlobGas = (*rlp.BigInt)(t.MaxFeePerBlobGas)
 	}
 	if len(t.Blobs) > 0 {
-		blobHashes = make(rlp.TypedList[Hash], 0, len(t.Blobs))
+		blobHashes = make(rlp.TypedList[kzgHash], 0, len(t.Blobs))
 		for i := range t.Blobs {
 			blob := t.Blobs[i]
-
-			blobHashes = append(blobHashes, &blob.Hash)
+			blobHashes = append(blobHashes, (*kzgHash)(&blob.Hash))
 			if blob.Sidecar != nil {
 				blobs.Add((*kzgBlob)(&blob.Sidecar.Blob))
 				commitments.Add((*kzgCommitment)(&blob.Sidecar.Commitment))
@@ -338,7 +337,7 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 	if len(*blobHashes) > 0 {
 		t.Blobs = make([]BlobInfo, len(*blobHashes))
 		for i, hash := range *blobHashes {
-			blob := BlobInfo{Hash: *hash}
+			blob := BlobInfo{Hash: crypto.KZGHash(*hash)}
 			if i < len(*blobs) && i < len(*commitments) && i < len(*proofs) {
 				blob.Sidecar = &BlobSidecar{
 					Blob:       crypto.KZGBlob(*(*blobs)[i]),

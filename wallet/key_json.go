@@ -34,7 +34,10 @@ func NewKeyFromJSONContent(content []byte, passphrase string) (*PrivateKey, erro
 	if err != nil {
 		return nil, err
 	}
-	key := NewKeyFromBytes(prv)
+	key, err := NewKeyFromBytes(prv)
+	if err != nil {
+		return nil, err
+	}
 	if !jKey.Address.IsZero() && jKey.Address != key.Address() {
 		return nil, errors.New("decrypted key address does not match address in file")
 	}

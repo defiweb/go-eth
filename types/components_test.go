@@ -496,7 +496,7 @@ func TestBlobData_JSON(t *testing.T) {
 				MaxFeePerBlobGas: big.NewInt(3000000000),
 				Blobs: []BlobInfo{
 					{
-						Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+						Hash: mustKZGHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666"),
 						Sidecar: &BlobSidecar{
 							Blob:       crypto.KZGBlob{0x01, 0x02, 0x03},
 							Commitment: crypto.KZGCommitment{0x04, 0x05, 0x06},
@@ -507,8 +507,8 @@ func TestBlobData_JSON(t *testing.T) {
 			},
 			want: &jsonCall{
 				MaxFeePerBlobGas: NumberFromBigIntPtr(big.NewInt(3000000000)),
-				BlobHashes: []Hash{
-					MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+				BlobHashes: []kzgHash{
+					kzgHash(mustKZGHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666")),
 				},
 				Blobs: []kzgBlob{
 					{0x01, 0x02, 0x03},
@@ -536,15 +536,15 @@ func TestBlobData_JSON(t *testing.T) {
 				MaxFeePerBlobGas: big.NewInt(3000000000),
 				Blobs: []BlobInfo{
 					{
-						Hash:    MustHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777", PadNone),
+						Hash:    mustKZGHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777"),
 						Sidecar: nil,
 					},
 				},
 			},
 			want: &jsonCall{
 				MaxFeePerBlobGas: NumberFromBigIntPtr(big.NewInt(3000000000)),
-				BlobHashes: []Hash{
-					MustHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777", PadNone),
+				BlobHashes: []kzgHash{
+					kzgHash(mustKZGHashFromHex("0x7777777777777777777777777777777777777777777777777777777777777777")),
 				},
 			},
 			wantJSON: `{

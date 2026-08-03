@@ -1153,8 +1153,13 @@ func (l oneOrList[T]) MarshalJSON() ([]byte, error) {
 }
 
 func (l *oneOrList[T]) UnmarshalJSON(input []byte) error {
-	if len(input) >= 1 && (input[0] == '[' || input[0] == '{') {
-		return json.Unmarshal(input, l)
+	if len(input) >= 1 && input[0] == '[' {
+		var list []T
+		if err := json.Unmarshal(input, &list); err != nil {
+			return err
+		}
+		*l = list
+		return nil
 	}
 	var i T
 	if err := json.Unmarshal(input, &i); err != nil {
@@ -1162,6 +1167,25 @@ func (l *oneOrList[T]) UnmarshalJSON(input []byte) error {
 	}
 	*l = oneOrList[T]{i}
 	return nil
+}
+
+// kzgHash is a fixed-length byte array used for KZG hash.
+type kzgHash [crypto.KZGHashSize]byte
+
+func (t kzgHash) MarshalJSON() ([]byte, error) {
+	return bytesMarshalJSON(t[:]), nil
+}
+
+func (t *kzgHash) UnmarshalJSON(input []byte) error {
+	return fixedBytesUnmarshalJSON(input, t[:])
+}
+
+func (t kzgHash) EncodeRLP() ([]byte, error) {
+	return rlp.Encode(rlp.Bytes(t[:]))
+}
+
+func (t *kzgHash) DecodeRLP(data []byte) (int, error) {
+	return fixedBytesDecodeRLP(data, t[:])
 }
 
 // kzgBlob is a fixed-length byte array used for KZG blob.

@@ -6,8 +6,6 @@ import (
 	"strconv"
 
 	"github.com/tyler-smith/go-bip39"
-
-	"github.com/defiweb/go-eth/crypto"
 )
 
 // The code below is based on:
@@ -114,7 +112,7 @@ func (m Mnemonic) Derive(path DerivationPath) (*PrivateKey, error) {
 			return nil, err
 		}
 	}
-	return NewKeyFromECDSA(crypto.PrivateKey(key.key)), nil
+	return NewKeyFromECDSA(key.key)
 }
 
 // ParseDerivationPath converts a BIP-33 derivation path string into the

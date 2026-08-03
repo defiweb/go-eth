@@ -133,7 +133,7 @@ func (a *AccessTuple) DecodeRLP(data []byte) (int, error) {
 // https://eips.ethereum.org/EIPS/eip-4844
 type BlobInfo struct {
 	// Hash is the blob's versioned hash.
-	Hash Hash
+	Hash crypto.KZGHash
 
 	// Sidecar contains the blob components. Nil when the sidecar is not available.
 	Sidecar *BlobSidecar
@@ -153,7 +153,7 @@ type BlobSidecar struct {
 }
 
 // ComputeHash computes the blob hash of the given blob sidecar.
-func (sc *BlobSidecar) ComputeHash() Hash {
+func (sc *BlobSidecar) ComputeHash() crypto.KZGHash {
 	return crypto.KZGComputeBlobHashV1(sc.Commitment)
 }
 

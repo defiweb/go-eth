@@ -3,7 +3,6 @@ package primitives
 import (
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,26 +34,6 @@ func TestPrivateKey_Bytes(t *testing.T) {
 func TestPrivateKey_Scalar(t *testing.T) {
 	k := PrivateKey{31: 5}
 	assert.Equal(t, int64(5), k.Scalar().Int64())
-}
-
-func TestPrivateKeyFromScalar(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		k, ok := PrivateKeyFromScalar(big.NewInt(5))
-		require.True(t, ok)
-		assert.Equal(t, PrivateKey{31: 5}, k)
-	})
-	t.Run("nil", func(t *testing.T) {
-		_, ok := PrivateKeyFromScalar(nil)
-		assert.False(t, ok)
-	})
-	t.Run("negative", func(t *testing.T) {
-		_, ok := PrivateKeyFromScalar(big.NewInt(-1))
-		assert.False(t, ok)
-	})
-	t.Run("too-large", func(t *testing.T) {
-		_, ok := PrivateKeyFromScalar(new(big.Int).Lsh(big.NewInt(1), 256))
-		assert.False(t, ok)
-	})
 }
 
 // TestPrivateKey_NoDisclose verifies that the key material is not disclosed by

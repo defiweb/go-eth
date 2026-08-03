@@ -3,6 +3,8 @@ package wallet
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 
@@ -18,20 +20,47 @@ type PrivateKey struct {
 }
 
 // NewKeyFromECDSA creates a new private key from a [crypto.PrivateKey].
-func NewKeyFromECDSA(prv crypto.PrivateKey) *PrivateKey {
+//
+// It key must be a valid secp256k1 scalar.
+func NewKeyFromECDSA(prv crypto.PrivateKey) (*PrivateKey, error) {
+	if err := validateScalar(prv); err != nil {
+		return nil, err
+	}
 	pub := crypto.ECPrivateKeyToPublicKey(prv)
 	return &PrivateKey{
 		private: prv,
 		public:  pub,
 		address: types.Address(crypto.ECPublicKeyToAddress(pub)),
+	}, nil
+}
+
+// MustNewKeyFromECDSA works like [NewKeyFromECDSA] but panics on error.
+func MustNewKeyFromECDSA(prv crypto.PrivateKey) *PrivateKey {
+	key, err := NewKeyFromECDSA(prv)
+	if err != nil {
+		panic(err)
 	}
+	return key
 }
 
 // NewKeyFromBytes creates a new private key from private key bytes.
-func NewKeyFromBytes(prv []byte) *PrivateKey {
-	key := secp256k1.PrivKeyFromBytes(prv)
-	defer key.Zero()
-	return NewKeyFromECDSA(crypto.PrivateKey(key.Serialize()))
+//
+// The input must be exactly [crypto.PrivateKeySize] bytes, big-endian, and a
+// valid secp256k1 scalar.
+func NewKeyFromBytes(prv []byte) (*PrivateKey, error) {
+	if len(prv) != crypto.PrivateKeySize {
+		return nil, fmt.Errorf("invalid private key length: got %d, want %d", len(prv), crypto.PrivateKeySize)
+	}
+	return NewKeyFromECDSA(crypto.PrivateKey(prv))
+}
+
+// MustNewKeyFromBytes works like [NewKeyFromBytes] but panics on error.
+func MustNewKeyFromBytes(prv []byte) *PrivateKey {
+	key, err := NewKeyFromBytes(prv)
+	if err != nil {
+		panic(err)
+	}
+	return key
 }
 
 // NewRandomKey creates a random private key.
@@ -40,7 +69,7 @@ func NewRandomKey() *PrivateKey {
 	if err != nil {
 		panic(err)
 	}
-	return NewKeyFromECDSA(key)
+	return MustNewKeyFromECDSA(key)
 }
 
 // PublicKey returns the ECDSA public key.
@@ -106,4 +135,15 @@ func (k *PrivateKey) VerifyMessage(_ context.Context, data []byte, sig types.Sig
 		return false
 	}
 	return types.Address(*addr) == k.address
+}
+
+func validateScalar(prv crypto.PrivateKey) error {
+	var s secp256k1.ModNScalar
+	overflow := s.SetBytes((*[crypto.PrivateKeySize]byte)(&prv))
+	zeroBit := s.IsZeroBit()
+	s.Zero()
+	if overflow|zeroBit != 0 {
+		return errors.New("invalid private key: scalar must be in the range [1, N-1]")
+	}
+	return nil
 }

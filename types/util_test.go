@@ -5,7 +5,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/defiweb/go-eth/crypto/primitives"
+	"github.com/defiweb/go-eth/hexutil"
 )
+
+func mustKZGHashFromHex(h string) (k primitives.KZGHash) {
+	b, err := hexutil.HexToBytes(h)
+	if err != nil {
+		return primitives.KZGHash{}
+	}
+	copy(k[:], b)
+	return k
+}
 
 func assertEqualTX(t *testing.T, actual, expected Transaction) {
 	assert.Equal(t, deref(reflect.TypeOf(actual)), deref(reflect.TypeOf(expected)))

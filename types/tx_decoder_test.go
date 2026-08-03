@@ -177,7 +177,7 @@ func TestTransactionDecoder_DecodeRLP(t *testing.T) {
 						MaxFeePerBlobGas: big.NewInt(3000000000),
 						Blobs: []BlobInfo{
 							{
-								Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+								Hash: mustKZGHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666"),
 							},
 						},
 					},
@@ -440,7 +440,7 @@ func TestTransactionDeocder_DecodeJSON(t *testing.T) {
 						MaxFeePerBlobGas: big.NewInt(3000000000),
 						Blobs: []BlobInfo{
 							{
-								Hash: MustHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666", PadNone),
+								Hash: mustKZGHashFromHex("0x6666666666666666666666666666666666666666666666666666666666666666"),
 							},
 						},
 					},
