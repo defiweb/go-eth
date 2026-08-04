@@ -45,12 +45,6 @@ func withStreamTimeout(timeout time.Duration) streamOption {
 	}
 }
 
-func withStreamCloseFunc(fn func()) streamOption {
-	return func(s *stream) {
-		s.closeFunc = fn
-	}
-}
-
 func withStreamErrorCh(errCh chan error) streamOption {
 	return func(s *stream) {
 		s.errCh = errCh
@@ -61,12 +55,11 @@ func withStreamErrorCh(errCh chan error) streamOption {
 type stream struct {
 	ctx context.Context
 
-	writeCh   chan rpcRequest  // Channel for sending requests used by structs that embed stream.
-	readCh    chan rpcResponse // Channel for receiving responses used by structs that embed stream.
-	errCh     chan error       // Channel to which errors are sent.
-	timeout   time.Duration    // Timeout for requests.
-	bufSize   int              // Buffer size for the subscription channels.
-	closeFunc func()           // Callback that is called when the stream is closed.
+	writeCh chan rpcRequest  // Channel for sending requests used by structs that embed stream.
+	readCh  chan rpcResponse // Channel for receiving responses used by structs that embed stream.
+	errCh   chan error       // Channel to which errors are sent.
+	timeout time.Duration    // Timeout for requests.
+	bufSize int              // Buffer size for the subscription channels.
 
 	// State fields. Should not be accessed by structs that embed stream.
 	id  uint64          // Request ID counter.
@@ -177,20 +170,15 @@ func (s *stream) Unsubscribe(ctx context.Context, id string) error {
 }
 
 func (s *stream) streamRoutine() {
-	defer func() {
-		s.chs.close()
-		if s.closeFunc != nil {
-			s.closeFunc()
-		}
-	}()
+	defer s.chs.close()
 	for {
 		select {
 		case res, ok := <-s.readCh:
 			if !ok {
 				return
 			}
-			switch {
-			case res.ID == nil:
+			switch res.ID {
+			case nil:
 				// If the ID is nil, it is a subscription notification.
 				sub := &rpcSubscription{}
 				if err := json.Unmarshal(res.Params, sub); err != nil {

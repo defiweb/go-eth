@@ -61,7 +61,7 @@ func assertEqualCall(t *testing.T, actual, expected Call) {
 }
 
 func deref(t reflect.Type) reflect.Type {
-	for t.Kind() == reflect.Ptr || t.Kind() == reflect.Interface {
+	for t.Kind() == reflect.Pointer || t.Kind() == reflect.Interface {
 		t = t.Elem()
 	}
 	return t

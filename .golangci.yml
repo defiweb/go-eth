@@ -1,0 +1,21 @@
+version: "2"
+
+run:
+  tests: false
+
+linters:
+  settings:
+    staticcheck:
+      checks:
+        - all
+
+        # Defaults.
+        - -ST1000
+        - -ST1003
+        - -ST1016
+        - -ST1020
+        - -ST1021
+        - -ST1022
+
+        # "could remove embedded field from selector".
+        - -QF1008

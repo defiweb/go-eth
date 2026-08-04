@@ -118,7 +118,7 @@ func subscribe[T any](ctx context.Context, t transport.Transport, method string,
 	msgCh := make(chan T)
 	go func() {
 		defer close(msgCh)
-		defer st.Unsubscribe(ctx, subID)
+		defer st.Unsubscribe(ctx, subID) //nolint:errcheck
 		for {
 			select {
 			case <-ctx.Done():

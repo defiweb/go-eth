@@ -86,9 +86,7 @@ func (b *BoolFlagsValue) MapFrom(_ abi.Mapper, src any) error {
 		if len(src) > 256 {
 			return fmt.Errorf("abi: cannot map []bool of length %d to BoolFlags", len(src))
 		}
-		for i, v := range src {
-			b[i] = v
-		}
+		copy(b[:], src)
 	}
 	return nil
 }
@@ -100,9 +98,7 @@ func (b *BoolFlagsValue) MapTo(_ abi.Mapper, dst any) error {
 		*dst = *b
 	case *[]bool:
 		*dst = make([]bool, 256)
-		for i, v := range b {
-			(*dst)[i] = v
-		}
+		copy(*dst, b[:])
 	}
 	return nil
 }

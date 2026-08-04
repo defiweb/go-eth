@@ -406,7 +406,7 @@ func setClientContext(ctx *ClientContext, r reflect.Value, maxDepth int) {
 	if maxDepth <= 0 {
 		return
 	}
-	for r.Kind() == reflect.Ptr {
+	for r.Kind() == reflect.Pointer {
 		if r.IsNil() {
 			return
 		}
@@ -424,7 +424,7 @@ func setClientContext(ctx *ClientContext, r reflect.Value, maxDepth int) {
 			f.Set(reflect.ValueOf(ctx))
 			continue
 		}
-		if f.Kind() == reflect.Struct || f.Kind() == reflect.Ptr {
+		if f.Kind() == reflect.Struct || f.Kind() == reflect.Pointer {
 			setClientContext(ctx, f, maxDepth-1)
 		}
 	}
@@ -444,4 +444,4 @@ type clientTransportHijacker struct {
 	*transport.Hijack
 }
 
-var contextTy = reflect.TypeOf((*ClientContext)(nil)).Elem()
+var contextTy = reflect.TypeFor[ClientContext]()

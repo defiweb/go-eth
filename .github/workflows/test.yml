@@ -30,7 +30,7 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: latest
+          version: v2.12.2
       - name: Build
         run: go build -v ./...
       - name: Test

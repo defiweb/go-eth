@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/defiweb/go-eth/rpc/transport"
-	"github.com/defiweb/go-eth/types"
 )
 
 type roundTripFunc func(req *http.Request) (*http.Response, error)
@@ -85,37 +84,6 @@ func (s *streamMock) Unsubscribe(_ context.Context, id string) error {
 	s.UnsubscribeMocks = s.UnsubscribeMocks[1:]
 	require.Equal(s.t, m.ArgID, id)
 	return m.ResultErr
-}
-
-type keyMock struct {
-	addressCallback         func() types.Address
-	signHashCallback        func(hash types.Hash) (*types.Signature, error)
-	signMessageCallback     func(data []byte) (*types.Signature, error)
-	signTransactionCallback func(tx *types.Transaction) error
-}
-
-func (k *keyMock) Address() types.Address {
-	return k.addressCallback()
-}
-
-func (k *keyMock) SignHash(ctx context.Context, hash types.Hash) (*types.Signature, error) {
-	return k.signHashCallback(hash)
-}
-
-func (k *keyMock) SignMessage(ctx context.Context, data []byte) (*types.Signature, error) {
-	return k.signMessageCallback(data)
-}
-
-func (k *keyMock) SignTransaction(ctx context.Context, tx *types.Transaction) error {
-	return k.signTransactionCallback(tx)
-}
-
-func (k *keyMock) VerifyHash(ctx context.Context, hash types.Hash, sig types.Signature) bool {
-	return false
-}
-
-func (k keyMock) VerifyMessage(ctx context.Context, data []byte, sig types.Signature) bool {
-	return false
 }
 
 func readBody(r *http.Request) string {

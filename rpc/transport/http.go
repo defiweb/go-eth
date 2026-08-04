@@ -63,7 +63,7 @@ func (h *HTTP) Call(ctx context.Context, result any, method string, args ...any)
 	if err != nil {
 		return fmt.Errorf("failed to send HTTP request: %w", err)
 	}
-	defer httpRes.Body.Close()
+	defer httpRes.Body.Close() //nolint:errcheck
 	rpcRes := &rpcResponse{}
 	if err := json.NewDecoder(httpRes.Body).Decode(rpcRes); err != nil {
 		// If the response is not a valid JSON-RPC response, return the HTTP
