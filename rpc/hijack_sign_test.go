@@ -19,8 +19,8 @@ import (
 )
 
 func TestHijackSign(t *testing.T) {
-	key1 := wallet.NewKeyFromBytes(hexutil.MustHexToBytes("0x01")) // 0x7e5f4552091a69125d5dfcb7b8c2659029395bdf
-	key2 := wallet.NewKeyFromBytes(hexutil.MustHexToBytes("0x02")) // 0x2b5ad5c4795c026514f8317c7a215e218dccd6cf
+	key1 := wallet.MustNewKeyFromBytes(hexutil.MustHexToBytes("0x0000000000000000000000000000000000000000000000000000000000000001")) // 0x7e5f4552091a69125d5dfcb7b8c2659029395bdf
+	key2 := wallet.MustNewKeyFromBytes(hexutil.MustHexToBytes("0x0000000000000000000000000000000000000000000000000000000000000002")) // 0x2b5ad5c4795c026514f8317c7a215e218dccd6cf
 	tc := []struct {
 		name       string
 		sign       *hijackSign
