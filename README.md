@@ -16,42 +16,49 @@ Key features include:
 - **Extensible Design**: Modular architecture with customizable transport hijackers and middleware
 
 <!-- TOC -->
-
-- [go-eth](#go-eth)
-    - [Installation](#installation)
-    - [Quick start](#quick-start)
-        - [Connecting to a node](#connecting-to-a-node)
-        - [Calling a contract method](#calling-a-contract-method)
-        - [Calling a contract method using a Human-Readable ABI](#calling-a-contract-method-using-a-human-readable-abi)
-        - [Sending a transaction](#sending-a-transaction)
-        - [Subscribing to events](#subscribing-to-events)
-    - [Transports](#transports)
-    - [Wallets](#wallets)
-    - [Working with ABI](#working-with-abi)
-        - [Mapping rules](#mapping-rules)
-        - [Encoding and Decoding Methods](#encoding-and-decoding-methods)
-            - [Encoding method arguments](#encoding-method-arguments)
-            - [Decoding method return values](#decoding-method-return-values)
-        - [Events / Logs](#events--logs)
-            - [Decoding events](#decoding-events)
-        - [Contract ABI](#contract-abi)
-            - [JSON-ABI](#json-abi)
-            - [Human-Readable ABI](#human-readable-abi)
-        - [Errors](#errors)
-        - [Reverts](#reverts)
-        - [Panics](#panics)
-        - [Signature parser syntax](#signature-parser-syntax)
-        - [Custom types](#custom-types)
-            - [Simple types](#simple-types)
-            - [Advanced types](#advanced-types)
-    - [Client Configuration](#client-configuration)
-        - [Available Options](#available-options)
-        - [Transport Hijacking](#transport-hijacking)
-    - [Cryptographic Functions](#cryptographic-functions)
-    - [Utility Packages](#utility-packages)
-    - [Additional tools](#additional-tools)
-    - [Documentation](#documentation)
-
+* [go-eth](#go-eth)
+  * [Installation](#installation)
+  * [Quick start](#quick-start)
+    * [Connecting to a node](#connecting-to-a-node)
+    * [Calling a contract method](#calling-a-contract-method)
+    * [Calling a contract method using a Human-Readable ABI](#calling-a-contract-method-using-a-human-readable-abi)
+    * [Sending a transaction](#sending-a-transaction)
+    * [Sending a blob transaction](#sending-a-blob-transaction)
+    * [Subscribing to events](#subscribing-to-events)
+  * [Transports](#transports)
+  * [Wallets](#wallets)
+  * [Client Configuration](#client-configuration)
+    * [Available Options](#available-options)
+    * [Transport Hijacking](#transport-hijacking)
+      * [Ordering](#ordering)
+      * [Argument copying](#argument-copying)
+  * [Working with ABI](#working-with-abi)
+    * [Mapping rules](#mapping-rules)
+    * [Encoding and Decoding Methods](#encoding-and-decoding-methods)
+      * [Encoding method arguments](#encoding-method-arguments)
+      * [Decoding method return values](#decoding-method-return-values)
+    * [Events / Logs](#events--logs)
+      * [Decoding events](#decoding-events)
+    * [Contract ABI](#contract-abi)
+      * [JSON-ABI](#json-abi)
+      * [Human-Readable ABI](#human-readable-abi)
+    * [Errors](#errors)
+    * [Reverts](#reverts)
+    * [Panics](#panics)
+    * [Signature parser syntax](#signature-parser-syntax)
+    * [Custom types](#custom-types)
+      * [Simple types](#simple-types)
+      * [Advanced types](#advanced-types)
+  * [Cryptographic Functions](#cryptographic-functions)
+    * [ECDSA Operations](#ecdsa-operations)
+    * [Hashing](#hashing)
+    * [KZG4844 (EIP-4844 Blob Transactions)](#kzg4844-eip-4844-blob-transactions)
+    * [Transaction Signing](#transaction-signing)
+  * [Utility Packages](#utility-packages)
+    * [HexUtil Package](#hexutil-package)
+    * [Types Package](#types-package)
+  * [Additional tools](#additional-tools)
+  * [Documentation](#documentation)
 <!-- TOC -->
 
 ## Installation
@@ -379,6 +386,136 @@ func keyPath() string {
 }
 ```
 
+### Sending a blob transaction
+
+EIP-4844 blob transactions carry large data payloads that the EVM cannot read
+but that remain available to the network for a limited time. The example below
+posts two blobs and prints their versioned hashes.
+
+Note that the blob gas price is not covered by any of the client options — it
+has to be set explicitly with `SetMaxFeePerBlobGas`.
+
+<!-- examples/send-tx-blob/main.go -->
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"os"
+
+	"github.com/defiweb/go-eth/crypto"
+	"github.com/defiweb/go-eth/hexutil"
+	"github.com/defiweb/go-eth/rpc"
+	"github.com/defiweb/go-eth/rpc/transport"
+	"github.com/defiweb/go-eth/types"
+	"github.com/defiweb/go-eth/wallet"
+)
+
+func main() {
+	// Load the private key.
+	k, err := wallet.NewKeyFromJSON(keyPath(), "test123")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create transport.
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://ethereum.publicnode.com"})
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a JSON-RPC client.
+	c, err := rpc.NewClient(
+		// Transport is always required.
+		rpc.WithTransport(t),
+
+		// Specify a key for signing transactions. If provided, the client
+		// will sign transactions before sending them to the node.
+		rpc.WithKeys(k),
+
+		// Specify the default "from" address for transactions.
+		rpc.WithDefaultAddress(rpc.AddressOptions{
+			Address: k.Address(),
+		}),
+
+		// Estimate gas limit for transactions if not provided explicitly.
+		rpc.WithGasLimit(rpc.GasLimitOptions{
+			Multiplier: 1.25,
+		}),
+
+		// Estimate gas price for transactions if not provided explicitly.
+		rpc.WithDynamicGasFee(rpc.DynamicGasFeeOptions{
+			GasPriceMultiplier:          1.25,
+			PriorityFeePerGasMultiplier: 1.25,
+		}),
+
+		// Automatically set the chain ID for transactions.
+		rpc.WithChainID(rpc.ChainIDOptions{}),
+
+		// Automatically set the nonce for transactions.
+		rpc.WithNonce(rpc.NonceOptions{}),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare the blobs.
+	//
+	// A blob is a fixed 128 KiB, so it is allocated on the heap rather than
+	// as a local variable.
+	//
+	// The data is used verbatim. EIP-4844 requires every 32-byte field
+	// element of a blob to be smaller than the BLS12-381 modulus, so
+	// arbitrary bytes must be encoded before being placed in a blob.
+	var blobs []types.BlobInfo
+	for _, data := range []string{"hello world 1", "hello world 2"} {
+		blob := new(crypto.KZGBlob)
+		copy(blob[:], data)
+
+		// NewBlobInfo computes the KZG commitment, the KZG proof, and the
+		// versioned hash for the blob.
+		info, err := types.NewBlobInfo(blob)
+		if err != nil {
+			panic(err)
+		}
+		blobs = append(blobs, info)
+	}
+
+	// Prepare a transaction.
+	tx := types.NewTransactionBlob()
+	tx.SetTo(types.MustAddressFromHex("0x69B352cbE6Fc5C130b6F62cc8f30b9d7B0DC27d0"))
+	tx.SetBlobs(blobs)
+
+	// The blob gas price is not estimated by any of the client options above,
+	// so it has to be set explicitly.
+	tx.SetMaxFeePerBlobGas(big.NewInt(1e10))
+
+	txHash, err := c.SendTransaction(context.Background(), tx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Print the transaction hash and the versioned hash of each blob. The
+	// versioned hashes are what the EVM sees; the blobs themselves are not
+	// accessible to contracts and are discarded by the network after a few
+	// weeks.
+	fmt.Printf("Transaction hash: %s\n", txHash.String())
+	for i, b := range blobs {
+		fmt.Printf("Blob %d versioned hash: %s\n", i, hexutil.BytesToHex(b.Hash[:]))
+	}
+}
+
+func keyPath() string {
+	if _, err := os.Stat("./key.json"); err == nil {
+		return "./key.json"
+	}
+	return "./examples/send-tx-blob/key.json"
+}
+```
+
 ### Subscribing to events
 
 The following example shows how to subscribe to WETH transfer events.
@@ -409,6 +546,12 @@ func main() {
 	t, err := transport.NewWebsocket(transport.WebsocketOptions{
 		Context: ctx,
 		URL:     "wss://ethereum.publicnode.com",
+
+		// Size the per-subscription queue for the slowest consumer. Once the
+		// buffer of any subscription fills up, the transport stops reading
+		// from the connection, stalling every other subscription and call
+		// sharing it.
+		SubscriptionBufferSize: 64,
 	})
 	if err != nil {
 		panic(err)
@@ -525,18 +668,99 @@ The RPC client can be configured with various options to automatically handle tr
 
 ### Available Options
 
-| Option                   | Description                               |
-| ------------------------ | ----------------------------------------- |
-| `WithTransport`          | Sets the transport for communication      |
-| `WithKeys`               | Adds private keys for transaction signing |
-| `WithDefaultAddress`     | Sets default sender address               |
-| `WithChainID`            | Auto-sets chain ID for transactions       |
-| `WithNonce`              | Auto-manages transaction nonces           |
-| `WithGasLimit`           | Auto-estimates gas limits                 |
-| `WithLegacyGasFee`       | Auto-estimates legacy gas prices          |
-| `WithDynamicGasFee`      | Auto-estimates EIP-1559 gas fees          |
-| `WithSimulate`           | Simulates transactions before sending     |
-| `WithTransactionDecoder` | Custom transaction decoder                |
+| Option                   | Description                                          |
+| ------------------------ | ---------------------------------------------------- |
+| `WithTransport`          | Sets the transport for communication                 |
+| `WithKeys`               | Adds private keys for transaction signing            |
+| `WithDefaultAddress`     | Sets default sender address                          |
+| `WithChainID`            | Auto-sets chain ID for transactions                  |
+| `WithNonce`              | Auto-manages transaction nonces                      |
+| `WithGasLimit`           | Auto-estimates gas limits                            |
+| `WithLegacyGasFee`       | Auto-estimates legacy gas prices                     |
+| `WithDynamicGasFee`      | Auto-estimates EIP-1559 gas fees                     |
+| `WithSimulate`           | Simulates transactions before sending                |
+| `WithTransactionDecoder` | Custom transaction decoder                           |
+| `WithPreHijackers`       | Custom middleware, run before the built-in hijackers |
+| `WithPostHijackers`      | Custom middleware, run after the built-in hijackers  |
+
+Options are order-independent: the client sorts them by a fixed priority before
+applying them, so the sequence in which they are passed to `NewClient` does not
+matter.
+
+### Transport Hijacking
+
+Every option above except `WithTransport` and `WithTransactionDecoder` is
+implemented as a *hijacker*: middleware wrapped around the transport that can
+inspect and modify a call before it reaches the node. The same mechanism is
+available for custom middleware through `WithPreHijackers` and
+`WithPostHijackers`.
+
+A hijacker implements `transport.Hijacker`, which has one method per transport
+operation. Returning `nil` from any of them leaves that operation untouched:
+
+```go
+type Hijacker interface {
+	Call() func(next CallFunc) CallFunc
+	Subscribe() func(next SubscribeFunc) SubscribeFunc
+	Unsubscribe() func(next UnsubscribeFunc) UnsubscribeFunc
+}
+```
+
+The example below logs every RPC call and its duration:
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/defiweb/go-eth/rpc"
+	"github.com/defiweb/go-eth/rpc/transport"
+)
+
+type logHijacker struct{}
+
+func (l *logHijacker) Call() func(next transport.CallFunc) transport.CallFunc {
+	return func(next transport.CallFunc) transport.CallFunc {
+		return func(ctx context.Context, t transport.Transport, result any, method string, args ...any) error {
+			start := time.Now()
+			err := next(ctx, t, result, method, args...)
+			log.Printf("%s took %s (err: %v)", method, time.Since(start), err)
+			return err
+		}
+	}
+}
+
+// Returning nil leaves subscriptions untouched.
+func (l *logHijacker) Subscribe() func(next transport.SubscribeFunc) transport.SubscribeFunc {
+	return nil
+}
+
+func (l *logHijacker) Unsubscribe() func(next transport.UnsubscribeFunc) transport.UnsubscribeFunc {
+	return nil
+}
+
+func main() {
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://ethereum.publicnode.com"})
+	if err != nil {
+		panic(err)
+	}
+
+	c, err := rpc.NewClient(
+		rpc.WithTransport(t),
+		rpc.WithPreHijackers(&logHijacker{}),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err := c.BlockNumber(context.Background()); err != nil {
+		panic(err)
+	}
+}
+```
 
 ## Working with ABI
 
@@ -787,7 +1011,7 @@ import (
 )
 
 func main() {
-	abiData := hexutil.MustHexToBytes("0x00000000000000000000000000000000000000000000000002b5e3af16b1880000")
+	abiData := hexutil.MustHexToBytes("0x000000000000000000000000000000000000000000000002b5e3af16b1880000")
 
 	// Parse method signature.
 	balanceOf := abi.MustParseMethod("balanceOf(address) returns (uint256)")
@@ -1223,21 +1447,21 @@ The package includes full support for KZG commitments and proofs used in blob tr
 Example KZG usage:
 
 ```go
-import "github.com/defiweb/go-eth/crypto/kzg4844"
+import "github.com/defiweb/go-eth/crypto"
 
-// Create a blob (128KB of data)
-var blob kzg4844.Blob
+// Create a blob (128 KiB of data)
+var blob crypto.KZGBlob
 copy(blob[:], "your data here...")
 
 // Generate commitment
-commitment, err := kzg4844.BlobToCommitment(&blob)
+commitment, err := crypto.KZGBlobToCommitment(&blob)
 if err != nil {
     panic(err)
 }
 
 // Generate proof for a specific point
-var point kzg4844.Point
-proof, claim, err := kzg4844.ComputeProof(&blob, point)
+var point crypto.KZGPoint
+proof, claim, err := crypto.KZGComputeProof(&blob, point)
 ```
 
 ### Transaction Signing

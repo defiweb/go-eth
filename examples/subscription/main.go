@@ -21,6 +21,12 @@ func main() {
 	t, err := transport.NewWebsocket(transport.WebsocketOptions{
 		Context: ctx,
 		URL:     "wss://ethereum.publicnode.com",
+
+		// Size the per-subscription queue for the slowest consumer. Once the
+		// buffer of any subscription fills up, the transport stops reading
+		// from the connection, stalling every other subscription and call
+		// sharing it.
+		SubscriptionBufferSize: 64,
 	})
 	if err != nil {
 		panic(err)
