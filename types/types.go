@@ -3,17 +3,23 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"math"
 	"math/big"
 	"strings"
 
 	"github.com/defiweb/go-rlp"
 
+	"github.com/defiweb/go-eth/crypto"
 	"github.com/defiweb/go-eth/hexutil"
 )
 
-// HashFunc returns the hash for the given input.
-type HashFunc func(data ...[]byte) Hash
+var (
+	// ForceAddressChecksum is a global flag that forces the use of checksummed
+	// addresses in text representations.
+	//
+	// Note: This is a global flag, so it affects all packages that use the
+	// Address type.
+	ForceAddressChecksum = false
+)
 
 // Pad is a padding type.
 type Pad uint8
@@ -40,6 +46,9 @@ var ZeroAddress = Address{}
 // AddressFromHex parses an address in hex format and returns an Address type.
 func AddressFromHex(h string) (a Address, err error) {
 	err = a.UnmarshalText([]byte(h))
+	if err != nil {
+		return ZeroAddress, err
+	}
 	return a, err
 }
 
@@ -107,6 +116,38 @@ func MustAddressFromBytesPtr(b []byte) *Address {
 	return &a
 }
 
+// AddressFromChecksum parses a checksummed address and returns an Address type.
+func AddressFromChecksum(h string) (Address, error) {
+	a, err := AddressFromHex(h)
+	if err != nil {
+		return ZeroAddress, err
+	}
+	if a.Checksum() != h {
+		return ZeroAddress, fmt.Errorf("invalid checksum: expected %s, got %s", a.Checksum(), h)
+	}
+	return a, nil
+}
+
+// MustAddressFromChecksum parses a checksummed address and returns an Address type.
+// It panics if the address is invalid.
+func MustAddressFromChecksum(h string) Address {
+	a, err := AddressFromChecksum(h)
+	if err != nil {
+		panic(err)
+	}
+	return a
+}
+
+// AddressFromChecksumPtr parses a checksummed address and returns an Address type.
+// It returns nil if the address is invalid.
+func AddressFromChecksumPtr(h string) *Address {
+	a, err := AddressFromChecksum(h)
+	if err != nil {
+		return nil
+	}
+	return &a
+}
+
 // Bytes returns the byte representation of the address.
 func (t Address) Bytes() []byte {
 	return t[:]
@@ -114,17 +155,17 @@ func (t Address) Bytes() []byte {
 
 // String returns the hex representation of the address.
 func (t Address) String() string {
+	if ForceAddressChecksum {
+		return t.Checksum()
+	}
 	return hexutil.BytesToHex(t[:])
 }
 
 // Checksum returns the address with the checksum calculated according to
 // EIP-55.
-//
-// HashFunc is the hash function used to calculate the checksum, most likely
-// crypto.Keccak256.
-func (t Address) Checksum(h HashFunc) string {
+func (t Address) Checksum() string {
 	hex := []byte(hexutil.BytesToHex(t[:])[2:])
-	hash := h(hex)
+	hash := crypto.Keccak256(hex)
 	for i, c := range hex {
 		if c >= '0' && c <= '9' {
 			continue
@@ -141,43 +182,55 @@ func (t Address) IsZero() bool {
 	return t == ZeroAddress
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t Address) MarshalJSON() ([]byte, error) {
+	if ForceAddressChecksum {
+		return naiveQuote([]byte(t.Checksum())), nil
+	}
 	return bytesMarshalJSON(t[:]), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *Address) UnmarshalJSON(input []byte) error {
 	return fixedBytesUnmarshalJSON(input, t[:])
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (t Address) MarshalText() ([]byte, error) {
+	if ForceAddressChecksum {
+		return []byte(t.Checksum()), nil
+	}
 	return bytesMarshalText(t[:]), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (t *Address) UnmarshalText(input []byte) error {
 	return fixedBytesUnmarshalText(input, t[:])
 }
 
+// EncodeRLP implements the rlp.Encoder interface.
 func (t Address) EncodeRLP() ([]byte, error) {
-	return rlp.Encode(rlp.NewBytes(t[:]))
+	return rlp.Encode(rlp.Bytes(t[:]))
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
 func (t *Address) DecodeRLP(data []byte) (int, error) {
-	r, n, err := rlp.Decode(data)
+	r, n, err := rlp.DecodeLazy(data)
 	if err != nil {
 		return 0, err
 	}
-	a, err := r.GetBytes()
+	b, err := r.Bytes()
 	if err != nil {
 		return 0, err
 	}
-	if len(a) == 0 {
+	if len(b) == 0 {
 		*t = ZeroAddress
 		return n, nil
 	}
-	if len(a) != AddressLength {
-		return 0, fmt.Errorf("invalid address length %d", len(a))
+	if len(b) != AddressLength {
+		return 0, fmt.Errorf("invalid address length %d", len(b))
 	}
-	copy(t[:], a)
+	copy(t[:], b)
 	return n, nil
 }
 
@@ -192,6 +245,11 @@ type Hash [HashLength]byte
 
 // ZeroHash is a hash with all zeros.
 var ZeroHash = Hash{}
+
+// HashKeccak256 calculates the Keccak256 hash of the given data.
+func HashKeccak256(data ...[]byte) Hash {
+	return Hash(crypto.Keccak256(data...))
+}
 
 // HashFromHex parses a hash in hex format and returns a Hash type.
 // If hash is longer than 32 bytes, it returns an error.
@@ -349,37 +407,47 @@ func (t Hash) IsZero() bool {
 	return t == ZeroHash
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t Hash) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *Hash) UnmarshalJSON(input []byte) error {
 	return fixedBytesUnmarshalJSON(input, t[:])
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (t Hash) MarshalText() ([]byte, error) {
 	return bytesMarshalText(t[:]), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (t *Hash) UnmarshalText(input []byte) error {
 	return fixedBytesUnmarshalText(input, t[:])
 }
 
+// EncodeRLP implements the rlp.Encoder interface.
 func (t Hash) EncodeRLP() ([]byte, error) {
-	return rlp.Encode(rlp.NewBytes(t[:]))
+	return rlp.Encode(rlp.Bytes(t[:]))
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
 func (t *Hash) DecodeRLP(data []byte) (int, error) {
-	r, n, err := rlp.Decode(data)
+	r, n, err := rlp.DecodeLazy(data)
 	if err != nil {
 		return 0, err
 	}
-	b, err := r.GetBytes()
+	b, err := r.Bytes()
 	if err != nil {
 		return 0, err
+	}
+	if len(b) == 0 {
+		*t = ZeroHash
+		return n, nil
 	}
 	if len(b) != HashLength {
-		return 0, fmt.Errorf("invalid hash length %d", len(t))
+		return 0, fmt.Errorf("invalid hash length %d", len(b))
 	}
 	copy(t[:], b)
 	return n, nil
@@ -507,6 +575,12 @@ func (t *BlockNumber) IsTag() bool {
 }
 
 // Big returns the big.Int representation of the block number.
+// It returns a negative number if the block tag is used:
+//   - earliest: -1
+//   - latest: -2
+//   - pending: -3
+//   - safe: -4
+//   - finalized: -5
 func (t *BlockNumber) Big() *big.Int {
 	return new(big.Int).Set(&t.x)
 }
@@ -529,6 +603,7 @@ func (t *BlockNumber) String() string {
 	}
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t BlockNumber) MarshalJSON() ([]byte, error) {
 	b, err := t.MarshalText()
 	if err != nil {
@@ -537,10 +612,16 @@ func (t BlockNumber) MarshalJSON() ([]byte, error) {
 	return naiveQuote(b), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *BlockNumber) UnmarshalJSON(input []byte) error {
-	return t.UnmarshalText(naiveUnquote(input))
+	input, ok := naiveUnquote(input)
+	if !ok {
+		return fmt.Errorf("invalid JSON string: %s", input)
+	}
+	return t.UnmarshalText(input)
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (t BlockNumber) MarshalText() ([]byte, error) {
 	switch {
 	case t.IsEarliest():
@@ -558,6 +639,7 @@ func (t BlockNumber) MarshalText() ([]byte, error) {
 	}
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (t *BlockNumber) UnmarshalText(input []byte) error {
 	switch strings.ToLower(strings.TrimSpace(string(input))) {
 	case "earliest":
@@ -580,9 +662,6 @@ func (t *BlockNumber) UnmarshalText(input []byte) error {
 		if err != nil {
 			return err
 		}
-		if u.Cmp(big.NewInt(math.MaxInt64)) > 0 {
-			return fmt.Errorf("block number larger than int64")
-		}
 		*t = BlockNumber{x: *u}
 		return nil
 	}
@@ -598,6 +677,8 @@ type Signature struct {
 	R *big.Int
 	S *big.Int
 }
+
+var _ = crypto.Signature(Signature{})
 
 // SignatureFromHex parses a hex string into a Signature.
 // Hex representation of the signature is hex([R || S || V]).
@@ -774,6 +855,7 @@ func (s Signature) Equal(c Signature) bool {
 	return sv.Cmp(cv) == 0 && sr.Cmp(cr) == 0 && ss.Cmp(cs) == 0
 }
 
+// Copy returns a deep copy of the signature.
 func (s Signature) Copy() *Signature {
 	cpy := &Signature{}
 	if s.V != nil {
@@ -788,10 +870,12 @@ func (s Signature) Copy() *Signature {
 	return cpy
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (s Signature) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(s.Bytes()), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (s *Signature) UnmarshalJSON(input []byte) error {
 	var b []byte
 	if err := bytesUnmarshalJSON(input, &b); err != nil {
@@ -805,10 +889,12 @@ func (s *Signature) UnmarshalJSON(input []byte) error {
 	return nil
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (s Signature) MarshalText() ([]byte, error) {
 	return bytesMarshalText(s.Bytes()), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (s *Signature) UnmarshalText(input []byte) error {
 	var b []byte
 	if err := bytesUnmarshalText(input, &b); err != nil {
@@ -896,7 +982,7 @@ func NumberFromBigInt(x *big.Int) Number {
 	if x == nil {
 		return Number{}
 	}
-	return Number{x: *x}
+	return Number{x: *copyBigInt(x)}
 }
 
 // NumberFromBigIntPtr converts a big.Int to a *Number type.
@@ -910,7 +996,7 @@ func (t *Number) Big() *big.Int {
 	return new(big.Int).Set(&t.x)
 }
 
-// Bytes returns the byte representation of the number.
+// Bytes returns the absolute value of a number as a big-endian byte slice.
 func (t *Number) Bytes() []byte {
 	return t.x.Bytes()
 }
@@ -920,18 +1006,22 @@ func (t *Number) String() string {
 	return hexutil.BigIntToHex(&t.x)
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t Number) MarshalJSON() ([]byte, error) {
 	return numberMarshalJSON(t.Big()), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *Number) UnmarshalJSON(input []byte) error {
 	return numberUnmarshalJSON(input, &t.x)
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (t Number) MarshalText() ([]byte, error) {
 	return numberMarshalText(t.Big()), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (t *Number) UnmarshalText(input []byte) error {
 	return numberUnmarshalText(input, &t.x)
 }
@@ -1022,42 +1112,143 @@ func (b *Bytes) String() string {
 	return hexutil.BytesToHex(*b)
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (b Bytes) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(b), nil
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (b *Bytes) UnmarshalJSON(input []byte) error {
 	return bytesUnmarshalJSON(input, (*[]byte)(b))
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
 func (b Bytes) MarshalText() ([]byte, error) {
 	return bytesMarshalText(b), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
 func (b *Bytes) UnmarshalText(input []byte) error {
 	return bytesUnmarshalText(input, (*[]byte)(b))
-}
-
-//
-// SyncStatus type:
-//
-
-// SyncStatus represents the sync status of a node.
-type SyncStatus struct {
-	StartingBlock BlockNumber `json:"startingBlock"`
-	CurrentBlock  BlockNumber `json:"currentBlock"`
-	HighestBlock  BlockNumber `json:"highestBlock"`
 }
 
 //
 // Internal types:
 //
 
-const bloomLength = 256
+const (
+	bloomLength = 256
+	nonceLength = 8
+)
 
-type hexBloom [bloomLength]byte
+// oneOrList is a type that can marshal and unmarshal a single element or a list
+// of elements.
+type oneOrList[T any] []T
 
-func bloomFromBytes(x []byte) hexBloom {
+func (l oneOrList[T]) MarshalJSON() ([]byte, error) {
+	if len(l) == 1 {
+		return json.Marshal(l[0])
+	}
+	return json.Marshal([]T(l))
+}
+
+func (l *oneOrList[T]) UnmarshalJSON(input []byte) error {
+	if len(input) >= 1 && input[0] == '[' {
+		var list []T
+		if err := json.Unmarshal(input, &list); err != nil {
+			return err
+		}
+		*l = list
+		return nil
+	}
+	var i T
+	if err := json.Unmarshal(input, &i); err != nil {
+		return err
+	}
+	*l = oneOrList[T]{i}
+	return nil
+}
+
+// kzgHash is a fixed-length byte array used for KZG hash.
+type kzgHash [crypto.KZGHashSize]byte
+
+func (t kzgHash) MarshalJSON() ([]byte, error) {
+	return bytesMarshalJSON(t[:]), nil
+}
+
+func (t *kzgHash) UnmarshalJSON(input []byte) error {
+	return fixedBytesUnmarshalJSON(input, t[:])
+}
+
+func (t kzgHash) EncodeRLP() ([]byte, error) {
+	return rlp.Encode(rlp.Bytes(t[:]))
+}
+
+func (t *kzgHash) DecodeRLP(data []byte) (int, error) {
+	return fixedBytesDecodeRLP(data, t[:])
+}
+
+// kzgBlob is a fixed-length byte array used for KZG blob.
+type kzgBlob [crypto.KZGBlobSize]byte
+
+func (t kzgBlob) MarshalJSON() ([]byte, error) {
+	return bytesMarshalJSON(t[:]), nil
+}
+
+func (t *kzgBlob) UnmarshalJSON(input []byte) error {
+	return fixedBytesUnmarshalJSON(input, t[:])
+}
+
+func (t kzgBlob) EncodeRLP() ([]byte, error) {
+	return rlp.Encode(rlp.Bytes(t[:]))
+}
+
+func (t *kzgBlob) DecodeRLP(data []byte) (int, error) {
+	return fixedBytesDecodeRLP(data, t[:])
+}
+
+// kzgCommitment is a fixed-length byte array used for KZG commitment.
+type kzgCommitment [crypto.KZGCommitmentSize]byte
+
+func (t kzgCommitment) MarshalJSON() ([]byte, error) {
+	return bytesMarshalJSON(t[:]), nil
+}
+
+func (t *kzgCommitment) UnmarshalJSON(input []byte) error {
+	return fixedBytesUnmarshalJSON(input, t[:])
+}
+
+func (t kzgCommitment) EncodeRLP() ([]byte, error) {
+	return rlp.Encode(rlp.Bytes(t[:]))
+}
+
+func (t *kzgCommitment) DecodeRLP(data []byte) (int, error) {
+	return fixedBytesDecodeRLP(data, t[:])
+}
+
+// kzgProof is a fixed-length byte array used for KZG proof.
+type kzgProof [crypto.KZGProofSize]byte
+
+func (t kzgProof) MarshalJSON() ([]byte, error) {
+	return bytesMarshalJSON(t[:]), nil
+}
+
+func (t *kzgProof) UnmarshalJSON(input []byte) error {
+	return fixedBytesUnmarshalJSON(input, t[:])
+}
+
+func (t kzgProof) EncodeRLP() ([]byte, error) {
+	return rlp.Encode(rlp.Bytes(t[:]))
+}
+
+func (t *kzgProof) DecodeRLP(data []byte) (int, error) {
+	return fixedBytesDecodeRLP(data, t[:])
+}
+
+// bloom is a fixed-length byte array used for bloom filter.
+type bloom [bloomLength]byte
+
+func bloomFromBytes(x []byte) bloom {
 	var b [bloomLength]byte
 	if len(x) > len(b) {
 		return b
@@ -1066,110 +1257,38 @@ func bloomFromBytes(x []byte) hexBloom {
 	return b
 }
 
-func (t *hexBloom) Bytes() []byte {
+func (t *bloom) Bytes() []byte {
 	return t[:]
 }
 
-func (t *hexBloom) String() string {
-	if t == nil {
-		return ""
-	}
-	return hexutil.BytesToHex(t[:])
-}
-
-func (t hexBloom) MarshalJSON() ([]byte, error) {
+func (t bloom) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
 }
 
-func (t *hexBloom) UnmarshalJSON(input []byte) error {
+func (t *bloom) UnmarshalJSON(input []byte) error {
 	return fixedBytesUnmarshalJSON(input, t[:])
 }
 
-func (t hexBloom) MarshalText() ([]byte, error) {
-	return bytesMarshalText(t[:]), nil
-}
-
-func (t *hexBloom) UnmarshalText(input []byte) error {
-	return fixedBytesUnmarshalText(input, t[:])
-}
-
-const nonceLength = 8
-
-type hexNonce [nonceLength]byte
-
-func nonceFromBigInt(x *big.Int) hexNonce {
+func nonceFromBigInt(x *big.Int) (n nonce) {
 	if x == nil {
-		return hexNonce{}
+		return nonce{}
 	}
-	return nonceFromBytes(x.Bytes())
-}
-
-func nonceFromBytes(x []byte) hexNonce {
-	var n hexNonce
-	if len(x) > len(n) {
-		return n
-	}
-	copy(n[nonceLength-len(x):], x)
+	b := x.Bytes()
+	copy(n[nonceLength-len(b):], b)
 	return n
 }
 
-func (t *hexNonce) Big() *big.Int {
+// nonce is a fixed-length byte array used for nonce.
+type nonce [nonceLength]byte
+
+func (t *nonce) Big() *big.Int {
 	return new(big.Int).SetBytes(t[:])
 }
 
-func (t *hexNonce) String() string {
-	if t == nil {
-		return ""
-	}
-	return hexutil.BytesToHex(t[:])
-}
-
-func (t hexNonce) MarshalJSON() ([]byte, error) {
+func (t nonce) MarshalJSON() ([]byte, error) {
 	return bytesMarshalJSON(t[:]), nil
 }
 
-func (t *hexNonce) UnmarshalJSON(input []byte) error {
+func (t *nonce) UnmarshalJSON(input []byte) error {
 	return fixedBytesUnmarshalJSON(input, t[:])
-}
-
-func (t hexNonce) MarshalText() ([]byte, error) {
-	return bytesMarshalText(t[:]), nil
-}
-
-func (t *hexNonce) UnmarshalText(input []byte) error {
-	return fixedBytesUnmarshalText(input, t[:])
-}
-
-type hashList []Hash
-
-func (b hashList) MarshalJSON() ([]byte, error) {
-	if len(b) == 1 {
-		return json.Marshal(b[0])
-	}
-	return json.Marshal([]Hash(b))
-}
-
-func (b *hashList) UnmarshalJSON(input []byte) error {
-	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
-		*b = hashList{{}}
-		return json.Unmarshal(input, &((*b)[0]))
-	}
-	return json.Unmarshal(input, (*[]Hash)(b))
-}
-
-type addressList []Address
-
-func (t addressList) MarshalJSON() ([]byte, error) {
-	if len(t) == 1 {
-		return json.Marshal(t[0])
-	}
-	return json.Marshal([]Address(t))
-}
-
-func (t *addressList) UnmarshalJSON(input []byte) error {
-	if len(input) >= 2 && input[0] == '"' && input[len(input)-1] == '"' {
-		*t = addressList{{}}
-		return json.Unmarshal(input, &((*t)[0]))
-	}
-	return json.Unmarshal(input, (*[]Address)(t))
 }

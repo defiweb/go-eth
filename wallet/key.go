@@ -15,7 +15,7 @@ type Key interface {
 	SignMessage(ctx context.Context, data []byte) (*types.Signature, error)
 
 	// SignTransaction signs the given transaction.
-	SignTransaction(ctx context.Context, tx *types.Transaction) error
+	SignTransaction(ctx context.Context, tx types.SignableTransaction) error
 
 	// VerifyMessage verifies whether the given data is signed by the key.
 	VerifyMessage(ctx context.Context, data []byte, sig types.Signature) bool

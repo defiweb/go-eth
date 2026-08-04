@@ -207,7 +207,7 @@ func encodeInt(v *big.Int, size int) (Words, error) {
 	if err := x.SetBigInt(v); err != nil {
 		return nil, err
 	}
-	if err := w.SetBytesPadLeft(x.Bytes()); err != nil {
+	if err := x.FillBytes(w[:]); err != nil {
 		return nil, err
 	}
 	return Words{w}, nil
@@ -224,7 +224,7 @@ func encodeUint(v *big.Int, size int) (Words, error) {
 	if err := x.SetBigInt(v); err != nil {
 		return nil, err
 	}
-	if err := w.SetBytesPadLeft(x.Bytes()); err != nil {
+	if err := x.FillBytes(w[:]); err != nil {
 		return nil, err
 	}
 	return Words{w}, nil
@@ -259,5 +259,5 @@ func writeInt(w *Word, x int) error {
 	if err := i32.SetInt(x); err != nil {
 		return err
 	}
-	return w.SetBytesPadLeft(i32.Bytes())
+	return i32.FillBytes(w[:])
 }

@@ -40,11 +40,12 @@ func (i *intX) BitSize() int {
 	return i.size
 }
 
-// BitLen returns the number of bits required to represent x.
+// BitLen returns the number of bits required to represent the integer.
 func (i *intX) BitLen() int {
 	return signedBitLen(i.val)
 }
 
+// IsInt returns true if the integer can be represented as an int.
 func (i *intX) IsInt() bool {
 	if !i.val.IsInt64() {
 		return false
@@ -59,6 +60,7 @@ func (i *intX) IsInt() bool {
 	return true
 }
 
+// Int returns the int64 representation of the integer.
 func (i *intX) Int() (int, error) {
 	if !i.val.IsInt64() {
 		return 0, fmt.Errorf("abi: int overflow")
@@ -73,6 +75,7 @@ func (i *intX) Int() (int, error) {
 	return int(i.val.Int64()), nil
 }
 
+// Int64 returns the int64 representation of the integer.
 func (i *intX) Int64() (int64, error) {
 	if !i.val.IsInt64() {
 		return 0, fmt.Errorf("abi: int64 overflow")
@@ -80,7 +83,7 @@ func (i *intX) Int64() (int64, error) {
 	return i.val.Int64(), nil
 }
 
-// BigInt returns the value of the integer as a big integer.
+// BigInt returns the *big.Int representation of the integer.
 func (i *intX) BigInt() *big.Int {
 	return i.val
 }
@@ -95,6 +98,24 @@ func (i *intX) Bytes() []byte {
 	return r
 }
 
+// FillBytes fills the byte slice r with the value of the integer as a
+// big-endian byte slice. If the byte slice is smaller than the integer,
+// an error is returned. The byte slice cannot be larger than 256 bits.
+// Negative values are two's complement encoded.
+func (i *intX) FillBytes(r []byte) error {
+	bitLen := len(r) * 8
+	if bitLen < i.size {
+		return fmt.Errorf("abi: cannot fill %d-bit integer to %d bytes", i.size, len(r))
+	}
+	if bitLen > 256 {
+		return fmt.Errorf("abi: cannot fill byte slices larger than 256 bits")
+	}
+	x := new(big.Int).Set(i.val).And(i.val, MaxUint[bitLen])
+	x.FillBytes(r)
+	return nil
+}
+
+// SetInt sets the value of the integer to x.
 func (i *intX) SetInt(x int) error {
 	if bits.Len(uint(x)) > i.size {
 		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit int", bits.Len(uint(x)), i.size)
@@ -103,6 +124,7 @@ func (i *intX) SetInt(x int) error {
 	return nil
 }
 
+// SetInt64 sets the value of the integer to x.
 func (i *intX) SetInt64(x int64) error {
 	if bits.Len64(uint64(x)) > i.size {
 		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit int64", bits.Len64(uint64(x)), i.size)
@@ -156,6 +178,7 @@ func newUintX(bitSize int) *uintX {
 	}
 }
 
+// Uint returns the uint representation of the integer.
 func (i *uintX) Uint() (int, error) {
 	if !i.val.IsUint64() {
 		return 0, fmt.Errorf("abi: uint overflow")
@@ -167,6 +190,7 @@ func (i *uintX) Uint() (int, error) {
 	return int(i.val.Uint64()), nil
 }
 
+// Uint64 returns the uint64 representation of the integer.
 func (i *uintX) Uint64() (uint64, error) {
 	if !i.val.IsUint64() {
 		return 0, fmt.Errorf("abi: int64 overflow")
@@ -174,7 +198,7 @@ func (i *uintX) Uint64() (uint64, error) {
 	return i.val.Uint64(), nil
 }
 
-// BigInt returns the value of the integer as a big integer.
+// BigInt returns the *big.Int representation of the integer.
 func (i *uintX) BigInt() *big.Int {
 	return i.val
 }
@@ -188,6 +212,22 @@ func (i *uintX) Bytes() []byte {
 	return r
 }
 
+// FillBytes fills the byte slice r with the value of the integer as a
+// big-endian byte slice. If the byte slice is smaller than the integer,
+// an error is returned. The byte slice cannot be larger than 256 bits.
+func (i *uintX) FillBytes(r []byte) error {
+	bitLen := len(r) * 8
+	if bitLen < i.size {
+		return fmt.Errorf("abi: cannot fill %d-bit integer to %d bytes", i.size, len(r))
+	}
+	if bitLen > 256 {
+		return fmt.Errorf("abi: cannot fill byte slices larger than 256 bits")
+	}
+	i.val.FillBytes(r)
+	return nil
+}
+
+// SetUint sets the value of the integer to x.
 func (i *uintX) SetUint(x uint) error {
 	if bits.Len(x) > i.size {
 		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit int", bits.Len(x), i.size)
@@ -196,6 +236,7 @@ func (i *uintX) SetUint(x uint) error {
 	return nil
 }
 
+// SetUint64 sets the value of the integer to x.
 func (i *uintX) SetUint64(x uint64) error {
 	if bits.Len64(x) > i.size {
 		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit int64", bits.Len64(x), i.size)
@@ -211,8 +252,11 @@ func (i *uintX) SetBigInt(x *big.Int) error {
 		i.val = big.NewInt(0)
 		return nil
 	}
+	if x.Sign() < 0 {
+		return fmt.Errorf("abi: cannot set negative integer to %d-bit unsigned int", i.size)
+	}
 	if x.BitLen() > i.size {
-		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit signed int", signedBitLen(x), i.size)
+		return fmt.Errorf("abi: cannot set %d-bit integer to %d-bit unsigned int", x.BitLen(), i.size)
 	}
 	i.val.Set(x)
 	return nil

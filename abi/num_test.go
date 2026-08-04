@@ -75,6 +75,29 @@ func TestIntX_Bytes(t *testing.T) {
 	}
 }
 
+func TestIntX_SetIntUint(t *testing.T) {
+	tests := []struct {
+		x      uint64
+		bitLen int
+		want   bool
+	}{
+		{x: 0, bitLen: 8, want: true},
+		{x: 1, bitLen: 8, want: true},
+		{x: 255, bitLen: 8, want: true},
+		{x: 256, bitLen: 8, want: false},
+		{x: 0, bitLen: 32, want: true},
+		{x: 1, bitLen: 32, want: true},
+		{x: math.MaxUint32, bitLen: 32, want: true},
+		{x: math.MaxUint32 + 1, bitLen: 32, want: false},
+		{x: math.MaxUint64, bitLen: 64, want: true},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			assert.Equal(t, tt.want, canSetUint(tt.x, tt.bitLen))
+		})
+	}
+}
+
 func TestIntX_SetBytes(t *testing.T) {
 	tests := []struct {
 		val     *intX
@@ -146,6 +169,78 @@ func TestIntX_SetBytes(t *testing.T) {
 	}
 }
 
+func TestIntX_FillBytes(t *testing.T) {
+	tests := []struct {
+		val     *intX
+		set     *big.Int
+		want    []byte
+		wantErr bool
+	}{
+		{
+			val:  newIntX(8),
+			set:  big.NewInt(0),
+			want: []byte{0x00},
+		},
+		{
+			val:  newIntX(8),
+			set:  big.NewInt(1),
+			want: []byte{0x01},
+		},
+		{
+			val:  newIntX(8),
+			set:  big.NewInt(-1),
+			want: []byte{0xff},
+		},
+		{
+			val:  newIntX(8),
+			set:  big.NewInt(127),
+			want: []byte{0x7f},
+		},
+		{
+			val:  newIntX(8),
+			set:  big.NewInt(-128),
+			want: []byte{0x80},
+		},
+		{
+			val:  newIntX(8),
+			set:  big.NewInt(1),
+			want: []byte{0x00, 0x01},
+		},
+		{
+			val:  newIntX(8),
+			set:  big.NewInt(-1),
+			want: []byte{0xff, 0xff},
+		},
+		// Too small slice
+		{
+			val:     newIntX(16),
+			set:     big.NewInt(0),
+			want:    []byte{0x00},
+			wantErr: true,
+		},
+		// Too large slice
+		{
+			val:     newIntX(8),
+			set:     big.NewInt(0),
+			want:    make([]byte, 33),
+			wantErr: true,
+		},
+	}
+	for n, tt := range tests {
+		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
+			require.NoError(t, tt.val.SetBigInt(tt.set))
+			res := make([]byte, len(tt.want))
+			err := tt.val.FillBytes(res)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, res)
+			}
+		})
+	}
+}
+
 func Test_signedBitLen(t *testing.T) {
 	tests := []struct {
 		arg  *big.Int
@@ -192,29 +287,6 @@ func Test_canSetInt(t *testing.T) {
 	for n, tt := range tests {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
 			assert.Equal(t, tt.want, canSetInt(tt.x, tt.bitLen))
-		})
-	}
-}
-
-func TestIntX_SetIntUint(t *testing.T) {
-	tests := []struct {
-		x      uint64
-		bitLen int
-		want   bool
-	}{
-		{x: 0, bitLen: 8, want: true},
-		{x: 1, bitLen: 8, want: true},
-		{x: 255, bitLen: 8, want: true},
-		{x: 256, bitLen: 8, want: false},
-		{x: 0, bitLen: 32, want: true},
-		{x: 1, bitLen: 32, want: true},
-		{x: math.MaxUint32, bitLen: 32, want: true},
-		{x: math.MaxUint32 + 1, bitLen: 32, want: false},
-		{x: math.MaxUint64, bitLen: 64, want: true},
-	}
-	for n, tt := range tests {
-		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			assert.Equal(t, tt.want, canSetUint(tt.x, tt.bitLen))
 		})
 	}
 }

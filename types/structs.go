@@ -3,721 +3,25 @@ package types
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/defiweb/go-rlp"
+
+	"github.com/defiweb/go-eth/crypto"
 )
 
-// Call represents a call to a contract or a contract creation if To is nil.
-type Call struct {
-	From     *Address // From is the sender address.
-	To       *Address // To is the recipient address. nil means contract creation.
-	GasLimit *uint64  // GasLimit is the gas limit, if 0, there is no limit.
-	GasPrice *big.Int // GasPrice is the gas price in wei per gas unit.
-	Value    *big.Int // Value is the amount of wei to send.
-	Input    []byte   // Input is the input data.
-
-	// EIP-2930 fields:
-	AccessList AccessList // AccessList is the list of addresses and storage keys that the transaction can access.
-
-	// EIP-1559 fields:
-	MaxPriorityFeePerGas *big.Int // MaxPriorityFeePerGas is the maximum priority fee per gas the sender is willing to pay.
-	MaxFeePerGas         *big.Int // MaxFeePerGas is the maximum fee per gas the sender is willing to pay.
-}
-
-func NewCall() *Call {
-	return &Call{}
-}
-
-func (c *Call) SetFrom(from Address) *Call {
-	c.From = &from
-	return c
-}
-
-func (c *Call) SetTo(to Address) *Call {
-	c.To = &to
-	return c
-}
-
-func (c *Call) SetGasLimit(gasLimit uint64) *Call {
-	c.GasLimit = &gasLimit
-	return c
-}
-
-func (c *Call) SetGasPrice(gasPrice *big.Int) *Call {
-	c.GasPrice = gasPrice
-	return c
-}
-
-func (c *Call) SetValue(value *big.Int) *Call {
-	c.Value = value
-	return c
-}
-
-func (c *Call) SetInput(input []byte) *Call {
-	c.Input = input
-	return c
-}
-
-func (c *Call) SetAccessList(accessList AccessList) *Call {
-	c.AccessList = accessList
-	return c
-}
-
-func (c *Call) SetMaxPriorityFeePerGas(maxPriorityFeePerGas *big.Int) *Call {
-	c.MaxPriorityFeePerGas = maxPriorityFeePerGas
-	return c
-}
-
-func (c *Call) SetMaxFeePerGas(maxFeePerGas *big.Int) *Call {
-	c.MaxFeePerGas = maxFeePerGas
-	return c
-}
-
-func (c Call) Copy() *Call {
-	var (
-		from                 *Address
-		to                   *Address
-		gasLimit             *uint64
-		gasPrice             *big.Int
-		value                *big.Int
-		input                []byte
-		accessList           AccessList
-		maxPriorityFeePerGas *big.Int
-		maxFeePerGas         *big.Int
-	)
-	if c.From != nil {
-		from = new(Address)
-		copy(from[:], c.From[:])
-	}
-	if c.To != nil {
-		to = new(Address)
-		copy(to[:], c.To[:])
-	}
-	if c.GasLimit != nil {
-		gasLimit = new(uint64)
-		*gasLimit = *c.GasLimit
-	}
-	if c.GasPrice != nil {
-		gasPrice = new(big.Int).Set(c.GasPrice)
-	}
-	if c.Value != nil {
-		value = new(big.Int).Set(c.Value)
-	}
-	if c.Input != nil {
-		input = make([]byte, len(c.Input))
-		copy(input, c.Input)
-	}
-	if c.AccessList != nil {
-		accessList = c.AccessList.Copy()
-	}
-	if c.MaxPriorityFeePerGas != nil {
-		maxPriorityFeePerGas = new(big.Int).Set(c.MaxPriorityFeePerGas)
-	}
-	if c.MaxFeePerGas != nil {
-		maxFeePerGas = new(big.Int).Set(c.MaxFeePerGas)
-	}
-	return &Call{
-		From:                 from,
-		To:                   to,
-		GasLimit:             gasLimit,
-		GasPrice:             gasPrice,
-		Value:                value,
-		Input:                input,
-		AccessList:           accessList,
-		MaxPriorityFeePerGas: maxPriorityFeePerGas,
-		MaxFeePerGas:         maxFeePerGas,
-	}
-}
-
-func (c Call) MarshalJSON() ([]byte, error) {
-	call := &jsonCall{
-		From:       c.From,
-		To:         c.To,
-		Data:       c.Input,
-		AccessList: c.AccessList,
-	}
-	if c.GasLimit != nil {
-		call.GasLimit = NumberFromUint64Ptr(*c.GasLimit)
-	}
-	if c.GasPrice != nil {
-		call.GasPrice = NumberFromBigIntPtr(c.GasPrice)
-	}
-	if c.MaxFeePerGas != nil {
-		call.MaxFeePerGas = NumberFromBigIntPtr(c.MaxFeePerGas)
-	}
-	if c.MaxPriorityFeePerGas != nil {
-		call.MaxPriorityFeePerGas = NumberFromBigIntPtr(c.MaxPriorityFeePerGas)
-	}
-	if c.Value != nil {
-		value := NumberFromBigInt(c.Value)
-		call.Value = &value
-	}
-	return json.Marshal(call)
-}
-
-func (c *Call) UnmarshalJSON(data []byte) error {
-	call := &jsonCall{}
-	if err := json.Unmarshal(data, call); err != nil {
-		return err
-	}
-	c.From = call.From
-	c.To = call.To
-	if call.GasLimit != nil {
-		gas := call.GasLimit.Big().Uint64()
-		c.GasLimit = &gas
-	}
-	if call.GasPrice != nil {
-		c.GasPrice = call.GasPrice.Big()
-	}
-	if call.MaxFeePerGas != nil {
-		c.MaxFeePerGas = call.MaxFeePerGas.Big()
-	}
-	if call.MaxPriorityFeePerGas != nil {
-		c.MaxPriorityFeePerGas = call.MaxPriorityFeePerGas.Big()
-	}
-	if call.Value != nil {
-		c.Value = call.Value.Big()
-	}
-	c.Input = call.Data
-	c.AccessList = call.AccessList
-	return nil
-}
-
-type jsonCall struct {
-	From                 *Address   `json:"from,omitempty"`
-	To                   *Address   `json:"to,omitempty"`
-	GasLimit             *Number    `json:"gas,omitempty"`
-	GasPrice             *Number    `json:"gasPrice,omitempty"`
-	MaxFeePerGas         *Number    `json:"maxFeePerGas,omitempty"`
-	MaxPriorityFeePerGas *Number    `json:"maxPriorityFeePerGas,omitempty"`
-	Value                *Number    `json:"value,omitempty"`
-	Data                 Bytes      `json:"data,omitempty"`
-	AccessList           AccessList `json:"accessList,omitempty"`
-}
-
-// TransactionType is the type of transaction.
-type TransactionType uint64
-
-// Transaction types.
-const (
-	LegacyTxType TransactionType = iota
-	AccessListTxType
-	DynamicFeeTxType
-)
-
-// Transaction represents a transaction.
-type Transaction struct {
-	Call
-
-	// Transaction data:
-	Type      TransactionType // Type is the transaction type.
-	Nonce     *uint64         // Nonce is the number of transactions made by the sender prior to this one.
-	Signature *Signature      // Signature of the transaction.
-
-	// EIP-2930 fields:
-	ChainID *uint64 // ChainID is the chain ID of the transaction.
-}
-
-func NewTransaction() *Transaction {
-	return &Transaction{}
-}
-
-func (t *Transaction) SetFrom(from Address) *Transaction {
-	t.From = &from
-	return t
-}
-
-func (t *Transaction) SetTo(to Address) *Transaction {
-	t.To = &to
-	return t
-}
-
-func (t *Transaction) SetGasLimit(gasLimit uint64) *Transaction {
-	t.GasLimit = &gasLimit
-	return t
-}
-
-func (t *Transaction) SetGasPrice(gasPrice *big.Int) *Transaction {
-	t.GasPrice = gasPrice
-	return t
-}
-
-func (t *Transaction) SetValue(value *big.Int) *Transaction {
-	t.Value = value
-	return t
-}
-
-func (t *Transaction) SetInput(input []byte) *Transaction {
-	t.Input = input
-	return t
-}
-
-func (t *Transaction) SetAccessList(accessList AccessList) *Transaction {
-	t.AccessList = accessList
-	return t
-}
-
-func (t *Transaction) SetMaxPriorityFeePerGas(maxPriorityFeePerGas *big.Int) *Transaction {
-	t.MaxPriorityFeePerGas = maxPriorityFeePerGas
-	return t
-}
-
-func (t *Transaction) SetMaxFeePerGas(maxFeePerGas *big.Int) *Transaction {
-	t.MaxFeePerGas = maxFeePerGas
-	return t
-}
-
-func (t *Transaction) SetType(transactionType TransactionType) *Transaction {
-	t.Type = transactionType
-	return t
-}
-
-func (t *Transaction) SetNonce(nonce uint64) *Transaction {
-	t.Nonce = &nonce
-	return t
-}
-
-func (t *Transaction) SetSignature(signature Signature) *Transaction {
-	t.Signature = &signature
-	return t
-}
-
-func (t *Transaction) SetChainID(chainID uint64) *Transaction {
-	t.ChainID = &chainID
-	return t
-}
-
-// Raw returns the raw transaction data that could be sent to the network.
-func (t Transaction) Raw() ([]byte, error) {
-	return t.EncodeRLP()
-}
-
-func (t *Transaction) Copy() *Transaction {
-	var (
-		nonce     *uint64
-		signature *Signature
-		chainID   *uint64
-	)
-	if t.Nonce != nil {
-		nonce = new(uint64)
-		*nonce = *t.Nonce
-	}
-	if t.Signature != nil {
-		signature = t.Signature.Copy()
-	}
-	if t.ChainID != nil {
-		chainID = new(uint64)
-		*chainID = *t.ChainID
-	}
-	return &Transaction{
-		Call:      *t.Call.Copy(),
-		Type:      t.Type,
-		Nonce:     nonce,
-		Signature: signature,
-		ChainID:   chainID,
-	}
-}
-
-func (t Transaction) MarshalJSON() ([]byte, error) {
-	transaction := &jsonTransaction{}
-	transaction.To = t.To
-	transaction.From = t.From
-	if t.GasLimit != nil {
-		transaction.GasLimit = NumberFromUint64Ptr(*t.GasLimit)
-	}
-	if t.GasPrice != nil {
-		transaction.GasPrice = NumberFromBigIntPtr(t.GasPrice)
-	}
-	if t.MaxFeePerGas != nil {
-		transaction.MaxFeePerGas = NumberFromBigIntPtr(t.MaxFeePerGas)
-	}
-	if t.MaxPriorityFeePerGas != nil {
-		transaction.MaxPriorityFeePerGas = NumberFromBigIntPtr(t.MaxPriorityFeePerGas)
-	}
-	transaction.Input = t.Input
-	if t.Nonce != nil {
-		transaction.Nonce = NumberFromUint64Ptr(*t.Nonce)
-	}
-	if t.Value != nil {
-		transaction.Value = NumberFromBigIntPtr(t.Value)
-	}
-	transaction.AccessList = t.AccessList
-	if t.Signature != nil {
-		transaction.V = NumberFromBigIntPtr(t.Signature.V)
-		transaction.R = NumberFromBigIntPtr(t.Signature.R)
-		transaction.S = NumberFromBigIntPtr(t.Signature.S)
-	}
-	return json.Marshal(transaction)
-}
-
-func (t *Transaction) UnmarshalJSON(data []byte) error {
-	transaction := &jsonTransaction{}
-	if err := json.Unmarshal(data, transaction); err != nil {
-		return err
-	}
-	t.To = transaction.To
-	t.From = transaction.From
-	if transaction.GasLimit != nil {
-		gas := transaction.GasLimit.Big().Uint64()
-		t.GasLimit = &gas
-	}
-	if transaction.GasPrice != nil {
-		t.GasPrice = transaction.GasPrice.Big()
-	}
-	if transaction.MaxFeePerGas != nil {
-		t.MaxFeePerGas = transaction.MaxFeePerGas.Big()
-	}
-	if transaction.MaxPriorityFeePerGas != nil {
-		t.MaxPriorityFeePerGas = transaction.MaxPriorityFeePerGas.Big()
-	}
-	t.Input = transaction.Input
-	if transaction.Nonce != nil {
-		nonce := transaction.Nonce.Big().Uint64()
-		t.Nonce = &nonce
-	}
-	if transaction.Value != nil {
-		t.Value = transaction.Value.Big()
-	}
-	t.AccessList = transaction.AccessList
-	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
-		t.Signature = SignatureFromVRSPtr(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
-	}
-	return nil
-}
-
-//nolint:funlen
-func (t Transaction) EncodeRLP() ([]byte, error) {
-	var (
-		chainID              = uint64(1)
-		nonce                = uint64(0)
-		gasPrice             = big.NewInt(0)
-		gasLimit             = uint64(0)
-		maxPriorityFeePerGas = big.NewInt(0)
-		maxFeePerGas         = big.NewInt(0)
-		to                   = ([]byte)(nil)
-		value                = big.NewInt(0)
-		accessList           = (AccessList)(nil)
-		v                    = big.NewInt(0)
-		r                    = big.NewInt(0)
-		s                    = big.NewInt(0)
-	)
-	if t.ChainID != nil {
-		chainID = *t.ChainID
-	}
-	if t.Nonce != nil {
-		nonce = *t.Nonce
-	}
-	if t.GasPrice != nil {
-		gasPrice = t.GasPrice
-	}
-	if t.GasLimit != nil {
-		gasLimit = *t.GasLimit
-	}
-	if t.MaxPriorityFeePerGas != nil {
-		maxPriorityFeePerGas = t.MaxPriorityFeePerGas
-	}
-	if t.MaxFeePerGas != nil {
-		maxFeePerGas = t.MaxFeePerGas
-	}
-	if t.To != nil {
-		to = t.To[:]
-	}
-	if t.Value != nil {
-		value = t.Value
-	}
-	if t.AccessList != nil {
-		accessList = t.AccessList
-	}
-	if t.Signature != nil {
-		v = t.Signature.V
-		r = t.Signature.R
-		s = t.Signature.S
-	}
-	switch t.Type {
-	case LegacyTxType:
-		return rlp.NewList(
-			rlp.NewUint(nonce),
-			rlp.NewBigInt(gasPrice),
-			rlp.NewUint(gasLimit),
-			rlp.NewBytes(to),
-			rlp.NewBigInt(value),
-			rlp.NewBytes(t.Input),
-			rlp.NewBigInt(v),
-			rlp.NewBigInt(r),
-			rlp.NewBigInt(s),
-		).EncodeRLP()
-	case AccessListTxType:
-		bin, err := rlp.NewList(
-			rlp.NewUint(chainID),
-			rlp.NewUint(nonce),
-			rlp.NewBigInt(gasPrice),
-			rlp.NewUint(gasLimit),
-			rlp.NewBytes(to),
-			rlp.NewBigInt(value),
-			rlp.NewBytes(t.Input),
-			&t.AccessList,
-			rlp.NewBigInt(v),
-			rlp.NewBigInt(r),
-			rlp.NewBigInt(s),
-		).EncodeRLP()
-		if err != nil {
-			return nil, err
-		}
-		return append([]byte{byte(t.Type)}, bin...), nil
-	case DynamicFeeTxType:
-		bin, err := rlp.NewList(
-			rlp.NewUint(chainID),
-			rlp.NewUint(nonce),
-			rlp.NewBigInt(maxPriorityFeePerGas),
-			rlp.NewBigInt(maxFeePerGas),
-			rlp.NewUint(gasLimit),
-			rlp.NewBytes(to),
-			rlp.NewBigInt(value),
-			rlp.NewBytes(t.Input),
-			&accessList,
-			rlp.NewBigInt(v),
-			rlp.NewBigInt(r),
-			rlp.NewBigInt(s),
-		).EncodeRLP()
-		if err != nil {
-			return nil, err
-		}
-		return append([]byte{byte(t.Type)}, bin...), nil
-	default:
-		return nil, fmt.Errorf("unknown transaction type: %d", t.Type)
-	}
-}
-
-//nolint:funlen
-func (t *Transaction) DecodeRLP(data []byte) (int, error) {
-	if len(data) == 0 {
-		return 0, fmt.Errorf("empty data")
-	}
-	var (
-		list                 *rlp.ListItem
-		chainID              = &rlp.UintItem{}
-		nonce                = &rlp.UintItem{}
-		gasPrice             = &rlp.BigIntItem{}
-		gasLimit             = &rlp.UintItem{}
-		maxPriorityFeePerGas = &rlp.BigIntItem{}
-		maxFeePerGas         = &rlp.BigIntItem{}
-		to                   = &rlp.StringItem{}
-		value                = &rlp.BigIntItem{}
-		input                = &rlp.StringItem{}
-		accessList           = &AccessList{}
-		v                    = &rlp.BigIntItem{}
-		r                    = &rlp.BigIntItem{}
-		s                    = &rlp.BigIntItem{}
-	)
-	switch {
-	case data[0] >= 0x80: // LegacyTxType
-		t.Type = LegacyTxType
-		list = rlp.NewList(
-			nonce,
-			gasPrice,
-			gasLimit,
-			to,
-			value,
-			input,
-			v,
-			r,
-			s,
-		)
-	case data[0] == byte(AccessListTxType):
-		t.Type = AccessListTxType
-		data = data[1:]
-		list = rlp.NewList(
-			chainID,
-			nonce,
-			gasPrice,
-			gasLimit,
-			to,
-			value,
-			input,
-			accessList,
-			v,
-			r,
-			s,
-		)
-	case data[0] == byte(DynamicFeeTxType):
-		t.Type = DynamicFeeTxType
-		data = data[1:]
-		list = rlp.NewList(
-			chainID,
-			nonce,
-			maxPriorityFeePerGas,
-			maxFeePerGas,
-			gasLimit,
-			to,
-			value,
-			input,
-			accessList,
-			v,
-			r,
-			s,
-		)
-	default:
-		return 0, fmt.Errorf("invalid transaction type: %d", data[0])
-	}
-	if _, err := rlp.DecodeTo(data, list); err != nil {
-		return 0, err
-	}
-	t.ChainID = &chainID.X
-	t.Nonce = &nonce.X
-	t.GasPrice = gasPrice.X
-	t.GasLimit = &gasLimit.X
-	t.MaxPriorityFeePerGas = maxPriorityFeePerGas.X
-	t.MaxFeePerGas = maxFeePerGas.X
-	t.To = AddressFromBytesPtr(to.Bytes())
-	t.Value = value.X
-	if len(input.Bytes()) > 0 {
-		t.Input = input.Bytes()
-	}
-	if len(*accessList) > 0 {
-		t.AccessList = *accessList
-	}
-	if v.X.Sign() != 0 || r.X.Sign() != 0 || s.X.Sign() != 0 {
-		t.Signature = &Signature{
-			V: v.X,
-			R: r.X,
-			S: s.X,
-		}
-	}
-	return len(data), nil
-}
-
-// Hash returns the hash of the transaction (transaction ID).
-func (t Transaction) Hash(h HashFunc) (Hash, error) {
-	raw, err := t.Raw()
-	if err != nil {
-		return Hash{}, err
-	}
-	return h(raw), nil
-}
-
-type jsonTransaction struct {
-	From                 *Address   `json:"from,omitempty"`
-	To                   *Address   `json:"to,omitempty"`
-	GasLimit             *Number    `json:"gas,omitempty"`
-	GasPrice             *Number    `json:"gasPrice,omitempty"`
-	MaxFeePerGas         *Number    `json:"maxFeePerGas,omitempty"`
-	MaxPriorityFeePerGas *Number    `json:"maxPriorityFeePerGas,omitempty"`
-	Input                Bytes      `json:"input,omitempty"`
-	Nonce                *Number    `json:"nonce,omitempty"`
-	Value                *Number    `json:"value,omitempty"`
-	AccessList           AccessList `json:"accessList,omitempty"`
-	V                    *Number    `json:"v,omitempty"`
-	R                    *Number    `json:"r,omitempty"`
-	S                    *Number    `json:"s,omitempty"`
-}
-
-// OnChainTransaction represents a transaction that is included in a block.
-type OnChainTransaction struct {
-	Transaction
-
-	// On-chain fields, only available when the transaction is included in a block:
-	Hash             *Hash    // Hash of the transaction.
-	BlockHash        *Hash    // BlockHash is the hash of the block where this transaction was in.
-	BlockNumber      *big.Int // BlockNumber is the block number where this transaction was in.
-	TransactionIndex *uint64  // TransactionIndex is the index of the transaction in the block.
-}
-
-type jsonOnChainTransaction struct {
-	jsonTransaction
-	Hash             *Hash   `json:"hash,omitempty"`
-	BlockHash        *Hash   `json:"blockHash,omitempty"`
-	BlockNumber      *Number `json:"blockNumber,omitempty"`
-	TransactionIndex *Number `json:"transactionIndex,omitempty"`
-}
-
-func (t OnChainTransaction) MarshalJSON() ([]byte, error) {
-	transaction := &jsonOnChainTransaction{}
-	transaction.To = t.To
-	transaction.From = t.From
-	if t.GasLimit != nil {
-		transaction.GasLimit = NumberFromUint64Ptr(*t.GasLimit)
-	}
-	if t.GasPrice != nil {
-		transaction.GasPrice = NumberFromBigIntPtr(t.GasPrice)
-	}
-	if t.MaxFeePerGas != nil {
-		transaction.MaxFeePerGas = NumberFromBigIntPtr(t.MaxFeePerGas)
-	}
-	if t.MaxPriorityFeePerGas != nil {
-		transaction.MaxPriorityFeePerGas = NumberFromBigIntPtr(t.MaxPriorityFeePerGas)
-	}
-	transaction.Input = t.Input
-	if t.Nonce != nil {
-		transaction.Nonce = NumberFromUint64Ptr(*t.Nonce)
-	}
-	if t.Value != nil {
-		transaction.Value = NumberFromBigIntPtr(t.Value)
-	}
-	transaction.AccessList = t.AccessList
-	if t.Signature != nil {
-		transaction.V = NumberFromBigIntPtr(t.Signature.V)
-		transaction.R = NumberFromBigIntPtr(t.Signature.R)
-		transaction.S = NumberFromBigIntPtr(t.Signature.S)
-	}
-	transaction.Hash = t.Hash
-	transaction.BlockHash = t.BlockHash
-	if t.BlockNumber != nil {
-		transaction.BlockNumber = NumberFromBigIntPtr(t.BlockNumber)
-	}
-	if t.TransactionIndex != nil {
-		transaction.TransactionIndex = NumberFromUint64Ptr(*t.TransactionIndex)
-	}
-	return json.Marshal(transaction)
-}
-
-func (t *OnChainTransaction) UnmarshalJSON(data []byte) error {
-	transaction := &jsonOnChainTransaction{}
-	if err := json.Unmarshal(data, transaction); err != nil {
-		return err
-	}
-	t.To = transaction.To
-	t.From = transaction.From
-	if transaction.GasLimit != nil {
-		gas := transaction.GasLimit.Big().Uint64()
-		t.GasLimit = &gas
-	}
-	if transaction.GasPrice != nil {
-		t.GasPrice = transaction.GasPrice.Big()
-	}
-	if transaction.MaxFeePerGas != nil {
-		t.MaxFeePerGas = transaction.MaxFeePerGas.Big()
-	}
-	if transaction.MaxPriorityFeePerGas != nil {
-		t.MaxPriorityFeePerGas = transaction.MaxPriorityFeePerGas.Big()
-	}
-	t.Input = transaction.Input
-	if transaction.Nonce != nil {
-		nonce := transaction.Nonce.Big().Uint64()
-		t.Nonce = &nonce
-	}
-	if transaction.Value != nil {
-		t.Value = transaction.Value.Big()
-	}
-	t.AccessList = transaction.AccessList
-	if transaction.V != nil && transaction.R != nil && transaction.S != nil {
-		t.Signature = SignatureFromVRSPtr(transaction.V.Big(), transaction.R.Big(), transaction.S.Big())
-	}
-	t.Hash = transaction.Hash
-	t.BlockHash = transaction.BlockHash
-	if transaction.BlockNumber != nil {
-		t.BlockNumber = transaction.BlockNumber.Big()
-	}
-	if transaction.TransactionIndex != nil {
-		index := transaction.TransactionIndex.Big().Uint64()
-		t.TransactionIndex = &index
-	}
-	return nil
-}
-
-// AccessList is an EIP-2930 access list.
+// AccessList represents an Ethereum access list as defined in EIP-2930.
+//
+// EIP-2930 introduced a new transaction type that includes an optional
+// access list, which specifies a list of addresses and storage keys that the
+// transaction plans to access. By declaring these accesses upfront,
+// transactions can benefit from reduced gas costs for cold accesses, as
+// the specified addresses and storage slots are warmed up ahead of execution.
+//
+// https://eips.ethereum.org/EIPS/eip-2930
 type AccessList []AccessTuple
 
 // AccessTuple is the element type of access list.
@@ -726,6 +30,7 @@ type AccessTuple struct {
 	StorageKeys []Hash  `json:"storageKeys"`
 }
 
+// Copy creates a deep copy of the access list.
 func (a *AccessList) Copy() AccessList {
 	if a == nil {
 		return nil
@@ -737,27 +42,29 @@ func (a *AccessList) Copy() AccessList {
 	return c
 }
 
+// EncodeRLP implements the rlp.Encoder interface.
 func (a AccessList) EncodeRLP() ([]byte, error) {
-	l := rlp.NewList()
+	l := rlp.List{}
 	for _, tuple := range a {
-		tuple := tuple // Copy value because of loop variable reuse.
-		l.Append(&tuple)
+		tuple := tuple
+		l.Add(&tuple)
 	}
 	return rlp.Encode(l)
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
 func (a *AccessList) DecodeRLP(data []byte) (int, error) {
-	d, n, err := rlp.Decode(data)
+	d, n, err := rlp.DecodeLazy(data)
 	if err != nil {
 		return 0, err
 	}
-	l, err := d.GetList()
+	l, err := d.List()
 	if err != nil {
 		return 0, err
 	}
 	for _, tuple := range l {
 		var t AccessTuple
-		if err := tuple.DecodeTo(&t); err != nil {
+		if err := tuple.Decode(&t); err != nil {
 			return 0, err
 		}
 		*a = append(*a, t)
@@ -765,6 +72,7 @@ func (a *AccessList) DecodeRLP(data []byte) (int, error) {
 	return n, nil
 }
 
+// Copy creates a deep copy of the access tuple.
 func (a *AccessTuple) Copy() AccessTuple {
 	keys := make([]Hash, len(a.StorageKeys))
 	copy(keys, a.StorageKeys)
@@ -774,37 +82,39 @@ func (a *AccessTuple) Copy() AccessTuple {
 	}
 }
 
+// EncodeRLP implements the rlp.Encoder interface.
 func (a AccessTuple) EncodeRLP() ([]byte, error) {
-	h := rlp.NewList()
+	h := rlp.List{}
 	for _, hash := range a.StorageKeys {
 		hash := hash
-		h.Append(&hash)
+		h.Add(&hash)
 	}
-	return rlp.Encode(rlp.NewList(&a.Address, h))
+	return rlp.Encode(rlp.List{a.Address, h})
 }
 
+// DecodeRLP implements the rlp.Decoder interface.
 func (a *AccessTuple) DecodeRLP(data []byte) (int, error) {
-	d, n, err := rlp.Decode(data)
+	d, n, err := rlp.DecodeLazy(data)
 	if err != nil {
 		return n, err
 	}
-	l, err := d.GetList()
+	l, err := d.List()
 	if err != nil {
 		return n, err
 	}
 	if len(l) != 2 {
 		return n, fmt.Errorf("invalid access list tuple")
 	}
-	if err := l[0].DecodeTo(&a.Address); err != nil {
+	if err := l[0].Decode(&a.Address); err != nil {
 		return n, err
 	}
-	h, err := l[1].GetList()
+	h, err := l[1].List()
 	if err != nil {
 		return n, err
 	}
 	for _, item := range h {
 		var hash Hash
-		if err := item.DecodeTo(&hash); err != nil {
+		if err := item.Decode(&hash); err != nil {
 			return n, err
 		}
 		a.StorageKeys = append(a.StorageKeys, hash)
@@ -812,24 +122,197 @@ func (a *AccessTuple) DecodeRLP(data []byte) (int, error) {
 	return n, nil
 }
 
-// TransactionReceipt represents transaction receipt.
-type TransactionReceipt struct {
-	TransactionHash   Hash     // TransactionHash is the hash of the transaction.
-	TransactionIndex  uint64   // TransactionIndex is the index of the transaction in the block.
-	BlockHash         Hash     // BlockHash is the hash of the block.
-	BlockNumber       *big.Int // BlockNumber is the number of the block.
-	From              Address  // From is the sender of the transaction.
-	To                Address  // To is the recipient of the transaction.
-	CumulativeGasUsed uint64   // CumulativeGasUsed is the total amount of gas used when this transaction was executed in the block.
-	EffectiveGasPrice *big.Int // EffectiveGasPrice is the effective gas price of the transaction.
-	GasUsed           uint64   // GasUsed is the amount of gas used by this specific transaction alone.
-	ContractAddress   *Address // ContractAddress is the contract address created, if the transaction was a contract creation, otherwise nil.
-	Logs              []Log    // Logs is the list of logs generated by the transaction.
-	LogsBloom         []byte   // LogsBloom is the bloom filter for the logs of the transaction.
-	Root              *Hash    // Root is the root of the state trie after the transaction.
-	Status            *uint64  // Status is the status of the transaction.
+// BlobInfo represents the information of an EIP-4844 blob carried in a
+// transaction.
+//
+// EIP-4844 introduces "blob-carrying transactions" to Ethereum, which include
+// a new type of data called "blobs". These blobs are large binary objects that
+// are not directly accessible by the EVM but are committed to the consensus
+// layer.
+//
+// https://eips.ethereum.org/EIPS/eip-4844
+type BlobInfo struct {
+	// Hash is the blob's versioned hash.
+	Hash crypto.KZGHash
+
+	// Sidecar contains the blob components. Nil when the sidecar is not available.
+	Sidecar *BlobSidecar
 }
 
+// BlobSidecar contains the components of the blob stored by the consensus
+// layer.
+type BlobSidecar struct {
+	// Blob is the blob data.
+	Blob crypto.KZGBlob
+
+	// Commitment is the KZG commitment for the blob.
+	Commitment crypto.KZGCommitment
+
+	// Proof is the KZG proof for the blob.
+	Proof crypto.KZGProof
+}
+
+// ComputeHash computes the blob hash of the given blob sidecar.
+func (sc *BlobSidecar) ComputeHash() crypto.KZGHash {
+	return crypto.KZGComputeBlobHashV1(sc.Commitment)
+}
+
+// NewBlobInfo creates a new EIP-4844 BlobInfo from the given blob, computing
+// its hash, commitment, and proof.
+//
+// The provided blob must not be nil and must be a valid EIP-4844 blob
+// of length 131072 bytes (4096 field elements of 32 bytes each).
+// Each field element is a 32-byte big-endian integer not exceeding the
+// BLS12-381 field modulus specified in EIP-4844.
+//
+// NewBlobInfo does not perform any encoding on the provided data.
+//
+// Returns an error if the blob is nil or if the commitment/proof computation
+// fails.
+func NewBlobInfo(b *crypto.KZGBlob) (BlobInfo, error) {
+	if b == nil {
+		return BlobInfo{}, errors.New("blob is nil")
+	}
+	c, err := crypto.KZGBlobToCommitment(b)
+	if err != nil {
+		return BlobInfo{}, err
+	}
+	p, err := crypto.KZGComputeBlobProof(b, c)
+	if err != nil {
+		return BlobInfo{}, err
+	}
+	s := &BlobSidecar{
+		Blob:       *b,
+		Commitment: c,
+		Proof:      p,
+	}
+	return BlobInfo{
+		Hash:    s.ComputeHash(),
+		Sidecar: s,
+	}, nil
+}
+
+// TransactionOnChain represents a transaction on the blockchain.
+type TransactionOnChain struct {
+	// Decoder is an optional transaction decoder. If nil, the default
+	// decoder is used.
+	Decoder JSONTransactionDecoder
+
+	// Transaction is the decoded transaction data.
+	Transaction Transaction
+
+	// Hash is the transaction hash.
+	Hash *Hash
+
+	// BlockHash is the hash of the block containing this transaction.
+	BlockHash *Hash
+
+	// BlockNumber is the number of the block containing this transaction.
+	BlockNumber *big.Int
+
+	// TransactionIndex is the index of the transaction within the block.
+	TransactionIndex *uint64
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (t *TransactionOnChain) MarshalJSON() ([]byte, error) {
+	ocd := &jsonOnChainTransaction{}
+	ocd.Hash = t.Hash
+	ocd.BlockHash = t.BlockHash
+	ocd.BlockNumber = NumberFromBigIntPtr(t.BlockNumber)
+	if t.TransactionIndex != nil {
+		ocd.TransactionIndex = NumberFromUint64Ptr(*t.TransactionIndex)
+	}
+	return marshalJSONMerge(
+		t.Transaction,
+		ocd,
+	)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (t *TransactionOnChain) UnmarshalJSON(data []byte) error {
+	ocd := &jsonOnChainTransaction{}
+	if err := json.Unmarshal(data, ocd); err != nil {
+		return err
+	}
+	t.Hash = ocd.Hash
+	t.BlockHash = ocd.BlockHash
+	if ocd.BlockNumber != nil {
+		t.BlockNumber = ocd.BlockNumber.Big()
+	} else {
+		t.BlockNumber = nil
+	}
+	if ocd.TransactionIndex != nil {
+		index := ocd.TransactionIndex.Big().Uint64()
+		t.TransactionIndex = &index
+	}
+	dec := t.Decoder
+	if dec == nil {
+		dec = DefaultTransactionDecoder
+	}
+	tx, err := dec.DecodeJSON(data)
+	if err != nil {
+		return err
+	}
+	t.Transaction = tx
+	return nil
+}
+
+type jsonOnChainTransaction struct {
+	Hash             *Hash   `json:"hash,omitempty"`
+	BlockHash        *Hash   `json:"blockHash,omitempty"`
+	BlockNumber      *Number `json:"blockNumber,omitempty"`
+	TransactionIndex *Number `json:"transactionIndex,omitempty"`
+}
+
+// TransactionReceipt represents transaction receipt.
+type TransactionReceipt struct {
+	// TransactionHash is the hash of the transaction.
+	TransactionHash Hash
+
+	// TransactionIndex is the index of the transaction within the block.
+	TransactionIndex uint64
+
+	// BlockHash is the hash of the block containing the transaction.
+	BlockHash Hash
+
+	// BlockNumber is the number of the block containing the transaction.
+	BlockNumber *big.Int
+
+	// From is the sender of the transaction.
+	From Address
+
+	// To is the recipient of the transaction.
+	To Address
+
+	// CumulativeGasUsed is the total gas used in the block up to and including
+	// this transaction.
+	CumulativeGasUsed uint64
+
+	// EffectiveGasPrice is the actual gas price paid for this transaction.
+	EffectiveGasPrice *big.Int
+
+	// GasUsed is the gas used by this transaction.
+	GasUsed uint64
+
+	// ContractAddress is the address of the created contract, or nil if the
+	// transaction was not a contract creation.
+	ContractAddress *Address
+
+	// Logs is the list of logs generated by the transaction.
+	Logs []Log
+
+	// LogsBloom is the bloom filter for the transaction's logs.
+	LogsBloom []byte
+
+	// Root is the post-transaction state root (pre-Byzantium only).
+	Root *Hash
+
+	// Status is 1 if the transaction succeeded, 0 if it reverted.
+	Status *uint64
+}
+
+// MarshalJSON implements the json.Marshaler interface.
 func (t TransactionReceipt) MarshalJSON() ([]byte, error) {
 	receipt := &jsonTransactionReceipt{
 		TransactionHash:   t.TransactionHash,
@@ -853,6 +336,7 @@ func (t TransactionReceipt) MarshalJSON() ([]byte, error) {
 	return json.Marshal(receipt)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (t *TransactionReceipt) UnmarshalJSON(data []byte) error {
 	receipt := &jsonTransactionReceipt{}
 	if err := json.Unmarshal(data, receipt); err != nil {
@@ -895,30 +379,75 @@ type jsonTransactionReceipt struct {
 	Status            *Number  `json:"status"`
 }
 
+// Block represents a block on the blockchain.
 type Block struct {
-	Number            *big.Int             // Block is the block number.
-	Hash              Hash                 // Hash is the hash of the block.
-	ParentHash        Hash                 // ParentHash is the hash of the parent block.
-	StateRoot         Hash                 // StateRoot is the root hash of the state trie.
-	ReceiptsRoot      Hash                 // ReceiptsRoot is the root hash of the receipts trie.
-	TransactionsRoot  Hash                 // TransactionsRoot is the root hash of the transactions trie.
-	MixHash           Hash                 // MixHash is the hash of the seed used for the DAG.
-	Sha3Uncles        Hash                 // Sha3Uncles is the SHA3 hash of the uncles data in the block.
-	Nonce             *big.Int             // Nonce is the block's nonce.
-	Miner             Address              // Miner is the address of the beneficiary to whom the mining rewards were given.
-	LogsBloom         []byte               // LogsBloom is the bloom filter for the logs of the block.
-	Difficulty        *big.Int             // Difficulty is the difficulty for this block.
-	TotalDifficulty   *big.Int             // TotalDifficulty is the total difficulty of the chain until this block.
-	Size              uint64               // Size is the size of the block in bytes.
-	GasLimit          uint64               // GasLimit is the maximum gas allowed in this block.
-	GasUsed           uint64               // GasUsed is the total used gas by all transactions in this block.
-	Timestamp         time.Time            // Timestamp is the time at which the block was collated.
-	Uncles            []Hash               // Uncles is the list of uncle hashes.
-	Transactions      []OnChainTransaction // Transactions is the list of transactions in the block.
-	TransactionHashes []Hash               // TransactionHashes is the list of transaction hashes in the block.
-	ExtraData         []byte               // ExtraData is the "extra data" field of this block.
+	// Number is the block number.
+	Number *big.Int
+
+	// Hash is the hash of the block.
+	Hash Hash
+
+	// ParentHash is the hash of the parent block.
+	ParentHash Hash
+
+	// StateRoot is the root hash of the state trie.
+	StateRoot Hash
+
+	// ReceiptsRoot is the root hash of the receipts trie.
+	ReceiptsRoot Hash
+
+	// TransactionsRoot is the root hash of the transactions trie.
+	TransactionsRoot Hash
+
+	// MixHash is the hash mixed with the nonce to prove proof-of-work.
+	MixHash Hash
+
+	// Sha3Uncles is the SHA3 hash of the uncle block headers.
+	Sha3Uncles Hash
+
+	// Nonce is the proof-of-work nonce.
+	Nonce *big.Int
+
+	// Miner is the address of the block's fee recipient.
+	Miner Address
+
+	// LogsBloom is the bloom filter for the block's logs.
+	LogsBloom []byte
+
+	// Difficulty is the proof-of-work difficulty for this block.
+	Difficulty *big.Int
+
+	// TotalDifficulty is the cumulative chain difficulty up to this block.
+	TotalDifficulty *big.Int
+
+	// Size is the size of the block in bytes.
+	Size uint64
+
+	// GasLimit is the maximum gas allowed in this block.
+	GasLimit uint64
+
+	// GasUsed is the total gas used by all transactions in this block.
+	GasUsed uint64
+
+	// Timestamp is the time at which the block was produced.
+	Timestamp time.Time
+
+	// Uncles is the list of uncle block hashes.
+	Uncles []Hash
+
+	// Transactions is the list of full transactions in the block.
+	// Populated when the block was requested with full transaction objects.
+	Transactions []TransactionOnChain
+
+	// TransactionHashes is the list of transaction hashes in the block.
+	// Populated when the block was requested with transaction hashes only.
+	TransactionHashes []Hash
+
+	// ExtraData is the arbitrary extra data field of this block.
+	ExtraData []byte
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (b Block) MarshalJSON() ([]byte, error) {
 	block := &jsonBlock{
 		Number:           NumberFromBigInt(b.Number),
@@ -950,6 +479,7 @@ func (b Block) MarshalJSON() ([]byte, error) {
 	return json.Marshal(block)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (b *Block) UnmarshalJSON(data []byte) error {
 	block := &jsonBlock{}
 	if err := json.Unmarshal(data, block); err != nil {
@@ -988,9 +518,9 @@ type jsonBlock struct {
 	TransactionsRoot Hash                  `json:"transactionsRoot"`
 	MixHash          Hash                  `json:"mixHash"`
 	Sha3Uncles       Hash                  `json:"sha3Uncles"`
-	Nonce            hexNonce              `json:"nonce"`
+	Nonce            nonce                 `json:"nonce"`
 	Miner            Address               `json:"miner"`
-	LogsBloom        hexBloom              `json:"logsBloom"`
+	LogsBloom        bloom                 `json:"logsBloom"`
 	Difficulty       Number                `json:"difficulty"`
 	TotalDifficulty  Number                `json:"totalDifficulty"`
 	Size             Number                `json:"size"`
@@ -1003,7 +533,7 @@ type jsonBlock struct {
 }
 
 type jsonBlockTransactions struct {
-	Objects []OnChainTransaction
+	Objects []TransactionOnChain
 	Hashes  []Hash
 }
 
@@ -1024,18 +554,37 @@ func (b *jsonBlockTransactions) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &b.Hashes)
 }
 
-// FeeHistory represents the result of the feeHistory Client call.
+// FeeHistory contains information about the fee structure and gas usage
+// over a range of blocks.
 type FeeHistory struct {
-	OldestBlock   uint64       // OldestBlock is the oldest block number for which the base fee and gas used are returned.
-	Reward        [][]*big.Int // Reward is the reward for each block in the range [OldestBlock, LatestBlock].
-	BaseFeePerGas []*big.Int   // BaseFeePerGas is the base fee per gas for each block in the range [OldestBlock, LatestBlock].
-	GasUsedRatio  []float64    // GasUsedRatio is the gas used ratio for each block in the range [OldestBlock, LatestBlock].
+	// OldestBlock is the oldest block number in the returned range.
+	OldestBlock uint64
+
+	// Reward contains the requested priority fee percentiles for each block.
+	Reward [][]*big.Int
+
+	// BaseFeePerGas is the base fee per gas for each block. The array has
+	// blockCount+1 entries; the last entry is the next block's predicted fee.
+	BaseFeePerGas []*big.Int
+
+	// GasUsedRatio is the ratio of gas used to gas limit for each block.
+	GasUsedRatio []float64
+
+	// BaseFeePerBlobGas is the base fee per blob gas for each block (EIP-4844).
+	// The array has blockCount+1 entries.
+	BaseFeePerBlobGas []*big.Int
+
+	// BlobGasUsedRatio is the ratio of blob gas used to the blob gas limit
+	// for each block (EIP-4844).
+	BlobGasUsedRatio []float64
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (f FeeHistory) MarshalJSON() ([]byte, error) {
 	feeHistory := &jsonFeeHistory{
-		OldestBlock:  NumberFromUint64(f.OldestBlock),
-		GasUsedRatio: f.GasUsedRatio,
+		OldestBlock:      NumberFromUint64(f.OldestBlock),
+		GasUsedRatio:     f.GasUsedRatio,
+		BlobGasUsedRatio: f.BlobGasUsedRatio,
 	}
 	if len(f.Reward) > 0 {
 		feeHistory.Reward = make([][]Number, len(f.Reward))
@@ -1052,9 +601,16 @@ func (f FeeHistory) MarshalJSON() ([]byte, error) {
 			feeHistory.BaseFeePerGas[i] = NumberFromBigInt(b)
 		}
 	}
+	if len(f.BaseFeePerBlobGas) > 0 {
+		feeHistory.BaseFeePerBlobGas = make([]Number, len(f.BaseFeePerBlobGas))
+		for i, b := range f.BaseFeePerBlobGas {
+			feeHistory.BaseFeePerBlobGas[i] = NumberFromBigInt(b)
+		}
+	}
 	return json.Marshal(feeHistory)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (f *FeeHistory) UnmarshalJSON(input []byte) error {
 	feeHistory := &jsonFeeHistory{}
 	if err := json.Unmarshal(input, feeHistory); err != nil {
@@ -1073,30 +629,210 @@ func (f *FeeHistory) UnmarshalJSON(input []byte) error {
 		f.BaseFeePerGas[i] = b.Big()
 	}
 	f.GasUsedRatio = feeHistory.GasUsedRatio
+	f.BaseFeePerBlobGas = make([]*big.Int, len(feeHistory.BaseFeePerBlobGas))
+	for i, b := range feeHistory.BaseFeePerBlobGas {
+		f.BaseFeePerBlobGas[i] = b.Big()
+	}
+	f.BlobGasUsedRatio = feeHistory.BlobGasUsedRatio
 	return nil
 }
 
 // jsonFeeHistory is the JSON representation of a fee history.
 type jsonFeeHistory struct {
-	OldestBlock   Number     `json:"oldestBlock"`
-	Reward        [][]Number `json:"reward"`
-	BaseFeePerGas []Number   `json:"baseFeePerGas"`
-	GasUsedRatio  []float64  `json:"gasUsedRatio"`
+	OldestBlock       Number     `json:"oldestBlock"`
+	Reward            [][]Number `json:"reward,omitempty"`
+	BaseFeePerGas     []Number   `json:"baseFeePerGas,omitempty"`
+	GasUsedRatio      []float64  `json:"gasUsedRatio,omitempty"`
+	BaseFeePerBlobGas []Number   `json:"baseFeePerBlobGas,omitempty"`
+	BlobGasUsedRatio  []float64  `json:"blobGasUsedRatio,omitempty"`
+}
+
+// AccessListResult represents the result of an eth_createAccessList call.
+type AccessListResult struct {
+	// AccessList is the list of addresses and storage keys accessed by
+	// the transaction.
+	AccessList AccessList
+
+	// GasUsed is the gas used by the transaction with the given access list.
+	GasUsed uint64
+
+	// Error is a revert message if the transaction would revert.
+	// Empty when the transaction succeeds.
+
+	Error string
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (a AccessListResult) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jsonAccessListResult{
+		AccessList: a.AccessList,
+		GasUsed:    NumberFromUint64(a.GasUsed),
+		Error:      a.Error,
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (a *AccessListResult) UnmarshalJSON(data []byte) error {
+	j := &jsonAccessListResult{}
+	if err := json.Unmarshal(data, j); err != nil {
+		return err
+	}
+	a.AccessList = j.AccessList
+	a.GasUsed = j.GasUsed.Big().Uint64()
+	a.Error = j.Error
+	return nil
+}
+
+type jsonAccessListResult struct {
+	AccessList AccessList `json:"accessList"`
+	GasUsed    Number     `json:"gasUsed"`
+	Error      string     `json:"error,omitempty"`
+}
+
+// StorageProof represents a single storage proof entry returned by
+// eth_getProof.
+type StorageProof struct {
+	// Key is the storage slot key.
+	Key Hash
+
+	// Value is the storage slot value.
+	Value *big.Int
+
+	// Proof is the array of RLP-serialized Merkle-Patricia trie nodes
+	// proving the storage slot value.
+	Proof []Bytes
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (s StorageProof) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jsonStorageProof{
+		Key:   s.Key,
+		Value: NumberFromBigInt(s.Value),
+		Proof: s.Proof,
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (s *StorageProof) UnmarshalJSON(data []byte) error {
+	j := &jsonStorageProof{}
+	if err := json.Unmarshal(data, j); err != nil {
+		return err
+	}
+	s.Key = j.Key
+	s.Value = j.Value.Big()
+	s.Proof = j.Proof
+	return nil
+}
+
+type jsonStorageProof struct {
+	Key   Hash    `json:"key"`
+	Value Number  `json:"value"`
+	Proof []Bytes `json:"proof"`
+}
+
+// AccountProof represents the result of an eth_getProof call as defined in
+// EIP-1186.
+//
+// https://eips.ethereum.org/EIPS/eip-1186
+type AccountProof struct {
+	// Address is the account address.
+	Address Address
+
+	// AccountProof is the array of RLP-serialized Merkle-Patricia trie nodes
+	// from the state root to the account leaf.
+	AccountProof []Bytes
+
+	// Balance is the account balance in wei.
+	Balance *big.Int
+
+	// CodeHash is the Keccak-256 hash of the account's code.
+	CodeHash Hash
+
+	// Nonce is the account nonce.
+	Nonce uint64
+
+	// StorageHash is the Keccak-256 hash of the account's storage trie root.
+	StorageHash Hash
+
+	// StorageProof contains the proofs for each requested storage key.
+	StorageProof []StorageProof
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (a AccountProof) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&jsonAccountProof{
+		Address:      a.Address,
+		AccountProof: a.AccountProof,
+		Balance:      NumberFromBigInt(a.Balance),
+		CodeHash:     a.CodeHash,
+		Nonce:        NumberFromUint64(a.Nonce),
+		StorageHash:  a.StorageHash,
+		StorageProof: a.StorageProof,
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (a *AccountProof) UnmarshalJSON(data []byte) error {
+	j := &jsonAccountProof{}
+	if err := json.Unmarshal(data, j); err != nil {
+		return err
+	}
+	a.Address = j.Address
+	a.AccountProof = j.AccountProof
+	a.Balance = j.Balance.Big()
+	a.CodeHash = j.CodeHash
+	a.Nonce = j.Nonce.Big().Uint64()
+	a.StorageHash = j.StorageHash
+	a.StorageProof = j.StorageProof
+	return nil
+}
+
+type jsonAccountProof struct {
+	Address      Address        `json:"address"`
+	AccountProof []Bytes        `json:"accountProof"`
+	Balance      Number         `json:"balance"`
+	CodeHash     Hash           `json:"codeHash"`
+	Nonce        Number         `json:"nonce"`
+	StorageHash  Hash           `json:"storageHash"`
+	StorageProof []StorageProof `json:"storageProof"`
 }
 
 // Log represents a contract log event.
 type Log struct {
-	Address          Address  // Address of the contract that generated the event
-	Topics           []Hash   // Topics provide information about the event type.
-	Data             []byte   // Data contains the non-indexed arguments of the event.
-	BlockHash        *Hash    // BlockHash is the hash of the block where this log was in. Nil when pending.
-	BlockNumber      *big.Int // BlockNumber is the block number where this log was in. Nil when pending.
-	TransactionHash  *Hash    // TransactionHash is the hash of the transaction that generated this log. Nil when pending.
-	TransactionIndex *uint64  // TransactionIndex is the index of the transaction in the block. Nil when pending.
-	LogIndex         *uint64  // LogIndex is the index of the log in the block. Nil when pending.
-	Removed          bool     // Removed is true if the log was reverted due to a chain reorganization. False if unknown.
+	// Address is the address of the contract that emitted the event.
+	Address Address
+
+	// Topics are the indexed event parameters.
+	Topics []Hash
+
+	// Data contains the non-indexed event parameters.
+	Data []byte
+
+	// BlockHash is the hash of the block containing this log.
+	// Nil when the log is pending.
+	BlockHash *Hash
+
+	// BlockNumber is the number of the block containing this log.
+	// Nil when the log is pending.
+	BlockNumber *big.Int
+
+	// TransactionHash is the hash of the transaction that emitted this log.
+	// Nil when the log is pending.
+	TransactionHash *Hash
+
+	// TransactionIndex is the index of the transaction within the block.
+	// Nil when the log is pending.
+	TransactionIndex *uint64
+
+	// LogIndex is the index of the log within the block.
+	// Nil when the log is pending.
+	LogIndex *uint64
+
+	// Removed is true if this log was reverted by a chain reorganisation.
+	Removed bool
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (l Log) MarshalJSON() ([]byte, error) {
 	j := &jsonLog{}
 	j.Address = l.Address
@@ -1117,6 +853,7 @@ func (l Log) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (l *Log) UnmarshalJSON(input []byte) error {
 	log := &jsonLog{}
 	if err := json.Unmarshal(input, log); err != nil {
@@ -1163,45 +900,47 @@ type FilterLogsQuery struct {
 	BlockHash *Hash
 }
 
+// NewFilterLogsQuery creates a new FilterLogsQuery.
 func NewFilterLogsQuery() *FilterLogsQuery {
 	return &FilterLogsQuery{}
 }
 
-func (q *FilterLogsQuery) SetAddresses(addresses ...Address) *FilterLogsQuery {
+// SetAddresses sets the addresses to filter logs.
+func (q *FilterLogsQuery) SetAddresses(addresses ...Address) {
 	q.Address = addresses
-	return q
 }
 
-func (q *FilterLogsQuery) AddAddresses(addresses ...Address) *FilterLogsQuery {
+// AddAddresses adds addresses to filter logs.
+func (q *FilterLogsQuery) AddAddresses(addresses ...Address) {
 	q.Address = append(q.Address, addresses...)
-	return q
 }
 
-func (q *FilterLogsQuery) SetFromBlock(fromBlock *BlockNumber) *FilterLogsQuery {
+// SetFromBlock sets the starting block number to filter logs.
+func (q *FilterLogsQuery) SetFromBlock(fromBlock *BlockNumber) {
 	q.FromBlock = fromBlock
-	return q
 }
 
-func (q *FilterLogsQuery) SetToBlock(toBlock *BlockNumber) *FilterLogsQuery {
+// SetToBlock sets the ending block number to filter logs.
+func (q *FilterLogsQuery) SetToBlock(toBlock *BlockNumber) {
 	q.ToBlock = toBlock
-	return q
 }
 
-func (q *FilterLogsQuery) SetTopics(topics ...[]Hash) *FilterLogsQuery {
+// SetTopics sets the topics to filter logs.
+func (q *FilterLogsQuery) SetTopics(topics ...[]Hash) {
 	q.Topics = topics
-	return q
 }
 
-func (q *FilterLogsQuery) AddTopics(topics ...[]Hash) *FilterLogsQuery {
+// AddTopics adds topics to filter logs.
+func (q *FilterLogsQuery) AddTopics(topics ...[]Hash) {
 	q.Topics = append(q.Topics, topics...)
-	return q
 }
 
-func (q *FilterLogsQuery) SetBlockHash(blockHash *Hash) *FilterLogsQuery {
+// SetBlockHash sets the block hash to filter logs.
+func (q *FilterLogsQuery) SetBlockHash(blockHash *Hash) {
 	q.BlockHash = blockHash
-	return q
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (q FilterLogsQuery) MarshalJSON() ([]byte, error) {
 	logsQuery := &jsonFilterLogsQuery{
 		FromBlock: q.FromBlock,
@@ -1213,7 +952,7 @@ func (q FilterLogsQuery) MarshalJSON() ([]byte, error) {
 		copy(logsQuery.Address, q.Address)
 	}
 	if len(q.Topics) > 0 {
-		logsQuery.Topics = make([]hashList, len(q.Topics))
+		logsQuery.Topics = make([]oneOrList[Hash], len(q.Topics))
 		for i, t := range q.Topics {
 			logsQuery.Topics[i] = make([]Hash, len(t))
 			copy(logsQuery.Topics[i], t)
@@ -1222,6 +961,7 @@ func (q FilterLogsQuery) MarshalJSON() ([]byte, error) {
 	return json.Marshal(logsQuery)
 }
 
+// UnmarshalJSON implements the json.Unmarshaler interface.
 func (q *FilterLogsQuery) UnmarshalJSON(input []byte) error {
 	logsQuery := &jsonFilterLogsQuery{}
 	if err := json.Unmarshal(input, logsQuery); err != nil {
@@ -1245,9 +985,16 @@ func (q *FilterLogsQuery) UnmarshalJSON(input []byte) error {
 }
 
 type jsonFilterLogsQuery struct {
-	Address   addressList  `json:"address"`
-	FromBlock *BlockNumber `json:"fromBlock,omitempty"`
-	ToBlock   *BlockNumber `json:"toBlock,omitempty"`
-	Topics    []hashList   `json:"topics"`
-	BlockHash *Hash        `json:"blockhash,omitempty"`
+	Address   oneOrList[Address] `json:"address"`
+	FromBlock *BlockNumber       `json:"fromBlock,omitempty"`
+	ToBlock   *BlockNumber       `json:"toBlock,omitempty"`
+	Topics    []oneOrList[Hash]  `json:"topics"`
+	BlockHash *Hash              `json:"blockhash,omitempty"`
+}
+
+// SyncStatus represents the sync status of a node.
+type SyncStatus struct {
+	StartingBlock BlockNumber `json:"startingBlock"`
+	CurrentBlock  BlockNumber `json:"currentBlock"`
+	HighestBlock  BlockNumber `json:"highestBlock"`
 }

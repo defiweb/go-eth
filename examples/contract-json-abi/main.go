@@ -3,12 +3,13 @@ package main
 import (
 	"fmt"
 	"math/big"
+	"os"
 
 	"github.com/defiweb/go-eth/abi"
 )
 
 func main() {
-	erc20, err := abi.LoadJSON("erc20.json")
+	erc20, err := abi.LoadJSON(abiPath())
 	if err != nil {
 		panic(err)
 	}
@@ -23,4 +24,11 @@ func main() {
 	}
 
 	fmt.Printf("Transfer calldata: 0x%x\n", calldata)
+}
+
+func abiPath() string {
+	if _, err := os.Stat("./erc20.json"); err == nil {
+		return "./erc20.json"
+	}
+	return "./examples/contract-json-abi/erc20.json"
 }

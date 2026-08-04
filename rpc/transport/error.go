@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -54,6 +55,8 @@ const (
 	BlastErrCodeCapacityExceeded     = -32098
 	BlastErrRateLimitReached         = -32097
 )
+
+var ErrNotSubscriptionTransport = errors.New("transport does not implement SubscriptionTransport")
 
 type HTTPErrorCode interface {
 	// HTTPErrorCode returns the HTTP status code.

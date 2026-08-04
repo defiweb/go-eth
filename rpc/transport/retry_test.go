@@ -2,7 +2,6 @@ package transport
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -10,54 +9,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type fakeTransport struct {
-	callResult  chan error
-	subResult   chan error
-	unsubResult chan error
-	callCount   int
-	subCount    int
-	unsubCount  int
-}
-
-func newFakeTransport() *fakeTransport {
-	return &fakeTransport{
-		callResult:  make(chan error),
-		subResult:   make(chan error),
-		unsubResult: make(chan error),
-	}
-}
-
-func (f *fakeTransport) Call(ctx context.Context, result any, method string, args ...any) error {
-	f.callCount++
-	return <-f.callResult
-}
-
-func (f *fakeTransport) Subscribe(ctx context.Context, method string, args ...any) (ch chan json.RawMessage, id string, err error) {
-	f.subCount++
-	err = <-f.subResult
-	return nil, "", err
-}
-
-func (f *fakeTransport) Unsubscribe(ctx context.Context, id string) error {
-	f.unsubCount++
-	return <-f.unsubResult
-}
-
 //nolint:funlen
 func TestRetry(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		retry   RetryOptions
-		asserts func(t *testing.T, f *fakeTransport, r *Retry)
+		asserts func(t *testing.T, f *mockTransport, r *Retry)
 	}{
 		// No retry on success (call).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.callResult <- nil
 				}()
@@ -71,12 +37,12 @@ func TestRetry(t *testing.T) {
 		// No retry on success (subscribe).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.subResult <- nil
 				}()
@@ -90,12 +56,12 @@ func TestRetry(t *testing.T) {
 		// No retry on success (unsubscribe).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.unsubResult <- nil
 				}()
@@ -109,12 +75,12 @@ func TestRetry(t *testing.T) {
 		// Retry on error (call).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.callResult <- fmt.Errorf("foo")
 					f.callResult <- nil
@@ -129,12 +95,12 @@ func TestRetry(t *testing.T) {
 		// Retry on error (subscribe).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.subResult <- fmt.Errorf("foo")
 					f.subResult <- nil
@@ -149,12 +115,12 @@ func TestRetry(t *testing.T) {
 		// Retry on error (unsubscribe).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.unsubResult <- fmt.Errorf("foo")
 					f.unsubResult <- nil
@@ -169,12 +135,12 @@ func TestRetry(t *testing.T) {
 		// Too many retries (call).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.callResult <- fmt.Errorf("foo")
 					f.callResult <- fmt.Errorf("foo")
@@ -189,12 +155,12 @@ func TestRetry(t *testing.T) {
 		// Too many retries (subscribe).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.subResult <- fmt.Errorf("foo")
 					f.subResult <- fmt.Errorf("foo")
@@ -209,12 +175,12 @@ func TestRetry(t *testing.T) {
 		// Too many retries (unsubscribe).
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.unsubResult <- fmt.Errorf("foo")
 					f.unsubResult <- fmt.Errorf("foo")
@@ -226,15 +192,66 @@ func TestRetry(t *testing.T) {
 				require.Equal(t, 2, f.unsubCount)
 			},
 		},
+		// Zero retries - single attempt, no retry on error (call).
+		{
+			retry: RetryOptions{
+				Transport:   newMockTransport(),
+				MaxRetries:  0,
+				RetryFunc:   RetryOnAnyError,
+				BackoffFunc: LinearBackoff(0),
+			},
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
+				go func() {
+					f.callResult <- fmt.Errorf("foo")
+				}()
+				err := r.Call(context.Background(), nil, "foo")
+				require.Error(t, err)
+				require.Equal(t, 1, f.callCount)
+			},
+		},
+		// Zero retries - single attempt, no retry on error (subscribe).
+		{
+			retry: RetryOptions{
+				Transport:   newMockTransport(),
+				MaxRetries:  0,
+				RetryFunc:   RetryOnAnyError,
+				BackoffFunc: LinearBackoff(0),
+			},
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
+				go func() {
+					f.subResult <- fmt.Errorf("foo")
+				}()
+				_, _, err := r.Subscribe(context.Background(), "foo")
+				require.Error(t, err)
+				require.Equal(t, 1, f.subCount)
+			},
+		},
+		// Zero retries - single attempt, no retry on error (unsubscribe).
+		{
+			retry: RetryOptions{
+				Transport:   newMockTransport(),
+				MaxRetries:  0,
+				RetryFunc:   RetryOnAnyError,
+				BackoffFunc: LinearBackoff(0),
+			},
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
+				go func() {
+					f.unsubResult <- fmt.Errorf("foo")
+				}()
+				err := r.Unsubscribe(context.Background(), "foo")
+				require.Error(t, err)
+				require.Equal(t, 1, f.unsubCount)
+			},
+		},
 		// Infinite retries until success
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  -1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.callResult <- fmt.Errorf("foo")
 					f.callResult <- fmt.Errorf("foo")
@@ -272,29 +289,24 @@ func TestRetry(t *testing.T) {
 		// Infinite retries until context is canceled.
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  -1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				ctx, cancel := context.WithCancel(context.Background())
 				go func() {
 					f.callResult <- fmt.Errorf("foo")
 
 					// Wait a bit to make sure the retry passes the select statement
-					// and blocks on the Call() call.
+					// and blocks on the second Call().
 					time.Sleep(100 * time.Millisecond)
-					cancel()
 
-					// The retry function is blocked on the Call() call, so we need to
-					// send a result to unblock it. Then no more retries will be made
-					// because the context is canceled.
-					//
-					// In practice, this is not a problem because the transport will
-					// return an error when the context is canceled so the retry
-					// function will not be blocked on the Call() call.
-					f.callResult <- fmt.Errorf("foo")
+					// Canceling is enough to unblock it: the transport returns the
+					// context error rather than waiting for a result. No further
+					// retry is made, so the call count stays at two.
+					cancel()
 				}()
 				err := r.Call(ctx, nil, "foo")
 				require.Error(t, err)
@@ -306,12 +318,12 @@ func TestRetry(t *testing.T) {
 		// Do not retry if RetryFunc returns false.
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   func(error) bool { return false },
 				BackoffFunc: LinearBackoff(0),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				go func() {
 					f.callResult <- fmt.Errorf("foo")
 					f.subResult <- fmt.Errorf("foo")
@@ -334,12 +346,12 @@ func TestRetry(t *testing.T) {
 		// Do not wait for backoff after the last retry.
 		{
 			retry: RetryOptions{
-				Transport:   newFakeTransport(),
+				Transport:   newMockTransport(),
 				MaxRetries:  1,
 				RetryFunc:   RetryOnAnyError,
 				BackoffFunc: LinearBackoff(100 * time.Millisecond),
 			},
-			asserts: func(t *testing.T, f *fakeTransport, r *Retry) {
+			asserts: func(t *testing.T, f *mockTransport, r *Retry) {
 				t0 := time.Now()
 				go func() {
 					f.callResult <- fmt.Errorf("foo")
@@ -368,18 +380,18 @@ func TestRetry(t *testing.T) {
 			},
 		},
 	}
-	for n, test := range tests {
+	for n, tt := range tc {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			r, err := NewRetry(test.retry)
+			r, err := NewRetry(tt.retry)
 			require.NoError(t, err)
-			test.asserts(t, r.opts.Transport.(*fakeTransport), r)
+			tt.asserts(t, r.opts.Transport.(*mockTransport), r)
 		})
 	}
 }
 
 //nolint:dupl
 func TestRetryOnAnyError(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		err  error
 		want bool
 	}{
@@ -444,17 +456,17 @@ func TestRetryOnAnyError(t *testing.T) {
 			want: false,
 		},
 	}
-	for n, test := range tests {
+	for n, tt := range tc {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			got := RetryOnAnyError(test.err)
-			require.Equal(t, test.want, got)
+			got := RetryOnAnyError(tt.err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
 
 //nolint:dupl
 func TestRetryOnLimitExceeded(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		err  error
 		want bool
 	}{
@@ -511,16 +523,16 @@ func TestRetryOnLimitExceeded(t *testing.T) {
 			want: true,
 		},
 	}
-	for n, test := range tests {
+	for n, tt := range tc {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			got := RetryOnLimitExceeded(test.err)
-			require.Equal(t, test.want, got)
+			got := RetryOnLimitExceeded(tt.err)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
 
 func TestLinearBackoff(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		delay time.Duration
 		want  []time.Duration
 	}{
@@ -539,10 +551,10 @@ func TestLinearBackoff(t *testing.T) {
 			},
 		},
 	}
-	for n, test := range tests {
+	for n, tt := range tc {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			b := LinearBackoff(test.delay)
-			for i, want := range test.want {
+			b := LinearBackoff(tt.delay)
+			for i, want := range tt.want {
 				got := b(i)
 				require.Equal(t, want, got)
 			}
@@ -551,7 +563,7 @@ func TestLinearBackoff(t *testing.T) {
 }
 
 func TestExponentialBackoff(t *testing.T) {
-	tests := []struct {
+	tc := []struct {
 		opts ExponentialBackoffOptions
 		want []time.Duration
 	}{
@@ -582,10 +594,10 @@ func TestExponentialBackoff(t *testing.T) {
 			},
 		},
 	}
-	for n, test := range tests {
+	for n, tt := range tc {
 		t.Run(fmt.Sprintf("case-%d", n+1), func(t *testing.T) {
-			b := ExponentialBackoff(test.opts)
-			for i, want := range test.want {
+			b := ExponentialBackoff(tt.opts)
+			for i, want := range tt.want {
 				got := b(i)
 				require.Equal(t, want, got)
 			}

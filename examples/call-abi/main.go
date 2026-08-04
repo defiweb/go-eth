@@ -73,12 +73,12 @@ func main() {
 	})
 
 	// Prepare a call.
-	call := types.NewCall().
-		SetTo(types.MustAddressFromHex("0xcA11bde05977b3631167028862bE2a173976CA11")).
-		SetInput(calldata)
+	call := types.NewCall()
+	call.SetTo(types.MustAddressFromHex("0xcA11bde05977b3631167028862bE2a173976CA11"))
+	call.SetInput(calldata)
 
 	// Call the contract.
-	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
+	b, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}

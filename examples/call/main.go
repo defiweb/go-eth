@@ -31,12 +31,12 @@ func main() {
 	calldata := balanceOf.MustEncodeArgs("0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
 
 	// Prepare a call.
-	call := types.NewCall().
-		SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).
-		SetInput(calldata)
+	call := types.NewCall()
+	call.SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"))
+	call.SetInput(calldata)
 
 	// Call balanceOf.
-	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
+	b, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}

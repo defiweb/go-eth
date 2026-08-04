@@ -1,73 +1,55 @@
+// Package crypto provides default implementations of cryptographic functions.
 package crypto
 
 import (
-	"crypto/ecdsa"
-	"fmt"
-
-	"github.com/defiweb/go-eth/types"
+	"github.com/defiweb/go-eth/crypto/ecdsa"
+	"github.com/defiweb/go-eth/crypto/keccak"
+	"github.com/defiweb/go-eth/crypto/kzg4844"
+	"github.com/defiweb/go-eth/crypto/primitives"
 )
 
-// Signer is an interface for signing data.
-type Signer interface {
-	// SignHash signs a hash.
-	SignHash(hash types.Hash) (*types.Signature, error)
-
-	// SignMessage signs a message.
-	SignMessage(data []byte) (*types.Signature, error)
-
-	// SignTransaction signs a transaction.
-	SignTransaction(tx *types.Transaction) error
-}
-
-// Recoverer is an interface for recovering addresses from signatures.
-type Recoverer interface {
-	// RecoverHash recovers the address from a hash and signature.
-	RecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error)
-
-	// RecoverMessage recovers the address from a message and signature.
-	RecoverMessage(data []byte, sig types.Signature) (*types.Address, error)
-
-	// RecoverTransaction recovers the address from a transaction.
-	RecoverTransaction(tx *types.Transaction) (*types.Address, error)
-}
-
-// AddMessagePrefix adds the Ethereum message prefix to the given data as
-// defined in EIP-191.
-func AddMessagePrefix(data []byte) []byte {
-	return []byte(fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data))
-}
-
-// ECSigner returns a Signer implementation for ECDSA.
-func ECSigner(key *ecdsa.PrivateKey) Signer { return &ecSigner{key} }
-
-// ECRecoverer is a Recoverer implementation for ECDSA.
-var ECRecoverer Recoverer = &ecRecoverer{}
+const (
+	HashSize          = primitives.HashSize
+	AddressSize       = primitives.AddressSize
+	PrivateKeySize    = primitives.PrivateKeySize
+	PublicKeySize     = primitives.PublicKeySize
+	KZGHashSize       = primitives.KZGHashSize
+	KZGScalarsPerBlob = primitives.KZGScalarsPerBlob
+	KZGScalarSize     = primitives.KZGScalarSize
+	KZGBlobSize       = primitives.KZGBlobSize
+	KZGCommitmentSize = primitives.KZGCommitmentSize
+	KZGProofSize      = primitives.KZGProofSize
+	KZGPointSize      = primitives.KZGPointSize
+)
 
 type (
-	ecSigner    struct{ key *ecdsa.PrivateKey }
-	ecRecoverer struct{}
+	Hash          = primitives.Hash
+	Address       = primitives.Address
+	PublicKey     = primitives.PublicKey
+	PrivateKey    = primitives.PrivateKey
+	Signature     = primitives.Signature
+	KZGHash       = primitives.KZGHash
+	KZGBlob       = primitives.KZGBlob
+	KZGCommitment = primitives.KZGCommitment
+	KZGProof      = primitives.KZGProof
+	KZGPoint      = primitives.KZGPoint
 )
 
-func (s *ecSigner) SignHash(hash types.Hash) (*types.Signature, error) {
-	return ecSignHash(s.key, hash)
-}
-
-func (s *ecSigner) SignMessage(data []byte) (*types.Signature, error) {
-	return ecSignMessage(s.key, data)
-}
-
-func (s *ecSigner) SignTransaction(tx *types.Transaction) error {
-	return ecSignTransaction(s.key, tx)
-}
-
-func (r *ecRecoverer) RecoverHash(hash types.Hash, sig types.Signature) (*types.Address, error) {
-	return ecRecoverHash(hash, sig)
-}
-
-func (r *ecRecoverer) RecoverMessage(data []byte, sig types.Signature) (*types.Address, error) {
-	return ecRecoverMessage(data, sig)
-}
-
-func (r *ecRecoverer) RecoverTransaction(tx *types.Transaction) (*types.Address, error) {
-	return ecRecoverTransaction(tx)
-}
+// Default implementations of the crypto functions. Can be overridden to use
+// alternative implementations.
+var (
+	Keccak256               = keccak.Keccak256
+	ECGenerateKey           = ecdsa.GenerateKey
+	ECPublicKeyToAddress    = ecdsa.PublicKeyToAddress
+	ECPrivateKeyToPublicKey = ecdsa.PrivateKeyToPublicKey
+	ECSignHash              = ecdsa.SignHash
+	ECRecoverHash           = ecdsa.RecoverHash
+	ECSignMessage           = ecdsa.SignMessage
+	ECRecoverMessage        = ecdsa.RecoverMessage
+	KZGBlobToCommitment     = kzg4844.BlobToCommitment
+	KZGComputeProof         = kzg4844.ComputeProof
+	KZGVerifyProof          = kzg4844.VerifyProof
+	KZGComputeBlobProof     = kzg4844.ComputeBlobProof
+	KZGVerifyBlobProof      = kzg4844.VerifyBlobProof
+	KZGComputeBlobHashV1    = kzg4844.ComputeBlobHashV1
+)

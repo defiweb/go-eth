@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"net/url"
 	"reflect"
-	"time"
 
 	"github.com/defiweb/go-eth/hexutil"
 	"github.com/defiweb/go-eth/types"
@@ -306,11 +304,12 @@ func (s *StringValue) EncodeABI() (Words, error) {
 // DecodeABI implements the Value interface.
 func (s *StringValue) DecodeABI(data Words) (int, error) {
 	var b []byte
-	if _, err := decodeBytes(&b, data); err != nil {
+	n, err := decodeBytes(&b, data)
+	if err != nil {
 		return 0, err
 	}
 	*s = StringValue(b)
-	return 1, nil
+	return n, nil
 }
 
 // MapFrom implements the anymapper.MapFrom interface.
@@ -327,13 +326,7 @@ func (s *StringValue) MapFrom(m Mapper, src any) error {
 	case reflect.String:
 		*s = StringValue(srcRef.String())
 	default:
-		switch srcTyp := srcRef.Interface().(type) {
-		case url.URL:
-			*s = StringValue(srcTyp.String())
-			return nil
-		default:
-			return fmt.Errorf("abi: cannot map %s to string", srcRef.Type())
-		}
+		return fmt.Errorf("abi: cannot map %s to string", srcRef.Type())
 	}
 	return nil
 }
@@ -354,16 +347,7 @@ func (s *StringValue) MapTo(m Mapper, dst any) error {
 	case reflect.Interface:
 		dstRef.Set(reflect.ValueOf(string(*s)))
 	default:
-		switch dstRef.Interface().(type) {
-		case url.URL:
-			u, err := url.Parse(string(*s))
-			if err != nil {
-				return fmt.Errorf("abi: cannot map string to %s: %v", dstRef.Type(), err)
-			}
-			dstRef.Set(reflect.ValueOf(*u))
-		default:
-			return fmt.Errorf("abi: cannot map string to %s", dstRef.Type())
-		}
+		return fmt.Errorf("abi: cannot map string to %s", dstRef.Type())
 	}
 	return nil
 }
@@ -704,15 +688,6 @@ func (u *UintValue) MapFrom(_ Mapper, src any) error {
 				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), u.Size)
 			}
 			u.Int = *bn
-		case time.Time:
-			bn := new(big.Int).SetInt64(srcTyp.Unix())
-			if bn.Sign() < 0 {
-				return fmt.Errorf("abi: cannot map %s to uint%d: negative value", srcRef.Type(), u.Size)
-			}
-			if bn.BitLen() > u.Size {
-				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), u.Size)
-			}
-			u.Int = *bn
 		default:
 			return fmt.Errorf("abi: cannot map %s to uint%d", srcRef.Type(), u.Size)
 		}
@@ -740,8 +715,6 @@ func (u *UintValue) MapTo(_ Mapper, dst any) error {
 		dstRef.Set(reflect.ValueOf(&u.Int))
 	default:
 		switch dstRef.Interface().(type) {
-		case time.Time:
-			dstRef.Set(reflect.ValueOf(time.Unix(u.Int.Int64(), 0)))
 		case big.Int:
 			dstRef.Set(reflect.ValueOf(u.Int))
 		case types.Number:
@@ -837,12 +810,6 @@ func (i *IntValue) MapFrom(_ Mapper, src any) error {
 				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), i.Size)
 			}
 			i.Int = *bn
-		case time.Time:
-			bn := new(big.Int).SetInt64(srcTyp.Unix())
-			if signedBitLen(bn) > i.Size {
-				return fmt.Errorf("abi: cannot map %s to uint%d: value too large", srcRef.Type(), i.Size)
-			}
-			i.Int = *bn
 		default:
 			return fmt.Errorf("abi: cannot map %s to uint%d", srcRef.Type(), i.Size)
 		}
@@ -873,8 +840,6 @@ func (i *IntValue) MapTo(_ Mapper, dst any) error {
 		dstRef.Set(reflect.ValueOf(&i.Int))
 	default:
 		switch dstRef.Interface().(type) {
-		case time.Time:
-			dstRef.Set(reflect.ValueOf(time.Unix(i.Int.Int64(), 0)))
 		case big.Int:
 			dstRef.Set(reflect.ValueOf(i.Int))
 		case types.Number:

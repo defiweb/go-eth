@@ -199,7 +199,7 @@ func (e *Event) String() string {
 }
 
 func (e *Event) calculateTopic0() {
-	e.topic0 = crypto.Keccak256([]byte(e.signature))
+	e.topic0 = types.Hash(crypto.Keccak256([]byte(e.signature)))
 }
 
 func (e *Event) generateSignature() {

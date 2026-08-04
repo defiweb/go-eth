@@ -113,9 +113,6 @@ func newErrorFromSig(abi *ABI, extraTypes map[string]Type, s sigparser.Signature
 // The extraTypes map is used to resolve types that are not part of the ABI.
 func newEventFromSig(abi *ABI, extraTypes map[string]Type, s sigparser.Signature) (*Event, error) {
 	var in []EventTupleElem
-	if len(s.Inputs) == 0 {
-		return nil, fmt.Errorf("abi: event %q has no inputs", s.Name)
-	}
 	for _, param := range s.Inputs {
 		typ, err := newTypeFromSig(abi, extraTypes, param)
 		if err != nil {

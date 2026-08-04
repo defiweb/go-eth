@@ -2,59 +2,83 @@ package wallet
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/rand"
 	"encoding/json"
+	"errors"
+	"fmt"
 
-	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 
 	"github.com/defiweb/go-eth/crypto"
+	"github.com/defiweb/go-eth/crypto/txsign"
 	"github.com/defiweb/go-eth/types"
 )
 
-var s256 = btcec.S256()
-
 type PrivateKey struct {
-	private *ecdsa.PrivateKey
-	public  *ecdsa.PublicKey
+	private crypto.PrivateKey
+	public  crypto.PublicKey
 	address types.Address
-	sign    crypto.Signer
-	recover crypto.Recoverer
 }
 
-// NewKeyFromECDSA creates a new private key from an ecdsa.PrivateKey.
-func NewKeyFromECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
+// NewKeyFromECDSA creates a new private key from a [crypto.PrivateKey].
+//
+// It key must be a valid secp256k1 scalar.
+func NewKeyFromECDSA(prv crypto.PrivateKey) (*PrivateKey, error) {
+	if err := validateScalar(prv); err != nil {
+		return nil, err
+	}
+	pub := crypto.ECPrivateKeyToPublicKey(prv)
 	return &PrivateKey{
 		private: prv,
-		public:  &prv.PublicKey,
-		address: crypto.ECPublicKeyToAddress(&prv.PublicKey),
-		sign:    crypto.ECSigner(prv),
-		recover: crypto.ECRecoverer,
+		public:  pub,
+		address: types.Address(crypto.ECPublicKeyToAddress(pub)),
+	}, nil
+}
+
+// MustNewKeyFromECDSA works like [NewKeyFromECDSA] but panics on error.
+func MustNewKeyFromECDSA(prv crypto.PrivateKey) *PrivateKey {
+	key, err := NewKeyFromECDSA(prv)
+	if err != nil {
+		panic(err)
 	}
+	return key
 }
 
 // NewKeyFromBytes creates a new private key from private key bytes.
-func NewKeyFromBytes(prv []byte) *PrivateKey {
-	key, _ := btcec.PrivKeyFromBytes(prv)
-	return NewKeyFromECDSA(key.ToECDSA())
+//
+// The input must be exactly [crypto.PrivateKeySize] bytes, big-endian, and a
+// valid secp256k1 scalar.
+func NewKeyFromBytes(prv []byte) (*PrivateKey, error) {
+	if len(prv) != crypto.PrivateKeySize {
+		return nil, fmt.Errorf("invalid private key length: got %d, want %d", len(prv), crypto.PrivateKeySize)
+	}
+	return NewKeyFromECDSA(crypto.PrivateKey(prv))
+}
+
+// MustNewKeyFromBytes works like [NewKeyFromBytes] but panics on error.
+func MustNewKeyFromBytes(prv []byte) *PrivateKey {
+	key, err := NewKeyFromBytes(prv)
+	if err != nil {
+		panic(err)
+	}
+	return key
 }
 
 // NewRandomKey creates a random private key.
 func NewRandomKey() *PrivateKey {
-	key, err := ecdsa.GenerateKey(s256, rand.Reader)
+	key, err := crypto.ECGenerateKey()
 	if err != nil {
 		panic(err)
 	}
-	return NewKeyFromECDSA(key)
+	return MustNewKeyFromECDSA(key)
 }
 
 // PublicKey returns the ECDSA public key.
-func (k *PrivateKey) PublicKey() *ecdsa.PublicKey {
+func (k *PrivateKey) PublicKey() crypto.PublicKey {
 	return k.public
 }
 
 // PrivateKey returns the ECDSA private key.
-func (k *PrivateKey) PrivateKey() *ecdsa.PrivateKey {
+func (k *PrivateKey) PrivateKey() crypto.PrivateKey {
 	return k.private
 }
 
@@ -74,33 +98,52 @@ func (k *PrivateKey) Address() types.Address {
 
 // SignHash implements the KeyWithHashSigner interface.
 func (k *PrivateKey) SignHash(_ context.Context, hash types.Hash) (*types.Signature, error) {
-	return k.sign.SignHash(hash)
+	s, err := crypto.ECSignHash(k.private, crypto.Hash(hash))
+	if err != nil {
+		return nil, err
+	}
+	return (*types.Signature)(s), nil
 }
 
 // SignMessage implements the Key interface.
 func (k *PrivateKey) SignMessage(_ context.Context, data []byte) (*types.Signature, error) {
-	return k.sign.SignMessage(data)
+	s, err := crypto.ECSignMessage(k.private, data)
+	if err != nil {
+		return nil, err
+	}
+	return (*types.Signature)(s), nil
 }
 
 // SignTransaction implements the Key interface.
-func (k *PrivateKey) SignTransaction(_ context.Context, tx *types.Transaction) error {
-	return k.sign.SignTransaction(tx)
+func (k *PrivateKey) SignTransaction(_ context.Context, tx types.SignableTransaction) error {
+	return txsign.Sign(k.private, tx)
 }
 
 // VerifyHash implements the KeyWithHashSigner interface.
 func (k *PrivateKey) VerifyHash(_ context.Context, hash types.Hash, sig types.Signature) bool {
-	addr, err := k.recover.RecoverHash(hash, sig)
+	addr, err := crypto.ECRecoverHash(crypto.Hash(hash), crypto.Signature(sig))
 	if err != nil {
 		return false
 	}
-	return *addr == k.address
+	return types.Address(*addr) == k.address
 }
 
 // VerifyMessage implements the Key interface.
 func (k *PrivateKey) VerifyMessage(_ context.Context, data []byte, sig types.Signature) bool {
-	addr, err := k.recover.RecoverMessage(data, sig)
+	addr, err := crypto.ECRecoverMessage(data, crypto.Signature(sig))
 	if err != nil {
 		return false
 	}
-	return *addr == k.address
+	return types.Address(*addr) == k.address
+}
+
+func validateScalar(prv crypto.PrivateKey) error {
+	var s secp256k1.ModNScalar
+	overflow := s.SetBytes((*[crypto.PrivateKeySize]byte)(&prv))
+	zeroBit := s.IsZeroBit()
+	s.Zero()
+	if overflow|zeroBit != 0 {
+		return errors.New("invalid private key: scalar must be in the range [1, N-1]")
+	}
+	return nil
 }

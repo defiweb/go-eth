@@ -1,3 +1,5 @@
+// Package transport provides transport layer implementations for the Ethereum
+// JSON-RPC API.
 package transport
 
 import (
@@ -13,7 +15,7 @@ type Transport interface {
 	Call(ctx context.Context, result any, method string, args ...any) error
 }
 
-// SubscriptionTransport is transport that supports subscriptions.
+// SubscriptionTransport is a transport that supports subscriptions.
 type SubscriptionTransport interface {
 	Transport
 
@@ -26,12 +28,12 @@ type SubscriptionTransport interface {
 	Unsubscribe(ctx context.Context, id string) error
 }
 
-// New returns a new Transport instance based on the URL scheme.
-// Supported schemes are: http, https, ws, wss.
-// If scheme is empty, it will use IPC.
+// New returns a new [Transport] instance based on the URL scheme.
+// Supported schemes are: http, https, ws, and wss.
+// If the scheme is empty, IPC will be used.
 //
 // The context is used to close the underlying connection when the transport
-// uses a websocket or IPC.
+// uses a WebSocket or IPC.
 func New(ctx context.Context, rpcURL string) (Transport, error) {
 	url, err := netURL.Parse(rpcURL)
 	if err != nil {

@@ -114,7 +114,7 @@ func NewABI() *ABI {
 				// empty value will cause the default mapping function to
 				// be used. Otherwise, dereference the source and continue
 				// the loop.
-				if v.Kind() != reflect.Interface && v.Kind() != reflect.Ptr {
+				if v.Kind() != reflect.Interface && v.Kind() != reflect.Pointer {
 					break
 				}
 				v = v.Elem()
@@ -128,7 +128,7 @@ func NewABI() *ABI {
 					return v
 				}
 				// If the destination is a nil pointer, then initialize it.
-				if v.Kind() == reflect.Ptr && v.IsNil() {
+				if v.Kind() == reflect.Pointer && v.IsNil() {
 					if !v.CanSet() {
 						return reflect.Value{}
 					}
@@ -147,7 +147,7 @@ func NewABI() *ABI {
 				// empty value will cause the anymapper package to ignore
 				// this hook. Otherwise, dereference the destination and
 				// continue the loop.
-				if v.Kind() != reflect.Interface && v.Kind() != reflect.Ptr {
+				if v.Kind() != reflect.Interface && v.Kind() != reflect.Pointer {
 					break
 				}
 				v = v.Elem()
@@ -200,7 +200,7 @@ var fieldMapper = func(field string) string {
 }
 
 func addr(v reflect.Value) reflect.Value {
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		return v
 	}
 	if v.CanAddr() {

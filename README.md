@@ -2,49 +2,63 @@
 
 # go-eth
 
-This library is a Go package designed to interact with the Ethereum blockchain. This package provides robust tools for
+This library is a comprehensive Go package designed to interact with the Ethereum blockchain. It provides robust tools for
 connecting to Ethereum nodes, sending transactions, and handling smart contract events. Whether you're developing a
-decentralized application or conducting blockchain analysis.
+decentralized application or conducting blockchain analysis, this package offers everything you need.
 
-Some of key features include:
+Key features include:
 
-* An RPC client that supports HTTP, WebSocket and IPC transports.
-* An ABI package allowing developers to easily interact with smart contracts.
-* An extendable and easy to use ABI encoder and decoder.
-* Support for JSON and HD wallets.
+- **RPC Client**: Supports HTTP, WebSocket, and IPC transports with advanced middleware capabilities
+- **ABI Package**: Comprehensive ABI encoder/decoder with Human-Readable ABI support
+- **Transaction Support**: All transaction types including Legacy, EIP-1559, EIP-2930, and EIP-4844 (blob transactions)
+- **Wallet Management**: Support for JSON keystore, HD wallets, and mnemonic phrases
+- **Cryptographic Functions**: Built-in support for ECDSA signing, Keccak hashing, and KZG4844 proofs
+- **Extensible Design**: Modular architecture with customizable transport hijackers and middleware
 
 <!-- TOC -->
-
 * [go-eth](#go-eth)
-    * [Installation](#installation)
-    * [Quick start](#quick-start)
-        * [Connecting to a node](#connecting-to-a-node)
-        * [Calling a contract method](#calling-a-contract-method)
-        * [Calling a contract method using a Human-Readable ABI](#calling-a-contract-method-using-a-human-readable-abi)
-        * [Sending a transaction](#sending-a-transaction)
-        * [Subscribing to events](#subscribing-to-events)
-    * [Transports](#transports)
-    * [Wallets](#wallets)
-    * [Working with ABI](#working-with-abi)
-        * [Mapping rules](#mapping-rules)
-        * [Encoding and Decoding Methods](#encoding-and-decoding-methods)
-            * [Encoding method arguments](#encoding-method-arguments)
-            * [Decoding method return values](#decoding-method-return-values)
-        * [Events / Logs](#events--logs)
-            * [Decoding events](#decoding-events)
-        * [Contract ABI](#contract-abi)
-            * [JSON-ABI](#json-abi)
-            * [Human-Readable ABI](#human-readable-abi)
-        * [Errors](#errors)
-        * [Reverts](#reverts)
-        * [Panics](#panics)
-        * [Signature parser syntax](#signature-parser-syntax)
-        * [Custom types](#custom-types)
-            * [Simple types](#simple-types)
-            * [Advanced types](#advanced-types)
-    * [Additional tools](#additional-tools)
-    * [Documentation](#documentation)
-
+  * [Installation](#installation)
+  * [Quick start](#quick-start)
+    * [Connecting to a node](#connecting-to-a-node)
+    * [Calling a contract method](#calling-a-contract-method)
+    * [Calling a contract method using a Human-Readable ABI](#calling-a-contract-method-using-a-human-readable-abi)
+    * [Sending a transaction](#sending-a-transaction)
+    * [Sending a blob transaction](#sending-a-blob-transaction)
+    * [Subscribing to events](#subscribing-to-events)
+  * [Transports](#transports)
+  * [Wallets](#wallets)
+  * [Client Configuration](#client-configuration)
+    * [Available Options](#available-options)
+    * [Transport Hijacking](#transport-hijacking)
+      * [Ordering](#ordering)
+      * [Argument copying](#argument-copying)
+  * [Working with ABI](#working-with-abi)
+    * [Mapping rules](#mapping-rules)
+    * [Encoding and Decoding Methods](#encoding-and-decoding-methods)
+      * [Encoding method arguments](#encoding-method-arguments)
+      * [Decoding method return values](#decoding-method-return-values)
+    * [Events / Logs](#events--logs)
+      * [Decoding events](#decoding-events)
+    * [Contract ABI](#contract-abi)
+      * [JSON-ABI](#json-abi)
+      * [Human-Readable ABI](#human-readable-abi)
+    * [Errors](#errors)
+    * [Reverts](#reverts)
+    * [Panics](#panics)
+    * [Signature parser syntax](#signature-parser-syntax)
+    * [Custom types](#custom-types)
+      * [Simple types](#simple-types)
+      * [Advanced types](#advanced-types)
+  * [Cryptographic Functions](#cryptographic-functions)
+    * [ECDSA Operations](#ecdsa-operations)
+    * [Hashing](#hashing)
+    * [KZG4844 (EIP-4844 Blob Transactions)](#kzg4844-eip-4844-blob-transactions)
+    * [Transaction Signing](#transaction-signing)
+  * [Utility Packages](#utility-packages)
+    * [HexUtil Package](#hexutil-package)
+    * [Types Package](#types-package)
+  * [Additional tools](#additional-tools)
+  * [Documentation](#documentation)
 <!-- TOC -->
 
 ## Installation
@@ -55,12 +69,12 @@ go get -u github.com/defiweb/go-eth
 
 ## Quick start
 
-The examples below provide a glimpse into the usage of the `go-eth` package.
+The examples below provide a comprehensive overview of the `go-eth` package capabilities.
 
 ### Connecting to a node
 
-The `go-eth` package offers a JSON-RPC client that can be used to establish a connection with a node. The example below
-demonstrates how to connect to a node using HTTP transport method.
+The `go-eth` package offers a JSON-RPC client that can connect to Ethereum nodes using various transport methods. The example below
+demonstrates how to connect using HTTP transport.
 
 <!-- examples/connect/main.go -->
 
@@ -104,7 +118,7 @@ func main() {
 
 ### Calling a contract method
 
-The example demonstrates how to call the `balanceOf` method on a contract.
+The following example demonstrates how to call the `balanceOf` method on an ERC-20 contract.
 
 <!-- examples/call/main.go -->
 
@@ -142,12 +156,12 @@ func main() {
 	calldata := balanceOf.MustEncodeArgs("0xd8da6bf26964af9d7eed9e03e53415d37aa96045")
 
 	// Prepare a call.
-	call := types.NewCall().
-		SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).
-		SetInput(calldata)
+	call := types.NewCall()
+	call.SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"))
+	call.SetInput(calldata)
 
 	// Call balanceOf.
-	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
+	b, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}
@@ -163,7 +177,7 @@ func main() {
 
 ### Calling a contract method using a Human-Readable ABI
 
-Following example shows how to call a contract method using a Human-Readable ABI. It uses popular
+The following example shows how to call a contract method using a Human-Readable ABI. It uses the popular
 [Multicall3](https://www.multicall3.com) contract as an example.
 
 <!-- examples/call-abi/main.go -->
@@ -244,12 +258,12 @@ func main() {
 	})
 
 	// Prepare a call.
-	call := types.NewCall().
-		SetTo(types.MustAddressFromHex("0xcA11bde05977b3631167028862bE2a173976CA11")).
-		SetInput(calldata)
+	call := types.NewCall()
+	call.SetTo(types.MustAddressFromHex("0xcA11bde05977b3631167028862bE2a173976CA11"))
+	call.SetInput(calldata)
 
 	// Call the contract.
-	b, _, err := c.Call(context.Background(), call, types.LatestBlockNumber)
+	b, err := c.Call(context.Background(), call, types.LatestBlockNumber)
 	if err != nil {
 		panic(err)
 	}
@@ -272,8 +286,8 @@ func main() {
 
 ### Sending a transaction
 
-The following example demonstrates how to execute an ERC20 token transfer transaction. Additionally, it illustrates the
-use of TX modifiers to simplify the transaction creation process.
+The following example demonstrates how to execute an ERC-20 token transfer transaction. It also illustrates the
+use of client options to automatically set gas, nonce, and other transaction parameters.
 
 <!-- examples/send-tx/main.go -->
 
@@ -284,18 +298,18 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 
 	"github.com/defiweb/go-eth/abi"
 	"github.com/defiweb/go-eth/rpc"
 	"github.com/defiweb/go-eth/rpc/transport"
-	"github.com/defiweb/go-eth/txmodifier"
 	"github.com/defiweb/go-eth/types"
 	"github.com/defiweb/go-eth/wallet"
 )
 
 func main() {
 	// Load the private key.
-	key, err := wallet.NewKeyFromJSON("./key.json", "test123")
+	k, err := wallet.NewKeyFromJSON(keyPath(), "test123")
 	if err != nil {
 		panic(err)
 	}
@@ -312,42 +326,33 @@ func main() {
 		rpc.WithTransport(t),
 
 		// Specify a key for signing transactions. If provided, the client
-		// uses it with SignTransaction, SendTransaction, and Sign methods
-		// instead of relying on the node for signing.
-		rpc.WithKeys(key),
+		// will sign transactions before sending them to the node.
+		rpc.WithKeys(k),
 
-		// Specify a default address for SendTransaction when the transaction
-		// does not have a 'From' field set.
-		rpc.WithDefaultAddress(key.Address()),
+		// Specify the default "from" address for transactions.
+		rpc.WithDefaultAddress(rpc.AddressOptions{
+			Address: k.Address(),
+		}),
 
-		// TX modifiers enable modifications to the transaction before signing
-		// and sending to the node. While not mandatory, without them, transaction
-		// parameters like gas limit, gas price, and nonce must be set manually.
-		rpc.WithTXModifiers(
-			// GasLimitEstimator automatically estimates the gas limit for the
-			// transaction.
-			txmodifier.NewGasLimitEstimator(txmodifier.GasLimitEstimatorOptions{
-				Multiplier: 1.25,
-			}),
+		// Estimate gas limit for transactions if not provided explicitly.
+		rpc.WithGasLimit(rpc.GasLimitOptions{
+			Multiplier: 1.25,
+		}),
 
-			// GasFeeEstimator automatically estimates the gas price for the
-			// transaction based on the current market conditions.
-			txmodifier.NewEIP1559GasFeeEstimator(txmodifier.EIP1559GasFeeEstimatorOptions{
-				GasPriceMultiplier:          1.25,
-				PriorityFeePerGasMultiplier: 1.25,
-			}),
+		// Estimate gas price for transactions if not provided explicitly.
+		rpc.WithDynamicGasFee(rpc.DynamicGasFeeOptions{
+			GasPriceMultiplier:          1.25,
+			PriorityFeePerGasMultiplier: 1.25,
+		}),
 
-			// NonceProvider automatically sets the nonce for the transaction.
-			txmodifier.NewNonceProvider(txmodifier.NonceProviderOptions{
-				UsePendingBlock: false,
-			}),
+		// Automatically set the chain ID for transactions.
+		rpc.WithChainID(rpc.ChainIDOptions{}),
 
-			// ChainIDProvider automatically sets the chain ID for the transaction.
-			txmodifier.NewChainIDProvider(txmodifier.ChainIDProviderOptions{
-				Replace: false,
-				Cache:   true,
-			}),
-		),
+		// Automatically set the nonce for transactions.
+		rpc.WithNonce(rpc.NonceOptions{}),
+
+		// Simulate transactions before sending them to the node.
+		rpc.WithSimulate(),
 	)
 	if err != nil {
 		panic(err)
@@ -360,11 +365,11 @@ func main() {
 	calldata := transfer.MustEncodeArgs("0xd8da6bf26964af9d7eed9e03e53415d37aa96045", new(big.Int).Mul(big.NewInt(100), big.NewInt(1e6)))
 
 	// Prepare a transaction.
-	tx := types.NewTransaction().
-		SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")).
-		SetInput(calldata)
+	tx := types.NewTransactionLegacy()
+	tx.SetTo(types.MustAddressFromHex("0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"))
+	tx.SetInput(calldata)
 
-	txHash, _, err := c.SendTransaction(context.Background(), tx)
+	txHash, err := c.SendTransaction(context.Background(), tx)
 	if err != nil {
 		panic(err)
 	}
@@ -372,11 +377,148 @@ func main() {
 	// Print the transaction hash.
 	fmt.Printf("Transaction hash: %s\n", txHash.String())
 }
+
+func keyPath() string {
+	if _, err := os.Stat("./key.json"); err == nil {
+		return "./key.json"
+	}
+	return "./examples/send-tx/key.json"
+}
+```
+
+### Sending a blob transaction
+
+EIP-4844 blob transactions carry large data payloads that the EVM cannot read
+but that remain available to the network for a limited time. The example below
+posts two blobs and prints their versioned hashes.
+
+Note that the blob gas price is not covered by any of the client options — it
+has to be set explicitly with `SetMaxFeePerBlobGas`.
+
+<!-- examples/send-tx-blob/main.go -->
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"os"
+
+	"github.com/defiweb/go-eth/crypto"
+	"github.com/defiweb/go-eth/hexutil"
+	"github.com/defiweb/go-eth/rpc"
+	"github.com/defiweb/go-eth/rpc/transport"
+	"github.com/defiweb/go-eth/types"
+	"github.com/defiweb/go-eth/wallet"
+)
+
+func main() {
+	// Load the private key.
+	k, err := wallet.NewKeyFromJSON(keyPath(), "test123")
+	if err != nil {
+		panic(err)
+	}
+
+	// Create transport.
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://ethereum.publicnode.com"})
+	if err != nil {
+		panic(err)
+	}
+
+	// Create a JSON-RPC client.
+	c, err := rpc.NewClient(
+		// Transport is always required.
+		rpc.WithTransport(t),
+
+		// Specify a key for signing transactions. If provided, the client
+		// will sign transactions before sending them to the node.
+		rpc.WithKeys(k),
+
+		// Specify the default "from" address for transactions.
+		rpc.WithDefaultAddress(rpc.AddressOptions{
+			Address: k.Address(),
+		}),
+
+		// Estimate gas limit for transactions if not provided explicitly.
+		rpc.WithGasLimit(rpc.GasLimitOptions{
+			Multiplier: 1.25,
+		}),
+
+		// Estimate gas price for transactions if not provided explicitly.
+		rpc.WithDynamicGasFee(rpc.DynamicGasFeeOptions{
+			GasPriceMultiplier:          1.25,
+			PriorityFeePerGasMultiplier: 1.25,
+		}),
+
+		// Automatically set the chain ID for transactions.
+		rpc.WithChainID(rpc.ChainIDOptions{}),
+
+		// Automatically set the nonce for transactions.
+		rpc.WithNonce(rpc.NonceOptions{}),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// Prepare the blobs.
+	//
+	// A blob is a fixed 128 KiB, so it is allocated on the heap rather than
+	// as a local variable.
+	//
+	// The data is used verbatim. EIP-4844 requires every 32-byte field
+	// element of a blob to be smaller than the BLS12-381 modulus, so
+	// arbitrary bytes must be encoded before being placed in a blob.
+	var blobs []types.BlobInfo
+	for _, data := range []string{"hello world 1", "hello world 2"} {
+		blob := new(crypto.KZGBlob)
+		copy(blob[:], data)
+
+		// NewBlobInfo computes the KZG commitment, the KZG proof, and the
+		// versioned hash for the blob.
+		info, err := types.NewBlobInfo(blob)
+		if err != nil {
+			panic(err)
+		}
+		blobs = append(blobs, info)
+	}
+
+	// Prepare a transaction.
+	tx := types.NewTransactionBlob()
+	tx.SetTo(types.MustAddressFromHex("0x69B352cbE6Fc5C130b6F62cc8f30b9d7B0DC27d0"))
+	tx.SetBlobs(blobs)
+
+	// The blob gas price is not estimated by any of the client options above,
+	// so it has to be set explicitly.
+	tx.SetMaxFeePerBlobGas(big.NewInt(1e10))
+
+	txHash, err := c.SendTransaction(context.Background(), tx)
+	if err != nil {
+		panic(err)
+	}
+
+	// Print the transaction hash and the versioned hash of each blob. The
+	// versioned hashes are what the EVM sees; the blobs themselves are not
+	// accessible to contracts and are discarded by the network after a few
+	// weeks.
+	fmt.Printf("Transaction hash: %s\n", txHash.String())
+	for i, b := range blobs {
+		fmt.Printf("Blob %d versioned hash: %s\n", i, hexutil.BytesToHex(b.Hash[:]))
+	}
+}
+
+func keyPath() string {
+	if _, err := os.Stat("./key.json"); err == nil {
+		return "./key.json"
+	}
+	return "./examples/send-tx-blob/key.json"
+}
 ```
 
 ### Subscribing to events
 
-Following example shows how to subscribe to WETH transfer events.
+The following example shows how to subscribe to WETH transfer events.
 
 <!-- examples/subscription/main.go -->
 
@@ -404,6 +546,12 @@ func main() {
 	t, err := transport.NewWebsocket(transport.WebsocketOptions{
 		Context: ctx,
 		URL:     "wss://ethereum.publicnode.com",
+
+		// Size the per-subscription queue for the slowest consumer. Once the
+		// buffer of any subscription fills up, the transport stops reading
+		// from the connection, stalling every other subscription and call
+		// sharing it.
+		SubscriptionBufferSize: 64,
 	})
 	if err != nil {
 		panic(err)
@@ -419,9 +567,9 @@ func main() {
 	transfer := abi.MustParseEvent("event Transfer(address indexed src, address indexed dst, uint256 wad)")
 
 	// Create a filter query.
-	query := types.NewFilterLogsQuery().
-		SetAddresses(types.MustAddressFromHex("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")).
-		SetTopics([]types.Hash{transfer.Topic0()})
+	query := types.NewFilterLogsQuery()
+	query.SetAddresses(types.MustAddressFromHex("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"))
+	query.SetTopics([]types.Hash{transfer.Topic0()})
 
 	// Fetch logs for WETH transfer events.
 	logs, err := c.SubscribeLogs(ctx, query)
@@ -444,39 +592,39 @@ func main() {
 
 ## Transports
 
-To connect to a node, it is necessary to choose a suitable transport method. The transport is responsible for executing
-a low-level communication protocol with the node. The `go-eth` package offers the following transport options:
+To connect to a node, you need to choose an appropriate transport method. The transport handles low-level communication
+with the node. The `go-eth` package offers the following transport options:
 
 | Transport | Description                                                                                | Subscriptions   |
-|-----------|--------------------------------------------------------------------------------------------|-----------------|
-| HTTP      | Connects to a node using the HTTP protocol.                                                | No              |
-| WebSocket | Connects to a node using the WebSocket protocol.                                           | Yes             |
-| IPC       | Connects to a node using the IPC protocol.                                                 | Yes             |
-| Retry     | Wraps a transport and retries requests in case of an error.                                | Yes<sup>2</sup> |
+| --------- | ------------------------------------------------------------------------------------------ | --------------- |
+| HTTP      | Connects to a node using the HTTP protocol. Most widely supported.                         | No              |
+| WebSocket | Connects to a node using the WebSocket protocol. Supports real-time subscriptions.         | Yes             |
+| IPC       | Connects to a node using Inter-Process Communication (Unix sockets/named pipes).           | Yes             |
+| Retry     | Wraps a transport and retries requests in case of errors with exponential backoff.         | Yes<sup>2</sup> |
 | Combined  | Wraps two transports and uses one for methods and the other for subscriptions.<sup>1</sup> | Yes             |
 
-1. It is recommended by some RPC providers to use HTTP for methods and WebSocket for subscriptions.
+1. Recommended by some RPC providers to use HTTP for methods and WebSocket for subscriptions for better performance.
 2. Only if the underlying transport supports subscriptions.
 
-Transports can be created using the `transport.New*` functions. It is also possible to create custom transport by
-implementing the `transport.Transport` interface or `transport.SubscriptionTransport` interface.
+Transports can be created using the `transport.New*` functions. You can also create custom transports by
+implementing the `transport.Transport` interface or the `transport.SubscriptionTransport` interface for subscription support.
 
 ## Wallets
 
-The `go-eth` package provides support for the following wallet types:
+The `go-eth` package provides comprehensive support for various wallet types and key management:
 
-| Description                  | Example                                                                     |
-|------------------------------|-----------------------------------------------------------------------------|
-| A random key                 | `key := wallet.NewRandomKey()`                                              |
-| Private key                  | `key, err := wallet.NewKeyFromBytes(privateKey)`                            |
-| JSON key file<sup>1</sup>    | `key, err := wallet.NewKeyFromJSON(path, password)`                         |
-| JSON key content<sup>1</sup> | `key, err := wallet.NewKeyFromJSONContent(jsonContent, password)`           |
-| Mnemonic                     | `key, err := wallet.NewKeyFromMnemonic(mnemonic, password, account, index)` |
-| Remote RPC                   | `key := wallet.NewKeyRPC(client, address)`                                  |
+| Description                       | Example                                                                     |
+| --------------------------------- | --------------------------------------------------------------------------- |
+| Random key generation             | `key := wallet.NewRandomKey()`                                              |
+| Private key from bytes            | `key, err := wallet.NewKeyFromBytes(privateKey)`                            |
+| JSON keystore file<sup>1</sup>    | `key, err := wallet.NewKeyFromJSON(path, password)`                         |
+| JSON keystore content<sup>1</sup> | `key, err := wallet.NewKeyFromJSONContent(jsonContent, password)`           |
+| HD wallet from mnemonic           | `key, err := wallet.NewKeyFromMnemonic(mnemonic, password, account, index)` |
+| Remote RPC wallet                 | `key := wallet.NewKeyRPC(client, address)`                                  |
 
-1. Only V3 JSON keys are supported.
+1. Only Ethereum JSON V3 keystores are supported.
 
-Wallets can be also created using custom derivation paths. For example, the following code creates a wallet using the
+You can also create wallets using custom derivation paths. For example, the following code creates a wallet using the
 `m/44'/60'/0'/10/10` derivation path:
 
 <!-- examples/key-mnemonic/main.go -->
@@ -514,10 +662,110 @@ func main() {
 }
 ```
 
+## Client Configuration
+
+The RPC client can be configured with various options to automatically handle transaction parameters, implement middleware, and customize behavior.
+
+### Available Options
+
+| Option                   | Description                                          |
+| ------------------------ | ---------------------------------------------------- |
+| `WithTransport`          | Sets the transport for communication                 |
+| `WithKeys`               | Adds private keys for transaction signing            |
+| `WithDefaultAddress`     | Sets default sender address                          |
+| `WithChainID`            | Auto-sets chain ID for transactions                  |
+| `WithNonce`              | Auto-manages transaction nonces                      |
+| `WithGasLimit`           | Auto-estimates gas limits                            |
+| `WithLegacyGasFee`       | Auto-estimates legacy gas prices                     |
+| `WithDynamicGasFee`      | Auto-estimates EIP-1559 gas fees                     |
+| `WithSimulate`           | Simulates transactions before sending                |
+| `WithTransactionDecoder` | Custom transaction decoder                           |
+| `WithPreHijackers`       | Custom middleware, run before the built-in hijackers |
+| `WithPostHijackers`      | Custom middleware, run after the built-in hijackers  |
+
+Options are order-independent: the client sorts them by a fixed priority before
+applying them, so the sequence in which they are passed to `NewClient` does not
+matter.
+
+### Transport Hijacking
+
+Every option above except `WithTransport` and `WithTransactionDecoder` is
+implemented as a *hijacker*: middleware wrapped around the transport that can
+inspect and modify a call before it reaches the node. The same mechanism is
+available for custom middleware through `WithPreHijackers` and
+`WithPostHijackers`.
+
+A hijacker implements `transport.Hijacker`, which has one method per transport
+operation. Returning `nil` from any of them leaves that operation untouched:
+
+```go
+type Hijacker interface {
+	Call() func(next CallFunc) CallFunc
+	Subscribe() func(next SubscribeFunc) SubscribeFunc
+	Unsubscribe() func(next UnsubscribeFunc) UnsubscribeFunc
+}
+```
+
+The example below logs every RPC call and its duration:
+
+```go
+package main
+
+import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/defiweb/go-eth/rpc"
+	"github.com/defiweb/go-eth/rpc/transport"
+)
+
+type logHijacker struct{}
+
+func (l *logHijacker) Call() func(next transport.CallFunc) transport.CallFunc {
+	return func(next transport.CallFunc) transport.CallFunc {
+		return func(ctx context.Context, t transport.Transport, result any, method string, args ...any) error {
+			start := time.Now()
+			err := next(ctx, t, result, method, args...)
+			log.Printf("%s took %s (err: %v)", method, time.Since(start), err)
+			return err
+		}
+	}
+}
+
+// Returning nil leaves subscriptions untouched.
+func (l *logHijacker) Subscribe() func(next transport.SubscribeFunc) transport.SubscribeFunc {
+	return nil
+}
+
+func (l *logHijacker) Unsubscribe() func(next transport.UnsubscribeFunc) transport.UnsubscribeFunc {
+	return nil
+}
+
+func main() {
+	t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://ethereum.publicnode.com"})
+	if err != nil {
+		panic(err)
+	}
+
+	c, err := rpc.NewClient(
+		rpc.WithTransport(t),
+		rpc.WithPreHijackers(&logHijacker{}),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err := c.BlockNumber(context.Background()); err != nil {
+		panic(err)
+	}
+}
+```
+
 ## Working with ABI
 
-The `go-eth` package offers an ABI encoder and decoder for working with ABI data. The package also includes a signature
-parser for parsing method, event, and error signatures, as well as custom types and structs.
+The `go-eth` package offers a comprehensive ABI encoder and decoder for working with smart contract data. The package includes a signature
+parser for parsing method, event, and error signatures, as well as support for custom types and structs.
 
 The following example shows how to encode and decode data:
 
@@ -567,7 +815,7 @@ In the example above, data is encoded and decoded using a struct. The `abi` tags
 corresponding tuple or struct fields. These tags are optional. If absent, fields are mapped by name, with the first
 consecutive uppercase letters converted to lowercase.
 
-It is also possible to encode and decode values to a separate variables:
+It is also possible to encode and decode values to separate variables:
 
 <!-- examples/abi-enc-dec-vars/main.go -->
 
@@ -604,12 +852,12 @@ func main() {
 }
 ```
 
-**Note that in both examples above, similarly named functions are used to encode and decode data. The only difference is
-that the second example uses the plural form of the function.** The plural form is used to encode and decode data from
-separate variables, while the singular form is used for structs or maps. This is a common pattern in the `go-eth`
+**Note: In both examples above, similarly named functions are used to encode and decode data. The only difference is
+that the second example uses the plural form of the function names.** The plural form encodes/decodes data from
+separate variables, while the singular form works with structs or maps. This is a consistent pattern throughout the `go-eth`
 package.
 
-Finally, instead of using signature parser, it is possible to create types manually which may be useful to create
+Finally, instead of using the signature parser, you can create types manually, which may be useful for creating
 custom types programmatically:
 
 <!-- examples/abi-enc-dec-prog/main.go -->
@@ -665,7 +913,7 @@ func main() {
 When mapping between Go and Solidity types, the following rules apply:
 
 | Go type \ Solidity type | `intX`           | `uintX`            | `bool` | `string` | `bytes`       | `bytesX`         | `address`       |
-|-------------------------|------------------|--------------------|--------|----------|---------------|------------------|-----------------|
+| ----------------------- | ---------------- | ------------------ | ------ | -------- | ------------- | ---------------- | --------------- |
 | `intX`                  | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
 | `uintX`                 | ✓<sup>1,2</sup>  | ✓<sup>1</sup>      | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
 | `bool`                  | ✗                | ✗                  | ✓      | ✗        | ✗             | ✗                | ✗               |
@@ -679,8 +927,8 @@ When mapping between Go and Solidity types, the following rules apply:
 | `types.Number`          | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
 | `types.BlockNumber`     | ✓<sup>1,10</sup> | ✓<sup>1,2,10</sup> | ✗      | ✗        | ✗             | ✓<sup>3,10</sup> | ✗               |
 
-* ✓ - Supported
-* ✗ - Not supported
+- ✓ - Supported
+- ✗ - Not supported
 
 1. Destination type must be able to hold the value of the source type. Otherwise, the mapping will result in an error.
    For example, `uint16` can be mapped to `uint8`, but only if the value is less than 256.
@@ -691,21 +939,21 @@ When mapping between Go and Solidity types, the following rules apply:
    the "0x" prefix is optional. Negative values are prefixed with a minus sign, e.g. "-0x123".
 6. Negative values are not supported.
 7. String representation is assumed to be in hexadecimal format.
-8. When mapping to `bytesX`, length of the data must the same as the length of the destination type.
+8. When mapping to `bytesX`, the length of the data must be the same as the length of the destination type.
 9. When mapping to `address`, length of the data must be 20 bytes.
-10. Mapping latest, earliest and pending block numbers is not supported.
+10. Mapping of latest, earliest, and pending block numbers is not supported.
 
-Note: Go type `[X]byte` represents a fixed-size byte array, such as `[20]byte`. Solidity types `intX`, `uintX`,
-and `bytesX` are also fixed-size types, such as, `uint32`.
+Note: The Go type `[X]byte` represents a fixed-size byte array, such as `[20]byte`. Solidity types `intX`, `uintX`,
+and `bytesX` are also fixed-size types, such as `uint32`.
 
-The general rule for mapping types is that the destination type must be capable of holding the value of the source type,
+The general rule for type mapping is that the destination type must be capable of holding the value of the source type,
 the conversion must be unambiguous, and the mapping must be reversible. Mapping from larger to smaller types is
-supported because often Solidity contracts use `uint256` for all numbers, even when the value is known to be much less
+supported because Solidity contracts often use `uint256` for all numbers, even when the value is known to be much smaller
 than 256 bits.
 
 ### Encoding and Decoding Methods
 
-To work with methods, the `abi.Method` structure needs to be created. Methods may be created using different methods:
+To work with methods, an `abi.Method` structure needs to be created. Methods can be created using different approaches:
 
 - `abi.ParseMethod` / `abi.MustParseMethod` - creates a new method by parsing a method signature.
 - `abi.NewMethod(name, inputs, outputs, mutability)` - creates a new method using provided arguments.
@@ -748,7 +996,7 @@ func main() {
 
 #### Decoding method return values
 
-To decode method arguments, the `abi.Method.DecodeArg` or `abi.Method.DecodeArgs` functions can be used. The first
+To decode method return values, the `abi.Method.DecodeValue` or `abi.Method.DecodeValues` functions can be used. The first
 function decodes returned values to a struct, the second function decodes returned values to consecutive variables.
 
 ```go
@@ -763,12 +1011,12 @@ import (
 )
 
 func main() {
-	abiData := hexutil.MustHexToBytes("0x00000000000000000000000000000000000000000000000002b5e3af16b1880000")
+	abiData := hexutil.MustHexToBytes("0x000000000000000000000000000000000000000000000002b5e3af16b1880000")
 
 	// Parse method signature.
 	balanceOf := abi.MustParseMethod("balanceOf(address) returns (uint256)")
 
-	// Encode method arguments.
+	// Decode method return values.
 	var balance big.Int
 	err := balanceOf.DecodeValues(abiData, &balance)
 	if err != nil {
@@ -782,10 +1030,10 @@ func main() {
 
 ### Events / Logs
 
-To decode contract events, the `abi.Event` structure needs to be created. Events may be created using different methods:
+To decode contract events, an `abi.Event` structure needs to be created. Events can be created using different approaches:
 
 - `abi.ParseEvent` / `abi.MustParseEvent` - creates a new event by parsing an event signature.
-- `abi.NewEvent(name, inputs)` - creates a new event using provided arguments.
+- `abi.NewEvent(name, inputs, anonymous)` - creates a new event using provided arguments.
 - Using the `abi.Contract` struct (see [Contract ABI](#contract-abi) section).
 
 #### Decoding events
@@ -822,11 +1070,11 @@ func main() {
 	transfer := abi.MustParseEvent("Transfer(address indexed src, address indexed dst, uint256 wad)")
 
 	// Create filter query.
-	query := types.NewFilterLogsQuery().
-		SetAddresses(types.MustAddressFromHex("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2")).
-		SetFromBlock(types.BlockNumberFromUint64Ptr(16492400)).
-		SetToBlock(types.BlockNumberFromUint64Ptr(16492400)).
-		SetTopics([]types.Hash{transfer.Topic0()})
+	query := types.NewFilterLogsQuery()
+	query.SetAddresses(types.MustAddressFromHex("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"))
+	query.SetFromBlock(types.BlockNumberFromUint64Ptr(16492400))
+	query.SetToBlock(types.BlockNumberFromUint64Ptr(16492400))
+	query.SetTopics([]types.Hash{transfer.Topic0()})
 
 	// Fetch logs for WETH transfer events.
 	logs, err := c.GetLogs(context.Background(), query)
@@ -849,7 +1097,7 @@ func main() {
 The `abi.Contract` structure is a utility that provides an interface to a contract. It can be created using a JSON-ABI
 file or by supplying a list of signatures (also known as a Human-Readable ABI).
 
-To create a contract struct, the following methods may be used:
+To create a contract struct, the following methods can be used:
 
 - `abi.LoadJSON` / `abi.MustLoadJSON` - creates a new contract by loading a JSON-ABI file.
 - `abi.ParseJSON` / `abi.MustParseJSON` - creates a new contract by parsing a JSON-ABI string.
@@ -866,12 +1114,13 @@ package main
 import (
 	"fmt"
 	"math/big"
+	"os"
 
 	"github.com/defiweb/go-eth/abi"
 )
 
 func main() {
-	erc20, err := abi.LoadJSON("erc20.json")
+	erc20, err := abi.LoadJSON(abiPath())
 	if err != nil {
 		panic(err)
 	}
@@ -886,6 +1135,13 @@ func main() {
 	}
 
 	fmt.Printf("Transfer calldata: 0x%x\n", calldata)
+}
+
+func abiPath() string {
+	if _, err := os.Stat("./erc20.json"); err == nil {
+		return "./erc20.json"
+	}
+	return "./examples/contract-json-abi/erc20.json"
 }
 ```
 
@@ -936,8 +1192,7 @@ func main() {
 
 ### Errors
 
-To decode custom contract errors, first a `abi.Error` struct must be created. Errors may be created using different
-methods:
+To decode custom contract errors, first an `abi.Error` struct must be created. Errors can be created using different approaches:
 
 - `abi.ParseError` / `abi.MustParseError` - creates a new error by parsing an error signature.
 - `abi.NewError(name, inputs)` - creates a new error using provided arguments.
@@ -945,39 +1200,39 @@ methods:
 
 Custom errors may be decoded from errors returned by the `Call` function using the `abi.Error.HandleError` method.
 
-When using a `abi.Contract`, errors may be decoded from call errors using the `abi.Contract.HandleError` method. This
-method will try to decode the error using all errors defined in the contract, also including reverts and panics.
+When using an `abi.Contract`, errors can be decoded from call errors using the `abi.Contract.HandleError` method. This
+method will attempt to decode the error using all errors defined in the contract, including reverts and panics.
 
 ### Reverts
 
 Reverts are special errors returned by the EVM when a contract call fails. Reverts are ABI-encoded errors with
-the `Error(string)` signature. The `abi.DecodeRevert` function can be used to decode reverts. Optionally, the `abi`
-package provides `abi.Revert`, a predefined error type that can be used to decode reverts.
+the `Error(string)` signature. The `abi.DecodeRevert` function can be used to decode reverts. The `abi`
+package also provides `abi.Revert`, a predefined error type for decoding reverts.
 
 To verify if an error is a revert, use the `abi.IsRevert` function.
 
 ### Panics
 
 Similar to reverts, panics are special errors returned by the EVM when a contract call fails. Panics are ABI-encoded
-errors with the `Panic(uint256)` signature. The `abi.DecodePanic` function can be used to decode panics. Optionally, the
-`abi` package also provides `abi.Panic`, a predefined error type that can be used to decode panics.
+errors with the `Panic(uint256)` signature. The `abi.DecodePanic` function can be used to decode panics. The
+`abi` package also provides `abi.Panic`, a predefined error type for decoding panics.
 
 To verify if an error is a panic, use the `abi.IsPanic` function.
 
 ### Signature parser syntax
 
-The parser is based on Solidity grammar, but it allows for the omission of argument names, as well as the `returns`
+The parser is based on Solidity grammar but allows for the omission of argument names, as well as the `returns`
 and `function` keywords. This means it can parse full Solidity signatures as well as short signatures, such
 as `bar(uint256,bytes32)`. Tuples are represented as a list of parameters, for example, `(uint256,bytes32)`. The list
-can be optionally prefixed with the `tuple` keyword, for example, `tuple(uint256,bytes32)`.
+can optionally be prefixed with the `tuple` keyword, for example, `tuple(uint256,bytes32)`.
 
-Examples of signatures that are accepted by the parser:
+Examples of signatures accepted by the parser:
 
 - `getPrice(string)`
-- `getPrice(string)((uint256,unit256))`
-- `getPrice(string symbol) returns ((uint256 price, unit256 timestamp) result)`
+- `getPrice(string)((uint256,uint256))`
+- `getPrice(string symbol) returns ((uint256 price, uint256 timestamp) result)`
 - `function getPrice(string calldata symbol) external view returns (tuple(uint256 price, uint256 timestamp) result)`
-- `event PriceUpated(string indexed symbol, uint256 price)`
+- `event PriceUpdated(string indexed symbol, uint256 price)`
 - `error PriceExpired(string symbol, uint256 timestamp)`
 
 ### Custom types
@@ -987,8 +1242,8 @@ the signature parser.
 
 #### Simple types
 
-The simplest way to create a custom type is to use the `abi.ParseType`, `abi.ParseStruct`, `abi.MustParseType`,
-`abi.MustParseStruct` functions, which parses a type signature and returns a `Type` struct. This method can be used to
+The simplest way to create a custom type is to use the `abi.ParseType`, `abi.ParseStruct`, `abi.MustParseType`, or
+`abi.MustParseStruct` functions, which parse a type signature and return a `Type` struct. This method can be used to
 create custom types for commonly used structs.
 
 <!-- examples/custom-type-simple/main.go -->
@@ -1032,7 +1287,7 @@ provides basic information about the type, while the `abi.Value` interface inclu
 values and holds the value itself. Optionally, the `abi.MapTo` and `abi.MapFrom` methods can be implemented to support
 advanced mapping logic.
 
-The example below demonstrates how to create a custom type that represents a 32-byte boolean array stored in a
+The example below demonstrates how to create a custom type that represents a 256-bit boolean array stored in a
 single `bytes32` value.
 
 <!-- examples/custom-type-advanced/main.go -->
@@ -1098,7 +1353,7 @@ func (b BoolFlagsValue) EncodeABI() (abi.Words, error) {
 // DecodeABI decodes the value from the ABI format.
 func (b *BoolFlagsValue) DecodeABI(words abi.Words) (int, error) {
 	if len(words) == 0 {
-		return 0, fmt.Errorf("abi: cannot decode BytesFlags from empty data")
+		return 0, fmt.Errorf("abi: cannot decode BoolFlags from empty data")
 	}
 	for i, v := range words[0] {
 		for j := 0; j < 8; j++ {
@@ -1113,6 +1368,9 @@ func (b *BoolFlagsValue) DecodeABI(words abi.Words) (int, error) {
 //
 // The abi.Mapper is the instance of the internal mapper that is used to
 // perform the mapping. It can be used to map nested types.
+//
+// Note that you may want to use reflection to implement the following methods,
+// as it would let you write more generic mapping code.
 
 // MapFrom maps value from a different type.
 func (b *BoolFlagsValue) MapFrom(_ abi.Mapper, src any) error {
@@ -1121,7 +1379,7 @@ func (b *BoolFlagsValue) MapFrom(_ abi.Mapper, src any) error {
 		*b = src
 	case []bool:
 		if len(src) > 256 {
-			return fmt.Errorf("abi: cannot map []bool of length %d to BytesFlags", len(src))
+			return fmt.Errorf("abi: cannot map []bool of length %d to BoolFlags", len(src))
 		}
 		for i, v := range src {
 			b[i] = v
@@ -1163,13 +1421,112 @@ Please note that adding a custom type to the `abi.Default.Types` map will affect
 the current process. If you want to add a custom type to a single `abi` instance, you can create a new instance using
 the `abi.NewABI` function.
 
+## Cryptographic Functions
+
+The `go-eth` package includes a comprehensive crypto module with support for various cryptographic operations:
+
+### ECDSA Operations
+
+- **Key Recovery**: `crypto.ECRecoverHash()` and `crypto.ECRecoverMessage()`
+- **Digital Signatures**: `crypto.ECSignHash()` and `crypto.ECSignMessage()`
+- **Address Generation**: `crypto.ECPublicKeyToAddress()`
+
+### Hashing
+
+- **Keccak-256**: `crypto.Keccak256()` - The primary hash function used in Ethereum
+
+### KZG4844 (EIP-4844 Blob Transactions)
+
+The package includes full support for KZG commitments and proofs used in blob transactions:
+
+- **Blob to Commitment**: `crypto.KZGBlobToCommitment()`
+- **Proof Generation**: `crypto.KZGComputeProof()` and `crypto.KZGComputeBlobProof()`
+- **Proof Verification**: `crypto.KZGVerifyProof()` and `crypto.KZGVerifyBlobProof()`
+- **Blob Hash Computation**: `crypto.KZGComputeBlobHashV1()`
+
+Example KZG usage:
+
+```go
+import "github.com/defiweb/go-eth/crypto"
+
+// Create a blob (128 KiB of data)
+var blob crypto.KZGBlob
+copy(blob[:], "your data here...")
+
+// Generate commitment
+commitment, err := crypto.KZGBlobToCommitment(&blob)
+if err != nil {
+    panic(err)
+}
+
+// Generate proof for a specific point
+var point crypto.KZGPoint
+proof, claim, err := crypto.KZGComputeProof(&blob, point)
+```
+
+### Transaction Signing
+
+The crypto module also provides transaction signing capabilities through the `txsign` subpackage, supporting all Ethereum transaction types including legacy, EIP-1559, EIP-2930, and EIP-4844.
+
+## Utility Packages
+
+### HexUtil Package
+
+The `hexutil` package provides convenient functions for working with hexadecimal data:
+
+```go
+import "github.com/defiweb/go-eth/hexutil"
+
+// Convert between big integers and hex strings
+hexStr := hexutil.BigIntToHex(big.NewInt(12345))  // "0x3039"
+bigInt := hexutil.MustHexToBigInt("0x3039")       // 12345
+
+// Convert between byte slices and hex strings
+hexStr = hexutil.BytesToHex([]byte{0x12, 0x34})  // "0x1234"
+bytes := hexutil.MustHexToBytes("0x1234")        // []byte{0x12, 0x34}
+
+// Utility functions
+hasPrefix := hexutil.Has0xPrefix("0x1234")       // true
+```
+
+### Types Package
+
+The `types` package provides Ethereum-specific data types:
+
+- **Address**: 20-byte Ethereum addresses with validation
+- **Hash**: 32-byte hashes with utilities
+- **BlockNumber**: Special handling for latest/earliest/pending blocks
+- **Transaction Types**: Support for all transaction types (Legacy, AccessList, DynamicFee, Blob)
+- **Call Types**: Various call structures for different use cases
+- **Filter Queries**: For event log filtering
+
+Example:
+
+```go
+import "github.com/defiweb/go-eth/types"
+
+// Create address from hex string
+addr := types.MustAddressFromHex("0x742d35Cc6606e7d8123456789012345678901234")
+
+// Create various transaction types
+legacyTx := types.NewTransactionLegacy()
+eip1559Tx := types.NewTransactionDynamicFee()
+eip2930Tx := types.NewTransactionAccessList()
+blobTx := types.NewTransactionBlob()
+
+// Create call for contract interaction
+call := types.NewCall()
+call.SetTo(addr)
+call.SetInput(calldata)
+```
+
 ## Additional tools
 
-You may be also find the following tools interesting:
+You may also find the following related tools interesting:
 
-* [go-rlp](https://github.com/defiweb/go-rlp) - RLP serialization/deserialization library.
-* [go-sigparser](https://github.com/defiweb/go-sigparser) - Solidity-compatible signature parser.
-* [go-anymapper](https://github.com/defiweb/go-anymapper) - Data mapper used by this package.
+- [go-rlp](https://github.com/defiweb/go-rlp) - RLP serialization/deserialization library.
+- [go-sigparser](https://github.com/defiweb/go-sigparser) - Solidity-compatible signature parser.
+- [go-anymapper](https://github.com/defiweb/go-anymapper) - Data mapper used by this package.
 
 ## Documentation
 
