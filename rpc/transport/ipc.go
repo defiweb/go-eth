@@ -27,6 +27,26 @@ type IPCOptions struct {
 	// Timeout is the timeout for the IPC requests. Default is 60s.
 	Timeout time.Duration
 
+	// ReadBufferSize is the buffer size for incoming messages. The default
+	// is 1.
+	//
+	// Once the buffer is full, the transport stops reading from the
+	// connection until it drains.
+	ReadBufferSize int
+
+	// WriteBufferSize is the buffer size for outgoing requests. The default
+	// is 1.
+	WriteBufferSize int
+
+	// SubscriptionBufferSize is the buffer size of the message queue of each
+	// subscription. The default is 32.
+	//
+	// Once the buffer of any subscription is full, the transport stops reading
+	// from the connection, which stalls every other subscription and call
+	// sharing it. No message is dropped, but nothing else progresses either,
+	// so this should be sized for the slowest consumer.
+	SubscriptionBufferSize int
+
 	// ErrorCh is an optional channel used to report errors.
 	ErrorCh chan error
 }
@@ -45,11 +65,20 @@ func NewIPC(opts IPCOptions) (*IPC, error) {
 		return nil, fmt.Errorf("failed to dial IPC: %w", err)
 	}
 	ipc := &IPC{conn: conn}
-	ipc.stream.initStream(
-		opts.Context,
+	streamOpts := []streamOption{
 		withStreamTimeout(opts.Timeout),
 		withStreamErrorCh(opts.ErrorCh),
-	)
+	}
+	if opts.ReadBufferSize > 0 {
+		streamOpts = append(streamOpts, withReadBufferSize(opts.ReadBufferSize))
+	}
+	if opts.WriteBufferSize > 0 {
+		streamOpts = append(streamOpts, withWriteBufferSize(opts.WriteBufferSize))
+	}
+	if opts.SubscriptionBufferSize > 0 {
+		streamOpts = append(streamOpts, withSubscriptionBufferSize(opts.SubscriptionBufferSize))
+	}
+	ipc.stream.initStream(opts.Context, streamOpts...)
 	go ipc.readerRoutine()
 	go ipc.writerRoutine()
 	return ipc, nil

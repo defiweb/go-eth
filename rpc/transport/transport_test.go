@@ -24,16 +24,30 @@ func newMockTransport() *mockTransport {
 
 func (t *mockTransport) Call(ctx context.Context, result any, method string, args ...any) error {
 	t.callCount++
-	return <-t.callResult
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-t.callResult:
+		return err
+	}
 }
 
 func (t *mockTransport) Subscribe(ctx context.Context, method string, args ...any) (ch chan json.RawMessage, id string, err error) {
 	t.subCount++
-	err = <-t.subResult
-	return nil, "", err
+	select {
+	case <-ctx.Done():
+		return nil, "", ctx.Err()
+	case err := <-t.subResult:
+		return nil, "", err
+	}
 }
 
 func (t *mockTransport) Unsubscribe(ctx context.Context, id string) error {
 	t.unsubCount++
-	return <-t.unsubResult
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-t.unsubResult:
+		return err
+	}
 }

@@ -49,6 +49,26 @@ type WebsocketOptions struct {
 	// A negative value disables pings.
 	PingInterval time.Duration
 
+	// ReadBufferSize is the buffer size for incoming messages. The default
+	// is 1.
+	//
+	// Once the buffer is full, the transport stops reading from the
+	// connection until it drains.
+	ReadBufferSize int
+
+	// WriteBufferSize is the buffer size for outgoing requests. The default
+	// is 1.
+	WriteBufferSize int
+
+	// SubscriptionBufferSize is the buffer size of the message queue of each
+	// subscription. The default is 32.
+	//
+	// Once the buffer of any subscription is full, the transport stops reading
+	// from the connection, which stalls every other subscription and call
+	// sharing it. No message is dropped, but nothing else progresses either,
+	// so this should be sized for the slowest consumer.
+	SubscriptionBufferSize int
+
 	// ErrorCh is an optional channel used to report errors.
 	ErrorCh chan error
 }
@@ -87,10 +107,20 @@ func NewWebsocket(opts WebsocketOptions) (*Websocket, error) {
 		conn: conn,
 		ping: opts.PingInterval,
 	}
-	ws.stream.initStream(opts.Context,
+	streamOpts := []streamOption{
 		withStreamErrorCh(opts.ErrorCh),
 		withStreamTimeout(opts.Timeout),
-	)
+	}
+	if opts.ReadBufferSize > 0 {
+		streamOpts = append(streamOpts, withReadBufferSize(opts.ReadBufferSize))
+	}
+	if opts.WriteBufferSize > 0 {
+		streamOpts = append(streamOpts, withWriteBufferSize(opts.WriteBufferSize))
+	}
+	if opts.SubscriptionBufferSize > 0 {
+		streamOpts = append(streamOpts, withSubscriptionBufferSize(opts.SubscriptionBufferSize))
+	}
+	ws.stream.initStream(opts.Context, streamOpts...)
 	if ws.ping > 0 {
 		ws.conn.SetPongHandler(func(string) error {
 			ws.resetReadDeadline()
