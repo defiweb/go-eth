@@ -1,10 +1,11 @@
 package rpc
 
 import (
+	"cmp"
 	"fmt"
 	"math/big"
 	"reflect"
-	"sort"
+	"slices"
 
 	"github.com/defiweb/go-eth/rpc/transport"
 	"github.com/defiweb/go-eth/types"
@@ -94,8 +95,6 @@ func WithPostHijackers(hijackers ...transport.Hijacker) ClientOption {
 //   - eth_sendTransaction - signs the transaction and re-issues it as
 //     eth_sendRawTransaction; downstream hijackers observe the substituted
 //     method name, not the original
-//
-// This option will modify the provided transaction instance.
 func WithKeys(keys ...wallet.Key) ClientOption {
 	return &option{
 		apply: func(ctx *ClientContext) error {
@@ -130,8 +129,6 @@ type NonceOptions struct {
 }
 
 // WithNonce sets the nonce in the transaction.
-//
-// This option will modify the provided transaction instance.
 func WithNonce(opts NonceOptions) ClientOption {
 	return &option{
 		apply: func(ctx *ClientContext) error {
@@ -166,8 +163,6 @@ type LegacyGasFeeOptions struct {
 // WithLegacyGasFee estimates the gas price and sets it in the transaction.
 //
 // It only works with eth_sendTransaction; raw transactions are not supported.
-//
-// This option will modify the provided transaction instance.
 func WithLegacyGasFee(opts LegacyGasFeeOptions) ClientOption {
 	return &option{
 		apply: func(ctx *ClientContext) error {
@@ -217,8 +212,6 @@ type DynamicGasFeeOptions struct {
 // WithDynamicGasFee estimates the gas price and sets it in the transaction.
 //
 // It only works with eth_sendTransaction; raw transactions are not supported.
-//
-// This option will modify the provided transaction instance.
 func WithDynamicGasFee(opts DynamicGasFeeOptions) ClientOption {
 	return &option{
 		apply: func(ctx *ClientContext) error {
@@ -256,8 +249,6 @@ type GasLimitOptions struct {
 }
 
 // WithGasLimit estimates the gas limit and sets it in the transaction.
-//
-// This option will modify the provided transaction instance.
 func WithGasLimit(opts GasLimitOptions) ClientOption {
 	return &option{
 		apply: func(ctx *ClientContext) error {
@@ -287,8 +278,6 @@ type AddressOptions struct {
 // WithDefaultAddress sets the default address for calls and transactions.
 //
 // To send a call with to a zero address, it must be set explicitly in the call.
-//
-// This option will modify the provided transaction and call instances.
 func WithDefaultAddress(opts AddressOptions) ClientOption {
 	return &option{
 		apply: func(ctx *ClientContext) error {
@@ -312,8 +301,6 @@ type ChainIDOptions struct {
 
 // WithChainID sets the chain ID in the transaction.
 // It only works with eth_sendTransaction method.
-//
-// This option will modify the provided transaction instance.
 func WithChainID(opts ChainIDOptions) ClientOption {
 	return &option{
 		apply: func(ctx *ClientContext) error {
@@ -398,10 +385,11 @@ func (o *option) Order() int {
 }
 
 func applyOptions(c *ClientContext, opts []ClientOption) error {
-	sort.Slice(opts, func(i, j int) bool {
-		return opts[i].Order() < opts[j].Order()
+	sorted := slices.Clone(opts)
+	slices.SortStableFunc(sorted, func(a, b ClientOption) int {
+		return cmp.Compare(a.Order(), b.Order())
 	})
-	for _, opt := range opts {
+	for _, opt := range sorted {
 		if err := opt.Apply(c); err != nil {
 			return err
 		}
