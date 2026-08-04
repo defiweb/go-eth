@@ -300,18 +300,13 @@ func TestRetry(t *testing.T) {
 					f.callResult <- fmt.Errorf("foo")
 
 					// Wait a bit to make sure the retry passes the select statement
-					// and blocks on the Call() call.
+					// and blocks on the second Call().
 					time.Sleep(100 * time.Millisecond)
-					cancel()
 
-					// The retry function is blocked on the Call() call, so we need to
-					// send a result to unblock it. Then no more retries will be made
-					// because the context is canceled.
-					//
-					// In practice, this is not a problem because the transport will
-					// return an error when the context is canceled so the retry
-					// function will not be blocked on the Call() call.
-					f.callResult <- fmt.Errorf("foo")
+					// Canceling is enough to unblock it: the transport returns the
+					// context error rather than waiting for a result. No further
+					// retry is made, so the call count stays at two.
+					cancel()
 				}()
 				err := r.Call(ctx, nil, "foo")
 				require.Error(t, err)

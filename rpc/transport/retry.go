@@ -149,10 +149,8 @@ func (c *Retry) Call(ctx context.Context, result any, method string, args ...any
 		if c.opts.MaxRetries >= 0 && i >= c.opts.MaxRetries {
 			break
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(c.opts.BackoffFunc(i)):
+		if err := wait(ctx, c.opts.BackoffFunc(i)); err != nil {
+			return err
 		}
 		i++
 	}
@@ -171,10 +169,8 @@ func (c *Retry) Subscribe(ctx context.Context, method string, args ...any) (ch c
 			if c.opts.MaxRetries >= 0 && i >= c.opts.MaxRetries {
 				break
 			}
-			select {
-			case <-ctx.Done():
-				return nil, "", ctx.Err()
-			case <-time.After(c.opts.BackoffFunc(i)):
+			if err := wait(ctx, c.opts.BackoffFunc(i)); err != nil {
+				return nil, "", err
 			}
 			i++
 		}
@@ -195,10 +191,8 @@ func (c *Retry) Unsubscribe(ctx context.Context, id string) (err error) {
 			if c.opts.MaxRetries >= 0 && i >= c.opts.MaxRetries {
 				break
 			}
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(c.opts.BackoffFunc(i)):
+			if err := wait(ctx, c.opts.BackoffFunc(i)); err != nil {
+				return err
 			}
 			i++
 		}
@@ -219,4 +213,16 @@ func errorCode(err error) int {
 		return httpErr.HTTPErrorCode()
 	}
 	return 0
+}
+
+func wait(ctx context.Context, d time.Duration) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(d):
+		return nil
+	}
 }
