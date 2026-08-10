@@ -16,6 +16,12 @@ github.com/defiweb/go-anymapper v0.3.0 h1:sWbTvhpdBaCHQGn+kuKYDnb+mPmeDNzzEXnC+C
 github.com/defiweb/go-anymapper v0.3.0/go.mod h1:EeQDyOsFd63Pt2uu9Yb8NFrChuZ9JBChjGKbDhRPHAQ=
 github.com/defiweb/go-rlp v0.4.0 h1:IheGseUX+kDlykSiADAWYo4J5kSaJPlBraLOfzAsSlI=
 github.com/defiweb/go-rlp v0.4.0/go.mod h1:nLGzk10jAgynPvN2hL+tLnnyZ5Fcshv0wmpWDRtV0PA=
+github.com/defiweb/go-rlp v0.5.0 h1:v52FC5VBLUuVGktz+mygRUEIzLXk+EzefABcwP2XWPE=
+github.com/defiweb/go-rlp v0.5.0/go.mod h1:nLGzk10jAgynPvN2hL+tLnnyZ5Fcshv0wmpWDRtV0PA=
+github.com/defiweb/go-rlp v0.6.0 h1:TV4KT/Y6c/BCfkCxlgLPzOJ4nedGjuZ8aOb65GDshCg=
+github.com/defiweb/go-rlp v0.6.0/go.mod h1:nLGzk10jAgynPvN2hL+tLnnyZ5Fcshv0wmpWDRtV0PA=
+github.com/defiweb/go-rlp v0.6.1 h1:1cMjH8iKfV5x9+3NAJ7Mr9tpNchbH1M1j4BuHfvYqso=
+github.com/defiweb/go-rlp v0.6.1/go.mod h1:nLGzk10jAgynPvN2hL+tLnnyZ5Fcshv0wmpWDRtV0PA=
 github.com/defiweb/go-sigparser v0.6.0 h1:HSNAZSUl8xyV+nKfWNKYVAPWLwTuASas6ohtarBbOT4=
 github.com/defiweb/go-sigparser v0.6.0/go.mod h1:R1wkfsnASR2M38ZupKHoqqIfv+8HgRbZaFQI9Inr4k8=
 github.com/google/subcommands v1.2.0/go.mod h1:ZjhPrFU+Olkh9WazFPsl27BQ4UPiG37m3yTrtFlrHVk=

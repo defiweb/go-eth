@@ -243,62 +243,48 @@ func (t *TransactionBlob) DecodeRLP(data []byte) (int, error) {
 		input                = new(rlp.Bytes)
 		accessList           = new(AccessList)
 		maxFeePerBlobGas     = new(rlp.BigInt)
-		blobHashes           = new(rlp.TypedList[Hash])
-		blobs                = new(rlp.TypedList[kzgBlob])
-		commitments          = new(rlp.TypedList[kzgCommitment])
-		proofs               = new(rlp.TypedList[kzgProof])
+		blobHashes           = new(rlp.VarTypedList[Hash])
+		blobs                = new(rlp.VarTypedList[kzgBlob])
+		commitments          = new(rlp.VarTypedList[kzgCommitment])
+		proofs               = new(rlp.VarTypedList[kzgProof])
 		v                    = new(rlp.BigInt)
 		r                    = new(rlp.BigInt)
 		s                    = new(rlp.BigInt)
 	)
-	dec, _, err := rlp.DecodeLazy(data)
+	dec, n, err := rlp.DecodeLazy(data)
 	if err != nil {
 		return 0, err
+	}
+	if n != len(data) {
+		return 0, rlp.ErrUnexpectedTrailingData
 	}
 	if !dec.IsList() {
 		return 0, fmt.Errorf("unable to decode transaction")
 	}
+	txFields := rlp.List{
+		chainID,
+		nonce,
+		maxPriorityFeePerGas,
+		maxFeePerGas,
+		gasLimit,
+		to,
+		value,
+		input,
+		accessList,
+		maxFeePerBlobGas,
+		blobHashes,
+		v,
+		r,
+		s,
+	}
 	var list rlp.List
 	switch dec.Length() {
 	case 4:
-		list = rlp.List{
-			&rlp.List{
-				chainID,
-				nonce,
-				maxPriorityFeePerGas,
-				maxFeePerGas,
-				gasLimit,
-				to,
-				value,
-				input,
-				accessList,
-				maxFeePerBlobGas,
-				blobHashes,
-				v,
-				r,
-				s,
-			},
-			blobs,
-			commitments,
-			proofs,
-		}
+		list = rlp.List{&txFields, blobs, commitments, proofs}
+	case 14:
+		list = txFields
 	default:
-		list = rlp.List{
-			chainID,
-			nonce,
-			maxPriorityFeePerGas,
-			maxFeePerGas,
-			gasLimit,
-			to,
-			value,
-			input,
-			accessList,
-			maxFeePerBlobGas,
-			blobHashes,
-			v,
-			r,
-			s,
-		}
+		return 0, fmt.Errorf("invalid transaction: expected 14 or 4 fields, got %d", dec.Length())
 	}
 	if err := dec.Decode(&list); err != nil {
 		return 0, err

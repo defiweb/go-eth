@@ -8,7 +8,7 @@ require (
 	github.com/crate-crypto/go-kzg-4844 v1.1.0
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
 	github.com/defiweb/go-anymapper v0.3.0
-	github.com/defiweb/go-rlp v0.4.0
+	github.com/defiweb/go-rlp v0.6.1
 	github.com/defiweb/go-sigparser v0.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/stretchr/testify v1.11.1
