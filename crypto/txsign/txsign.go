@@ -31,11 +31,12 @@ func Sign(key crypto.PrivateKey, tx types.SignableTransaction) error {
 	sv, sr, ss := sig.V, sig.R, sig.S
 	if tx.Type() == types.LegacyTxType {
 		if sd.ChainID != nil {
+			sv = new(big.Int).Sub(sv, big.NewInt(27))
 			sv = new(big.Int).Add(sv, new(big.Int).SetUint64(*sd.ChainID*2))
 			sv = new(big.Int).Add(sv, big.NewInt(35))
-		} else {
-			sv = new(big.Int).Add(sv, big.NewInt(27))
 		}
+	} else {
+		sv = new(big.Int).Sub(sv, big.NewInt(27))
 	}
 	sd.SetSignature(types.SignatureFromVRS(sv, sr, ss))
 	if ed != nil {
@@ -64,9 +65,11 @@ func Recover(tx types.SignableTransaction) (*types.Address, error) {
 
 			// Derive the recovery byte from the signature.
 			sig.V = new(big.Int).Add(new(big.Int).Mod(x, big.NewInt(2)), big.NewInt(27))
-		} else {
-			sig.V = new(big.Int).Sub(sig.V, big.NewInt(27))
 		}
+		// else: V is already 27/28 for pre-EIP-155 legacy transactions.
+	} else {
+		// Typed transactions (EIP-2718) store V as 0 or 1.
+		sig.V = new(big.Int).Add(sig.V, big.NewInt(27))
 	}
 	hash, err := tx.SigningHash()
 	if err != nil {

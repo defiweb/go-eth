@@ -51,6 +51,7 @@ func PrivateKeyToPublicKey(privateKey primitives.PrivateKey) primitives.PublicKe
 }
 
 // SignHash signs the given hash with the given private key.
+// V in the returned signature is 27 or 28.
 func SignHash(privateKey primitives.PrivateKey, hash primitives.Hash) (*primitives.Signature, error) {
 	if privateKey.IsZero() {
 		return nil, fmt.Errorf("invalid private key")
@@ -58,7 +59,7 @@ func SignHash(privateKey primitives.PrivateKey, hash primitives.Hash) (*primitiv
 	priv := secp256k1.PrivKeyFromBytes(privateKey[:])
 	defer priv.Zero()
 	sig := secpecdsa.SignCompact(priv, hash[:], false)
-	v := sig[0] - 27
+	v := sig[0] // 27 or 28
 	copy(sig, sig[1:])
 	sig[64] = v
 	return &primitives.Signature{
@@ -69,7 +70,7 @@ func SignHash(privateKey primitives.PrivateKey, hash primitives.Hash) (*primitiv
 }
 
 // RecoverHash recovers the Ethereum address from the given hash and
-// signature.
+// signature. V must be 27 or 28.
 func RecoverHash(hash primitives.Hash, signature primitives.Signature) (*primitives.Address, error) {
 	if signature.V.BitLen() > 8 {
 		return nil, errors.New("invalid signature: V has more than 8 bits")
@@ -80,14 +81,14 @@ func RecoverHash(hash primitives.Hash, signature primitives.Signature) (*primiti
 	if signature.S.BitLen() > 256 {
 		return nil, errors.New("invalid signature: S has more than 256 bits")
 	}
-	v, err := recoveryByte(byte(signature.V.Uint64()))
-	if err != nil {
-		return nil, err
+	v := signature.V.Uint64()
+	if v != 27 && v != 28 {
+		return nil, fmt.Errorf("invalid signature: V must be 27 or 28, got %d", v)
 	}
 	rb := signature.R.Bytes()
 	sb := signature.S.Bytes()
 	bin := make([]byte, 65)
-	bin[0] = v
+	bin[0] = byte(v)
 	copy(bin[1+(32-len(rb)):], rb)
 	copy(bin[33+(32-len(sb)):], sb)
 	pub, _, err := secpecdsa.RecoverCompact(bin, hash[:])
@@ -99,22 +100,17 @@ func RecoverHash(hash primitives.Hash, signature primitives.Signature) (*primiti
 }
 
 // SignMessage signs the given message with the given private key.
+// V in the returned signature is 27 or 28 (EIP-191 convention).
 func SignMessage(key primitives.PrivateKey, data []byte) (*primitives.Signature, error) {
 	if key.IsZero() {
 		return nil, fmt.Errorf("invalid private key")
 	}
-	sig, err := SignHash(key, keccak.Keccak256(AddMessagePrefix(data)))
-	if err != nil {
-		return nil, err
-	}
-	sig.V = new(big.Int).Add(sig.V, big.NewInt(27))
-	return sig, nil
+	return SignHash(key, keccak.Keccak256(AddMessagePrefix(data)))
 }
 
 // RecoverMessage recovers the Ethereum address from the given message and
-// signature.
+// signature. V must be 27 or 28 (EIP-191 convention).
 func RecoverMessage(data []byte, sig primitives.Signature) (*primitives.Address, error) {
-	sig.V = new(big.Int).Sub(sig.V, big.NewInt(27))
 	return RecoverHash(keccak.Keccak256(AddMessagePrefix(data)), sig)
 }
 
@@ -123,15 +119,4 @@ func newPublicKey(pub *secp256k1.PublicKey) (key primitives.PublicKey) {
 	b := pub.SerializeUncompressed()
 	copy(key[:], b[1:])
 	return
-}
-
-func recoveryByte(v byte) (byte, error) {
-	switch v {
-	case 0, 27:
-		return 27, nil
-	case 1, 28:
-		return 28, nil
-	default:
-		return 0, fmt.Errorf("invalid signature: V must be 0, 1, 27, or 28, got %d", v)
-	}
 }

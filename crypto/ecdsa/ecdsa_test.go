@@ -24,7 +24,7 @@ func TestSignHash(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, signature)
-	assert.Equal(t, "0", signature.V.Text(16))
+	assert.Equal(t, "1b", signature.V.Text(16))
 	assert.Equal(t, "97ef30233ead25d10f7bb2bf9eaf571a16f2deb33a75f20819284f0cb8ff3cc1", signature.R.Text(16))
 	assert.Equal(t, "4870ca05940199c113b4dc77866f001702691cde269f6835581e7aea1ead2660", signature.S.Text(16))
 }
