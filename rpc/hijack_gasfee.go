@@ -9,6 +9,173 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+type (
+	legacyGasFeeMultiplierKey  struct{}
+	legacyGasFeeMinGasPriceKey struct{}
+	legacyGasFeeMaxGasPriceKey struct{}
+	legacyGasFeeReplaceKey     struct{}
+)
+
+// ContextWithLegacyGasFeeMultiplier overrides the Multiplier option for this
+// call.
+// Only has effect when the [WithLegacyGasFee] client option is enabled.
+func ContextWithLegacyGasFeeMultiplier(ctx context.Context, v float64) context.Context {
+	return context.WithValue(ctx, legacyGasFeeMultiplierKey{}, v)
+}
+
+// ContextWithLegacyGasFeeMinGasPrice overrides the MinGasPrice option for
+// this call.
+// Only has effect when the [WithLegacyGasFee] client option is enabled.
+func ContextWithLegacyGasFeeMinGasPrice(ctx context.Context, v *big.Int) context.Context {
+	return context.WithValue(ctx, legacyGasFeeMinGasPriceKey{}, v)
+}
+
+// ContextWithLegacyGasFeeMaxGasPrice overrides the MaxGasPrice option for
+// this call.
+// Only has effect when the [WithLegacyGasFee] client option is enabled.
+func ContextWithLegacyGasFeeMaxGasPrice(ctx context.Context, v *big.Int) context.Context {
+	return context.WithValue(ctx, legacyGasFeeMaxGasPriceKey{}, v)
+}
+
+// ContextWithLegacyGasFeeReplace overrides the Replace option for this call.
+// Only has effect when the [WithLegacyGasFee] client option is enabled.
+func ContextWithLegacyGasFeeReplace(ctx context.Context, v bool) context.Context {
+	return context.WithValue(ctx, legacyGasFeeReplaceKey{}, v)
+}
+
+func legacyGasFeeMultiplier(ctx context.Context, h *hijackLegacyGasFee) float64 {
+	if v, ok := ctx.Value(legacyGasFeeMultiplierKey{}).(float64); ok {
+		return v
+	}
+	return h.multiplier
+}
+
+func legacyGasFeeMinGasPrice(ctx context.Context, h *hijackLegacyGasFee) *big.Int {
+	if v, ok := ctx.Value(legacyGasFeeMinGasPriceKey{}).(*big.Int); ok {
+		return v
+	}
+	return h.minGasPrice
+}
+
+func legacyGasFeeMaxGasPrice(ctx context.Context, h *hijackLegacyGasFee) *big.Int {
+	if v, ok := ctx.Value(legacyGasFeeMaxGasPriceKey{}).(*big.Int); ok {
+		return v
+	}
+	return h.maxGasPrice
+}
+
+func legacyGasFeeReplace(ctx context.Context, h *hijackLegacyGasFee) bool {
+	if v, ok := ctx.Value(legacyGasFeeReplaceKey{}).(bool); ok {
+		return v
+	}
+	return h.replace
+}
+
+type (
+	dynamicGasFeeGasPriceMultiplierKey          struct{}
+	dynamicGasFeePriorityFeePerGasMultiplierKey struct{}
+	dynamicGasFeeMinGasPriceKey                 struct{}
+	dynamicGasFeeMaxGasPriceKey                 struct{}
+	dynamicGasFeeMinPriorityFeePerGasKey        struct{}
+	dynamicGasFeeMaxPriorityFeePerGasKey        struct{}
+	dynamicGasFeeReplaceKey                     struct{}
+)
+
+// ContextWithDynamicGasFeeGasPriceMultiplier overrides the GasPriceMultiplier
+// option for this call. Only has effect when the [WithDynamicGasFee] client
+// option is enabled.
+func ContextWithDynamicGasFeeGasPriceMultiplier(ctx context.Context, v float64) context.Context {
+	return context.WithValue(ctx, dynamicGasFeeGasPriceMultiplierKey{}, v)
+}
+
+// ContextWithDynamicGasFeePriorityFeePerGasMultiplier overrides the
+// PriorityFeePerGasMultiplier option for this call. Only has effect when the
+// [WithDynamicGasFee] client option is enabled.
+func ContextWithDynamicGasFeePriorityFeePerGasMultiplier(ctx context.Context, v float64) context.Context {
+	return context.WithValue(ctx, dynamicGasFeePriorityFeePerGasMultiplierKey{}, v)
+}
+
+// ContextWithDynamicGasFeeMinGasPrice overrides the MinGasPrice option for
+// this call. Only has effect when the [WithDynamicGasFee] client option is enabled.
+func ContextWithDynamicGasFeeMinGasPrice(ctx context.Context, v *big.Int) context.Context {
+	return context.WithValue(ctx, dynamicGasFeeMinGasPriceKey{}, v)
+}
+
+// ContextWithDynamicGasFeeMaxGasPrice overrides the MaxGasPrice option for
+// this call. Only has effect when the [WithDynamicGasFee] client option is enabled.
+func ContextWithDynamicGasFeeMaxGasPrice(ctx context.Context, v *big.Int) context.Context {
+	return context.WithValue(ctx, dynamicGasFeeMaxGasPriceKey{}, v)
+}
+
+// ContextWithDynamicGasFeeMinPriorityFeePerGas overrides the
+// MinPriorityFeePerGas option for this call. Only has effect when the
+// [WithDynamicGasFee] client option is enabled.
+func ContextWithDynamicGasFeeMinPriorityFeePerGas(ctx context.Context, v *big.Int) context.Context {
+	return context.WithValue(ctx, dynamicGasFeeMinPriorityFeePerGasKey{}, v)
+}
+
+// ContextWithDynamicGasFeeMaxPriorityFeePerGas overrides the
+// MaxPriorityFeePerGas option for this call. Only has effect when the
+// [WithDynamicGasFee] client option is enabled.
+func ContextWithDynamicGasFeeMaxPriorityFeePerGas(ctx context.Context, v *big.Int) context.Context {
+	return context.WithValue(ctx, dynamicGasFeeMaxPriorityFeePerGasKey{}, v)
+}
+
+// ContextWithDynamicGasFeeReplace overrides the Replace option for this call.
+// Only has effect when the [WithDynamicGasFee] client option is enabled.
+func ContextWithDynamicGasFeeReplace(ctx context.Context, v bool) context.Context {
+	return context.WithValue(ctx, dynamicGasFeeReplaceKey{}, v)
+}
+
+func dynamicGasFeeGasPriceMultiplier(ctx context.Context, h *hijackDynamicGasFee) float64 {
+	if v, ok := ctx.Value(dynamicGasFeeGasPriceMultiplierKey{}).(float64); ok {
+		return v
+	}
+	return h.gasPriceMultiplier
+}
+
+func dynamicGasFeePriorityFeePerGasMultiplier(ctx context.Context, h *hijackDynamicGasFee) float64 {
+	if v, ok := ctx.Value(dynamicGasFeePriorityFeePerGasMultiplierKey{}).(float64); ok {
+		return v
+	}
+	return h.priorityFeePerGasMultiplier
+}
+
+func dynamicGasFeeMinGasPrice(ctx context.Context, h *hijackDynamicGasFee) *big.Int {
+	if v, ok := ctx.Value(dynamicGasFeeMinGasPriceKey{}).(*big.Int); ok {
+		return v
+	}
+	return h.minGasPrice
+}
+
+func dynamicGasFeeMaxGasPrice(ctx context.Context, h *hijackDynamicGasFee) *big.Int {
+	if v, ok := ctx.Value(dynamicGasFeeMaxGasPriceKey{}).(*big.Int); ok {
+		return v
+	}
+	return h.maxGasPrice
+}
+
+func dynamicGasFeeMinPriorityFeePerGas(ctx context.Context, h *hijackDynamicGasFee) *big.Int {
+	if v, ok := ctx.Value(dynamicGasFeeMinPriorityFeePerGasKey{}).(*big.Int); ok {
+		return v
+	}
+	return h.minPriorityFeePerGas
+}
+
+func dynamicGasFeeMaxPriorityFeePerGas(ctx context.Context, h *hijackDynamicGasFee) *big.Int {
+	if v, ok := ctx.Value(dynamicGasFeeMaxPriorityFeePerGasKey{}).(*big.Int); ok {
+		return v
+	}
+	return h.maxPriorityFeePerGas
+}
+
+func dynamicGasFeeReplace(ctx context.Context, h *hijackDynamicGasFee) bool {
+	if v, ok := ctx.Value(dynamicGasFeeReplaceKey{}).(bool); ok {
+		return v
+	}
+	return h.replace
+}
+
 // hijackLegacyGasFee hijacks the "eth_sendTransaction" method and sets the
 // "gasPrice" field using the estimate provided by the RPC node.
 type hijackLegacyGasFee struct {
@@ -35,17 +202,17 @@ func (h *hijackLegacyGasFee) Call() func(next transport.CallFunc) transport.Call
 				args[0] = tx
 			}
 			lpd := types.GetLegacyFeeData(tx)
-			if lpd != nil && (h.replace || lpd.GasPrice == nil) {
+			if lpd != nil && (legacyGasFeeReplace(ctx, h) || lpd.GasPrice == nil) {
 				gasPrice, err := (&MethodsCommon{&ClientContext{Transport: t}}).GasPrice(ctx)
 				if err != nil {
 					return &ErrHijackFailed{name: "legacy gas price", err: fmt.Errorf("failed to get gas price: %w", err)}
 				}
-				gasPrice, _ = new(big.Float).Mul(new(big.Float).SetInt(gasPrice), big.NewFloat(h.multiplier)).Int(nil)
-				if h.minGasPrice != nil && gasPrice.Cmp(h.minGasPrice) < 0 {
-					gasPrice = h.minGasPrice
+				gasPrice, _ = new(big.Float).Mul(new(big.Float).SetInt(gasPrice), big.NewFloat(legacyGasFeeMultiplier(ctx, h))).Int(nil)
+				if min := legacyGasFeeMinGasPrice(ctx, h); min != nil && gasPrice.Cmp(min) < 0 {
+					gasPrice = min
 				}
-				if h.maxGasPrice != nil && gasPrice.Cmp(h.maxGasPrice) > 0 {
-					gasPrice = h.maxGasPrice
+				if max := legacyGasFeeMaxGasPrice(ctx, h); max != nil && gasPrice.Cmp(max) > 0 {
+					gasPrice = max
 				}
 				lpd.GasPrice = gasPrice
 			}
@@ -98,7 +265,7 @@ func (h *hijackDynamicGasFee) Call() func(next transport.CallFunc) transport.Cal
 			dfd := types.GetDynamicFeeData(tx)
 
 			// Set the dynamic fee fields if necessary.
-			if dfd != nil && (h.replace || dfd.MaxFeePerGas == nil || dfd.MaxPriorityFeePerGas == nil) {
+			if dfd != nil && (dynamicGasFeeReplace(ctx, h) || dfd.MaxFeePerGas == nil || dfd.MaxPriorityFeePerGas == nil) {
 				// Fetch current gas prices from the RPC node.
 				maxFeePerGas, err := (&MethodsCommon{&ClientContext{Transport: t}}).GasPrice(ctx)
 				if err != nil {
@@ -110,19 +277,19 @@ func (h *hijackDynamicGasFee) Call() func(next transport.CallFunc) transport.Cal
 				}
 
 				// Apply multipliers and limits and set the fields.
-				maxFeePerGas, _ = new(big.Float).Mul(new(big.Float).SetInt(maxFeePerGas), big.NewFloat(h.gasPriceMultiplier)).Int(nil)
-				priorityFeePerGas, _ = new(big.Float).Mul(new(big.Float).SetInt(priorityFeePerGas), big.NewFloat(h.priorityFeePerGasMultiplier)).Int(nil)
-				if h.minGasPrice != nil && maxFeePerGas.Cmp(h.minGasPrice) < 0 {
-					maxFeePerGas = h.minGasPrice
+				maxFeePerGas, _ = new(big.Float).Mul(new(big.Float).SetInt(maxFeePerGas), big.NewFloat(dynamicGasFeeGasPriceMultiplier(ctx, h))).Int(nil)
+				priorityFeePerGas, _ = new(big.Float).Mul(new(big.Float).SetInt(priorityFeePerGas), big.NewFloat(dynamicGasFeePriorityFeePerGasMultiplier(ctx, h))).Int(nil)
+				if min := dynamicGasFeeMinGasPrice(ctx, h); min != nil && maxFeePerGas.Cmp(min) < 0 {
+					maxFeePerGas = min
 				}
-				if h.maxGasPrice != nil && maxFeePerGas.Cmp(h.maxGasPrice) > 0 {
-					maxFeePerGas = h.maxGasPrice
+				if max := dynamicGasFeeMaxGasPrice(ctx, h); max != nil && maxFeePerGas.Cmp(max) > 0 {
+					maxFeePerGas = max
 				}
-				if h.minPriorityFeePerGas != nil && priorityFeePerGas.Cmp(h.minPriorityFeePerGas) < 0 {
-					priorityFeePerGas = h.minPriorityFeePerGas
+				if min := dynamicGasFeeMinPriorityFeePerGas(ctx, h); min != nil && priorityFeePerGas.Cmp(min) < 0 {
+					priorityFeePerGas = min
 				}
-				if h.maxPriorityFeePerGas != nil && priorityFeePerGas.Cmp(h.maxPriorityFeePerGas) > 0 {
-					priorityFeePerGas = h.maxPriorityFeePerGas
+				if max := dynamicGasFeeMaxPriorityFeePerGas(ctx, h); max != nil && priorityFeePerGas.Cmp(max) > 0 {
+					priorityFeePerGas = max
 				}
 				if maxFeePerGas.Cmp(priorityFeePerGas) < 0 {
 					priorityFeePerGas = maxFeePerGas

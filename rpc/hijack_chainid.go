@@ -9,6 +9,36 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+type (
+	chainIDKey        struct{}
+	chainIDReplaceKey struct{}
+)
+
+// ContextWithChainID overrides the chain ID for this call, bypassing any
+// cached or auto-detected value.
+// Only has effect when the [WithChainID] client option is enabled.
+func ContextWithChainID(ctx context.Context, v uint64) context.Context {
+	return context.WithValue(ctx, chainIDKey{}, v)
+}
+
+// ContextWithChainIDReplace overrides the Replace option for this call.
+// Only has effect when the [WithChainID] client option is enabled.
+func ContextWithChainIDReplace(ctx context.Context, v bool) context.Context {
+	return context.WithValue(ctx, chainIDReplaceKey{}, v)
+}
+
+func chainIDValue(ctx context.Context) (uint64, bool) {
+	v, ok := ctx.Value(chainIDKey{}).(uint64)
+	return v, ok
+}
+
+func chainIDReplace(ctx context.Context, h *hijackChainID) bool {
+	if v, ok := ctx.Value(chainIDReplaceKey{}).(bool); ok {
+		return v
+	}
+	return h.replace
+}
+
 // hijackChainID hijacks the "eth_sendTransaction" method and sets the
 // "chainID" field.
 type hijackChainID struct {
@@ -30,15 +60,21 @@ func (h *hijackChainID) Call() func(next transport.CallFunc) transport.CallFunc 
 				return next(ctx, t, result, method, args...)
 			}
 			sd := types.GetSigningData(tx)
-			if sd != nil && (h.replace || sd.ChainID == nil) {
-				if chainID.Load() == 0 {
-					id, err := (&MethodsCommon{&ClientContext{Transport: t}}).ChainID(ctx)
-					if err != nil {
-						return &ErrHijackFailed{name: "chain ID", err: fmt.Errorf("failed to get chain ID: %w", err)}
+			if sd != nil && (chainIDReplace(ctx, h) || sd.ChainID == nil) {
+				var id uint64
+				if ctxID, ok := chainIDValue(ctx); ok {
+					// Context-provided value bypasses the cache entirely.
+					id = ctxID
+				} else {
+					if chainID.Load() == 0 {
+						fetched, err := (&MethodsCommon{&ClientContext{Transport: t}}).ChainID(ctx)
+						if err != nil {
+							return &ErrHijackFailed{name: "chain ID", err: fmt.Errorf("failed to get chain ID: %w", err)}
+						}
+						chainID.Store(fetched)
 					}
-					chainID.Store(id)
+					id = chainID.Load()
 				}
-				id := chainID.Load()
 				sd.ChainID = &id
 			}
 			return next(ctx, t, result, method, args...)

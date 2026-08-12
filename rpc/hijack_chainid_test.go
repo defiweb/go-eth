@@ -18,6 +18,7 @@ import (
 func TestHijackChainID(t *testing.T) {
 	tc := []struct {
 		name     string
+		ctx      context.Context
 		hijacker *hijackChainID
 		method   string
 		args     []any
@@ -72,10 +73,45 @@ func TestHijackChainID(t *testing.T) {
 				`{"jsonrpc":"2.0","id": 1,"result": "0x1111111111111111111111111111111111111111111111111111111111111111"}`,
 			},
 		},
+		{
+			name:     "context: chain ID value bypasses cache",
+			ctx:      ContextWithChainID(context.Background(), 42),
+			hijacker: &hijackChainID{},
+			method:   "eth_sendTransaction",
+			args:     []any{types.NewTransactionAccessList()},
+			request: []string{
+				`{"jsonrpc":"2.0","id":1,"method":"eth_sendTransaction","params":[{"chainId": "0x2a"}]}`,
+			},
+			response: []string{
+				`{"jsonrpc":"2.0","id": 1,"result": "0x1111111111111111111111111111111111111111111111111111111111111111"}`,
+			},
+		},
+		{
+			name:     "context: replace overrides struct",
+			ctx:      ContextWithChainIDReplace(context.Background(), true),
+			hijacker: &hijackChainID{replace: false},
+			method:   "eth_sendTransaction",
+			args: []any{func() types.Transaction {
+				tx := types.NewTransactionAccessList()
+				tx.SetChainID(2)
+				return tx
+			}()},
+			request: []string{
+				`{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}`,
+				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"chainId": "0x1"}]}`,
+			},
+			response: []string{
+				`{"jsonrpc":"2.0","id": 1,"result": "0x01"}`,
+				`{"jsonrpc":"2.0","id": 1,"result": "0x1111111111111111111111111111111111111111111111111111111111111111"}`,
+			},
+		},
 	}
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := tt.ctx
+			if ctx == nil {
+				ctx = context.Background()
+			}
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 				require.NotEmpty(t, tt.request)

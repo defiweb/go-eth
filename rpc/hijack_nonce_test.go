@@ -18,6 +18,7 @@ import (
 func TestHijackNonce(t *testing.T) {
 	tc := []struct {
 		name     string
+		ctx      context.Context
 		hijacker *hijackNonce
 		method   string
 		args     []any
@@ -78,10 +79,52 @@ func TestHijackNonce(t *testing.T) {
 				`{"jsonrpc":"2.0","id":2,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
 			},
 		},
+		{
+			name:     "context: use pending block",
+			ctx:      ContextWithNonceUsePendingBlock(context.Background(), true),
+			hijacker: &hijackNonce{},
+			method:   "eth_sendTransaction",
+			args: []any{func() types.Transaction {
+				tx := types.NewTransactionAccessList()
+				tx.SetFrom(types.MustAddressFromHex("0x1111111111111111111111111111111111111111"))
+				return tx
+			}()},
+			request: []string{
+				`{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionCount","params":["0x1111111111111111111111111111111111111111","pending"]}`,
+				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"from": "0x1111111111111111111111111111111111111111", "nonce": "0x1"}]}`,
+			},
+			response: []string{
+				`{"jsonrpc":"2.0","id":1,"result":"0x01"}`,
+				`{"jsonrpc":"2.0","id":2,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
+			},
+		},
+		{
+			name:     "context: replace overrides struct",
+			ctx:      ContextWithNonceReplace(context.Background(), true),
+			hijacker: &hijackNonce{replace: false},
+			method:   "eth_sendTransaction",
+			args: []any{func() types.Transaction {
+				tx := types.NewTransactionAccessList()
+				tx.SetNonce(2)
+				tx.SetFrom(types.MustAddressFromHex("0x1111111111111111111111111111111111111111"))
+				return tx
+			}()},
+			request: []string{
+				`{"jsonrpc":"2.0","id":1,"method":"eth_getTransactionCount","params":["0x1111111111111111111111111111111111111111","latest"]}`,
+				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"from": "0x1111111111111111111111111111111111111111", "nonce": "0x1"}]}`,
+			},
+			response: []string{
+				`{"jsonrpc":"2.0","id":1,"result":"0x01"}`,
+				`{"jsonrpc":"2.0","id":2,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
+			},
+		},
 	}
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := tt.ctx
+			if ctx == nil {
+				ctx = context.Background()
+			}
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 				require.NotEmpty(t, tt.request)

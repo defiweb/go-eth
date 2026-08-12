@@ -18,6 +18,7 @@ import (
 func TestHijackGasLimit(t *testing.T) {
 	tc := []struct {
 		name     string
+		ctx      context.Context
 		hijacker *hijackGasLimit
 		method   string
 		args     []any
@@ -74,9 +75,33 @@ func TestHijackGasLimit(t *testing.T) {
 				`{"jsonrpc":"2.0","id":2,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
 			},
 		},
+		{
+			name:     "context: replace overrides struct",
+			ctx:      ContextWithGasLimitReplace(context.Background(), true),
+			hijacker: &hijackGasLimit{multiplier: 1.0, replace: false},
+			method:   "eth_sendTransaction",
+			args: []any{func() types.Transaction {
+				tx := types.NewTransactionAccessList()
+				tx.SetGasLimit(2)
+				tx.SetFrom(types.MustAddressFromHex("0x1111111111111111111111111111111111111111"))
+				return tx
+			}()},
+			request: []string{
+				`{"jsonrpc":"2.0","id":1,"method":"eth_estimateGas","params":[{"from":"0x1111111111111111111111111111111111111111", "gas":"0x2"}, "latest"]}`,
+				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"from": "0x1111111111111111111111111111111111111111", "gas": "0x1"}]}`,
+			},
+			response: []string{
+				`{"jsonrpc":"2.0","id":1,"result":"0x01"}`,
+				`{"jsonrpc":"2.0","id":2,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
+			},
+		},
 	}
 	for _, tc := range tc {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := tc.ctx
+			if ctx == nil {
+				ctx = context.Background()
+			}
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 				require.NotEmpty(t, tc.request)
@@ -97,7 +122,7 @@ func TestHijackGasLimit(t *testing.T) {
 
 			hijacker := transport.NewHijacker(httpMock, tc.hijacker)
 
-			err := hijacker.Call(context.Background(), nil, tc.method, tc.args...)
+			err := hijacker.Call(ctx, nil, tc.method, tc.args...)
 			assert.Len(t, tc.request, 0)
 			assert.Len(t, tc.response, 0)
 			require.NoError(t, err)

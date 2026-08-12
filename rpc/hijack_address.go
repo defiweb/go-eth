@@ -7,6 +7,37 @@ import (
 	"github.com/defiweb/go-eth/types"
 )
 
+type (
+	addressKey        struct{}
+	addressReplaceKey struct{}
+)
+
+// ContextWithFromAddress overrides the default sender address for this call.
+// Only has effect when the [WithDefaultAddress] client option is enabled.
+func ContextWithFromAddress(ctx context.Context, v types.Address) context.Context {
+	return context.WithValue(ctx, addressKey{}, v)
+}
+
+// ContextWithFromAddressReplace overrides the Replace option for this call.
+// Only has effect when the [WithDefaultAddress] client option is enabled.
+func ContextWithFromAddressReplace(ctx context.Context, v bool) context.Context {
+	return context.WithValue(ctx, addressReplaceKey{}, v)
+}
+
+func fromAddress(ctx context.Context, h *hijackAddress) types.Address {
+	if v, ok := ctx.Value(addressKey{}).(types.Address); ok {
+		return v
+	}
+	return h.address
+}
+
+func fromAddressReplace(ctx context.Context, h *hijackAddress) bool {
+	if v, ok := ctx.Value(addressReplaceKey{}).(bool); ok {
+		return v
+	}
+	return h.replace
+}
+
 // hijackAddress hijacks "eth_sendTransaction", "eth_call",
 // "eth_estimateGas", and "eth_createAccessList" to set the "from" field.
 type hijackAddress struct {
@@ -38,8 +69,9 @@ func (h *hijackAddress) Call() func(next transport.CallFunc) transport.CallFunc 
 			default:
 				return next(ctx, t, result, method, args...)
 			}
-			if ed != nil && (h.replace || ed.From == nil) {
-				ed.From = &h.address
+			if ed != nil && (fromAddressReplace(ctx, h) || ed.From == nil) {
+				addr := fromAddress(ctx, h)
+				ed.From = &addr
 			}
 			return next(ctx, t, result, method, args...)
 		}

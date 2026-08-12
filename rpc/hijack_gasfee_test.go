@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"testing"
 
@@ -18,6 +19,7 @@ import (
 func TestHijackLegacyGasFee(t *testing.T) {
 	tc := []struct {
 		name     string
+		ctx      context.Context
 		hijacker *hijackLegacyGasFee
 		method   string
 		args     []any
@@ -38,9 +40,32 @@ func TestHijackLegacyGasFee(t *testing.T) {
 				`{"jsonrpc":"2.0","id":2,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
 			},
 		},
+		{
+			name:     "context: replace overrides struct",
+			ctx:      ContextWithLegacyGasFeeReplace(context.Background(), true),
+			hijacker: &hijackLegacyGasFee{multiplier: 1.0, replace: false},
+			method:   "eth_sendTransaction",
+			args: []any{func() types.Transaction {
+				tx := types.NewTransactionLegacy()
+				tx.SetGasPrice(big.NewInt(1))
+				return tx
+			}()},
+			request: []string{
+				`{"jsonrpc":"2.0","id":1,"method":"eth_gasPrice","params":[]}`,
+				`{"jsonrpc":"2.0","id":2,"method":"eth_sendTransaction","params":[{"gasPrice":"0x1000"}]}`,
+			},
+			response: []string{
+				`{"jsonrpc":"2.0","id":1,"result":"0x1000"}`,
+				`{"jsonrpc":"2.0","id":2,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
+			},
+		},
 	}
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := tt.ctx
+			if ctx == nil {
+				ctx = context.Background()
+			}
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 				require.NotEmpty(t, tt.request)
@@ -61,7 +86,7 @@ func TestHijackLegacyGasFee(t *testing.T) {
 
 			hijacker := transport.NewHijacker(httpMock, tt.hijacker)
 
-			err := hijacker.Call(context.Background(), nil, tt.method, tt.args...)
+			err := hijacker.Call(ctx, nil, tt.method, tt.args...)
 			assert.Len(t, tt.request, 0)
 			assert.Len(t, tt.response, 0)
 			require.NoError(t, err)
@@ -72,6 +97,7 @@ func TestHijackLegacyGasFee(t *testing.T) {
 func TestHijackDynamicGasFee(t *testing.T) {
 	tc := []struct {
 		name     string
+		ctx      context.Context
 		hijacker *hijackDynamicGasFee
 		method   string
 		args     []any
@@ -94,9 +120,35 @@ func TestHijackDynamicGasFee(t *testing.T) {
 				`{"jsonrpc":"2.0","id":3,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
 			},
 		},
+		{
+			name:     "context: replace overrides struct",
+			ctx:      ContextWithDynamicGasFeeReplace(context.Background(), true),
+			hijacker: &hijackDynamicGasFee{gasPriceMultiplier: 1.0, priorityFeePerGasMultiplier: 1.0, replace: false},
+			method:   "eth_sendTransaction",
+			args: []any{func() types.Transaction {
+				tx := types.NewTransactionDynamicFee()
+				tx.SetMaxFeePerGas(big.NewInt(1))
+				tx.SetMaxPriorityFeePerGas(big.NewInt(1))
+				return tx
+			}()},
+			request: []string{
+				`{"jsonrpc":"2.0","id":1,"method":"eth_gasPrice","params":[]}`,
+				`{"jsonrpc":"2.0","id":2,"method":"eth_maxPriorityFeePerGas","params":[]}`,
+				`{"jsonrpc":"2.0","id":3,"method":"eth_sendTransaction","params":[{"maxFeePerGas":"0x1000","maxPriorityFeePerGas":"0x100"}]}`,
+			},
+			response: []string{
+				`{"jsonrpc":"2.0","id":1,"result":"0x1000"}`,
+				`{"jsonrpc":"2.0","id":2,"result":"0x100"}`,
+				`{"jsonrpc":"2.0","id":3,"result":"0x1111111111111111111111111111111111111111111111111111111111111111"}`,
+			},
+		},
 	}
 	for _, tt := range tc {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := tt.ctx
+			if ctx == nil {
+				ctx = context.Background()
+			}
 			httpMock := newHTTPMock()
 			httpMock.Handler = func(req *http.Request) (*http.Response, error) {
 				require.NotEmpty(t, tt.request)
@@ -117,7 +169,7 @@ func TestHijackDynamicGasFee(t *testing.T) {
 
 			hijacker := transport.NewHijacker(httpMock, tt.hijacker)
 
-			err := hijacker.Call(context.Background(), nil, tt.method, tt.args...)
+			err := hijacker.Call(ctx, nil, tt.method, tt.args...)
 			assert.Len(t, tt.request, 0)
 			assert.Len(t, tt.response, 0)
 			require.NoError(t, err)
