@@ -111,21 +111,21 @@ func TestContract_ToError(t *testing.T) {
 	t.Run("revert", func(t *testing.T) {
 		revertErr := c.ToError(hexutil.MustHexToBytes("0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003666f6f0000000000000000000000000000000000000000000000000000000000"))
 		require.NotNil(t, revertErr)
-		assert.Equal(t, "revert: foo", revertErr.Error())
+		assert.Equal(t, "revert(foo)", revertErr.Error())
 	})
 
 	// Panic
 	t.Run("panic", func(t *testing.T) {
 		panicErr := c.ToError(hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000020"))
 		require.NotNil(t, panicErr)
-		assert.Equal(t, "panic: 32", panicErr.Error())
+		assert.Equal(t, "panic(32)", panicErr.Error())
 	})
 
 	// Custom error
 	t.Run("custom error", func(t *testing.T) {
 		customErr := c.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
 		require.NotNil(t, customErr)
-		assert.Equal(t, "error: foo", customErr.Error())
+		assert.Equal(t, "error foo(arg0=300)", customErr.Error())
 	})
 
 	// Unknown error
@@ -144,7 +144,7 @@ func TestContract_HandleError(t *testing.T) {
 		callErr := &mockError{data: hexutil.MustHexToBytes("0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003666f6f0000000000000000000000000000000000000000000000000000000000")}
 		revertErr := c.HandleError(callErr)
 		require.NotNil(t, revertErr)
-		assert.Equal(t, "revert: foo", revertErr.Error())
+		assert.Equal(t, "revert(foo)", revertErr.Error())
 	})
 
 	// Panic
@@ -152,7 +152,7 @@ func TestContract_HandleError(t *testing.T) {
 		callErr := &mockError{data: hexutil.MustHexToBytes("0x4e487b710000000000000000000000000000000000000000000000000000000000000020")}
 		panicErr := c.HandleError(callErr)
 		require.NotNil(t, panicErr)
-		assert.Equal(t, "panic: 32", panicErr.Error())
+		assert.Equal(t, "panic(32)", panicErr.Error())
 	})
 
 	// Custom error
@@ -160,7 +160,7 @@ func TestContract_HandleError(t *testing.T) {
 		callErr := &mockError{data: hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c")}
 		customErr := c.HandleError(callErr)
 		require.NotNil(t, customErr)
-		assert.Equal(t, "error: foo", customErr.Error())
+		assert.Equal(t, "error foo(arg0=300)", customErr.Error())
 	})
 
 	// Unknown error

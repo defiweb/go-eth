@@ -17,7 +17,7 @@ type RevertError struct {
 
 // Error implements the error interface.
 func (e RevertError) Error() string {
-	return fmt.Sprintf("revert: %s", e.Reason)
+	return fmt.Sprintf("revert(%s)", e.Reason)
 }
 
 // IsRevert returns true if the data has the revert prefix.

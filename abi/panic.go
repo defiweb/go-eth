@@ -20,7 +20,7 @@ type PanicError struct {
 
 // Error implements the error interface.
 func (e PanicError) Error() string {
-	return fmt.Sprintf("panic: %s", e.Code.String())
+	return fmt.Sprintf("panic(%s)", e.Code.String())
 }
 
 // IsPanic returns true if the data has the panic prefix.

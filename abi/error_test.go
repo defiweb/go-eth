@@ -58,15 +58,56 @@ func TestError_Is(t *testing.T) {
 	assert.False(t, e.Is(hexutil.MustHexToBytes("0xaabbccdd000000000000000000000000000000000000000000000000000000000000012c")))
 }
 
+func TestError_Format(t *testing.T) {
+	tests := []struct {
+		name      string
+		signature string
+		data      string
+		expected  string
+	}{
+		{
+			name:      "with selector and named arg",
+			signature: "error foo(uint256 code)",
+			data:      "2fbebd38000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "error foo(code=300)",
+		},
+		{
+			name:      "without selector",
+			signature: "error foo(uint256 code)",
+			data:      "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "error foo(code=300)",
+		},
+		{
+			name:      "invalid selector",
+			signature: "error foo(uint256 code)",
+			data:      "aabbccdd000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "error foo(selector mismatch)",
+		},
+		{
+			name:      "multiple named args",
+			signature: "error foo(uint256 code, bool flag)",
+			data: "0000000000000000000000000000000000000000000000000000000000000042" +
+				"0000000000000000000000000000000000000000000000000000000000000001",
+			expected: "error foo(code=66, flag=true)",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := MustParseError(tt.signature)
+			assert.Equal(t, tt.expected, e.Format(hexutil.MustHexToBytes(tt.data)))
+		})
+	}
+}
+
 func TestError_ToError(t *testing.T) {
-	e, err := ParseError("error foo(uint256)")
+	e, err := ParseError("error foo(uint256 code)")
 	require.NoError(t, err)
 
 	// Custom error
 	t.Run("custom error", func(t *testing.T) {
 		customErr := e.ToError(hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c"))
 		require.NotNil(t, customErr)
-		assert.Equal(t, "error: foo", customErr.Error())
+		assert.Equal(t, "error foo(code=300)", customErr.Error())
 	})
 
 	// Unknown error
@@ -77,7 +118,7 @@ func TestError_ToError(t *testing.T) {
 }
 
 func TestError_HandleError(t *testing.T) {
-	e, err := ParseError("error foo(uint256)")
+	e, err := ParseError("error foo(uint256 code)")
 	require.NoError(t, err)
 
 	// Custom error
@@ -85,7 +126,7 @@ func TestError_HandleError(t *testing.T) {
 		callErr := &mockError{data: hexutil.MustHexToBytes("0x2fbebd38000000000000000000000000000000000000000000000000000000000000012c")}
 		customErr := e.HandleError(callErr)
 		require.NotNil(t, customErr)
-		assert.Equal(t, "error: foo", customErr.Error())
+		assert.Equal(t, "error foo(code=300)", customErr.Error())
 	})
 
 	// Unknown error

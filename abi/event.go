@@ -186,6 +186,75 @@ func (e *Event) MustDecodeValues(topics []types.Hash, data []byte, vals ...any) 
 	}
 }
 
+// Format returns a human-readable representation of the event, including the
+// values of the event arguments.
+//
+// The topics must include topic0 for non-anonymous events.
+func (e *Event) Format(topics []types.Hash, data []byte) string {
+	msg := strings.Builder{}
+	msg.WriteString("event ")
+	msg.WriteString(e.Name())
+	topicsData := topics
+	if !e.anonymous {
+		if len(topics) == 0 || topics[0] != e.topic0 {
+			msg.WriteString("(topic0 mismatch)")
+			return msg.String()
+		}
+		topicsData = topics[1:]
+	}
+	topicsRes := make(map[string]any)
+	if len(topicsData) > 0 {
+		if decErr := DecodeValue(e.inputs.TopicsTuple(), hashSliceToBytes(topicsData), topicsRes); decErr != nil {
+			msg.WriteString("(")
+			msg.WriteString(decErr.Error())
+			msg.WriteString(")")
+			return msg.String()
+		}
+	}
+	dataRes := make(map[string]any)
+	if len(data) > 0 {
+		if decErr := DecodeValue(e.inputs.DataTuple(), data, dataRes); decErr != nil {
+			msg.WriteString("(")
+			msg.WriteString(decErr.Error())
+			msg.WriteString(")")
+			return msg.String()
+		}
+	}
+	msg.WriteString("(")
+	topicIdx := 0
+	dataIdx := 0
+	for i, elem := range e.inputs.Elements() {
+		if i > 0 {
+			msg.WriteString(", ")
+		}
+		var name string
+		var val any
+		if elem.Indexed {
+			name = elem.Name
+			if name == "" {
+				name = fmt.Sprintf("topic%d", topicIdx+1)
+			}
+			topicIdx++
+			val = topicsRes[name]
+		} else {
+			name = elem.Name
+			if name == "" {
+				name = fmt.Sprintf("data%d", dataIdx)
+			}
+			dataIdx++
+			val = dataRes[name]
+		}
+		msg.WriteString(name)
+		if elem.Indexed {
+			msg.WriteString("[indexed]")
+		}
+		msg.WriteString("=")
+		_, _ = fmt.Fprintf(&msg, "%v", val)
+	}
+	msg.WriteString(")")
+	return msg.String()
+}
+
 // String returns the human-readable signature of the event.
 func (e *Event) String() string {
 	var buf strings.Builder

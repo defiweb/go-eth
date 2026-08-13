@@ -39,6 +39,76 @@ func TestParseEvent(t *testing.T) {
 	}
 }
 
+func TestEvent_Format(t *testing.T) {
+	dynHash := types.MustHashFromHex("0xb6e16d27ac5ab427a7f68900ac5559ce272dc6c37c82b3e052246c82244c50e4", types.PadNone)
+
+	tests := []struct {
+		name        string
+		signature   string
+		withTopic0  bool
+		extraTopics []string
+		data        string
+		expected    string
+	}{
+		{
+			name:       "non-indexed named arg",
+			signature:  "foo(uint256 value)",
+			withTopic0: true,
+			data:       "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:   "event foo(value=300)",
+		},
+		{
+			name:       "unnamed arg auto-named",
+			signature:  "foo(uint256)",
+			withTopic0: true,
+			data:       "0000000000000000000000000000000000000000000000000000000000000001",
+			expected:   "event foo(data0=1)",
+		},
+		{
+			name:        "indexed and non-indexed args",
+			signature:   "foo(address indexed from, uint256 amount)",
+			withTopic0:  true,
+			extraTopics: []string{"0x0000000000000000000000001F7acDa376eF37EC371235a094113dF9Cb4EfEe1"},
+			data:        "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:    "event foo(from[indexed]=0x1f7acda376ef37ec371235a094113df9cb4efee1, amount=300)",
+		},
+		{
+			name:        "dynamic indexed type stored as hash",
+			signature:   "foo(string indexed message, uint256 amount)",
+			withTopic0:  true,
+			extraTopics: []string{"0xb6e16d27ac5ab427a7f68900ac5559ce272dc6c37c82b3e052246c82244c50e4"},
+			data:        "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:    fmt.Sprintf("event foo(message[indexed]=%v, amount=300)", [32]byte(dynHash)),
+		},
+		{
+			name:        "invalid topic0",
+			signature:   "foo(uint256 value)",
+			extraTopics: []string{"0xdeadbeef00000000000000000000000000000000000000000000000000000000"},
+			data:        "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:    "event foo(topic0 mismatch)",
+		},
+		{
+			name:      "anonymous event",
+			signature: "event foo(uint256 value) anonymous",
+			data:      "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "event foo(value=300)",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := MustParseEvent(tt.signature)
+			var topics []types.Hash
+			if tt.withTopic0 {
+				topics = append(topics, e.Topic0())
+			}
+			for _, h := range tt.extraTopics {
+				topics = append(topics, types.MustHashFromHex(h, types.PadNone))
+			}
+			assert.Equal(t, tt.expected, e.Format(topics, hexutil.MustHexToBytes(tt.data)))
+		})
+	}
+}
+
 func TestEvent_DecodeValue(t *testing.T) {
 	tests := []struct {
 		signature string
