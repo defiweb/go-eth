@@ -1796,6 +1796,143 @@ func TestMapTo(t *testing.T) {
 	}
 }
 
+func TestWriteValue(t *testing.T) {
+	uintVal := func(n int64) *UintValue {
+		v := &UintValue{Size: 256}
+		v.Int.SetInt64(n)
+		return v
+	}
+	intVal := func(n int64) *IntValue {
+		v := &IntValue{Size: 256}
+		v.Int.SetInt64(n)
+		return v
+	}
+	boolVal := func(b bool) *BoolValue {
+		v := BoolValue(b)
+		return &v
+	}
+	strVal := func(s string) *StringValue {
+		v := StringValue(s)
+		return &v
+	}
+	bytesVal := func(b []byte) *BytesValue {
+		v := BytesValue(b)
+		return &v
+	}
+	fixedBytesVal := func(b []byte) *FixedBytesValue {
+		v := FixedBytesValue(b)
+		return &v
+	}
+	addrVal := func(hex string) *AddressValue {
+		v := AddressValue(types.MustAddressFromHex(hex))
+		return &v
+	}
+
+	tests := []struct {
+		name     string
+		value    Value
+		expected string
+	}{
+		{
+			name:     "uint256",
+			value:    uintVal(300),
+			expected: "300",
+		},
+		{
+			name:     "int256 negative",
+			value:    intVal(-42),
+			expected: "-42",
+		},
+		{
+			name:     "bool true",
+			value:    boolVal(true),
+			expected: "true",
+		},
+		{
+			name:     "bool false",
+			value:    boolVal(false),
+			expected: "false",
+		},
+		{
+			name:     "address",
+			value:    addrVal("0x1F7acDa376eF37EC371235a094113dF9Cb4EfEe1"),
+			expected: "0x1f7acda376ef37ec371235a094113df9cb4efee1",
+		},
+		{
+			name:     "string",
+			value:    strVal("hello"),
+			expected: "hello",
+		},
+		{
+			name:     "bytes",
+			value:    bytesVal([]byte{0xde, 0xad, 0xbe, 0xef}),
+			expected: "0xdeadbeef",
+		},
+		{
+			name: "bytes32",
+			value: fixedBytesVal([]byte{
+				0x01, 0x02, 0x03, 0x04,
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0, 0, 0, 0, 0,
+				0, 0, 0, 0,
+			}),
+			expected: "0x0102030400000000000000000000000000000000000000000000000000000000",
+		},
+		{
+			name: "tuple",
+			value: &TupleValue{
+				{Name: "x", Value: uintVal(42)},
+				{Name: "y", Value: boolVal(true)},
+			},
+			expected: "(x=42, y=true)",
+		},
+		{
+			name: "array",
+			value: &ArrayValue{
+				Elems: []Value{uintVal(1), uintVal(2), uintVal(3)},
+			},
+			expected: "[1, 2, 3]",
+		},
+		{
+			name: "fixed array",
+			value: func() *FixedArrayValue {
+				v := FixedArrayValue([]Value{uintVal(10), uintVal(20)})
+				return &v
+			}(),
+			expected: "[10, 20]",
+		},
+		{
+			name: "nested tuple",
+			value: &TupleValue{
+				{Name: "inner", Value: &TupleValue{
+					{Name: "a", Value: uintVal(1)},
+					{Name: "b", Value: boolVal(false)},
+				}},
+				{Name: "z", Value: uintVal(100)},
+			},
+			expected: "(inner=(a=1, b=false), z=100)",
+		},
+		{
+			name: "array of tuples",
+			value: &ArrayValue{
+				Elems: []Value{
+					&TupleValue{{Name: "x", Value: uintVal(1)}},
+					&TupleValue{{Name: "x", Value: uintVal(2)}},
+				},
+			},
+			expected: "[(x=1), (x=2)]",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var msg strings.Builder
+			writeValue(&msg, tt.value)
+			assert.Equal(t, tt.expected, msg.String())
+		})
+	}
+}
+
 func padL(h string) (w Word) {
 	_ = (&w).SetBytesPadLeft(hexutil.MustHexToBytes(h))
 	return w

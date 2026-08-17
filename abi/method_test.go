@@ -38,6 +38,67 @@ func TestParseMethod(t *testing.T) {
 	}
 }
 
+func TestMethod_Text(t *testing.T) {
+	tests := []struct {
+		name       string
+		signature  string
+		calldata   string
+		returnData string
+		expected   string
+	}{
+		{
+			name:      "calldata only with selector",
+			signature: "foo(uint256 value)()",
+			calldata:  "2fbebd38000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "function foo(value=300)",
+		},
+		{
+			name:      "calldata only without selector",
+			signature: "foo(uint256 value)()",
+			calldata:  "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "function foo(value=300)",
+		},
+		{
+			name:      "selector mismatch",
+			signature: "foo(uint256 value)()",
+			calldata:  "aabbccdd000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "function foo(selector mismatch)",
+		},
+		{
+			name:       "return data only",
+			signature:  "foo()(uint256 value)",
+			returnData: "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:   "function foo returns(value=300)",
+		},
+		{
+			name:       "calldata and return data",
+			signature:  "foo(uint256 a)(uint256 b)",
+			calldata:   "000000000000000000000000000000000000000000000000000000000000012c",
+			returnData: "0000000000000000000000000000000000000000000000000000000000000042",
+			expected:   "function foo(a=300) returns(b=66)",
+		},
+		{
+			name:      "unnamed args auto-named",
+			signature: "foo(uint256)(bool)",
+			calldata:  "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "function foo(arg0=300)",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := MustParseMethod(tt.signature)
+			var calldata, returnData []byte
+			if tt.calldata != "" {
+				calldata = hexutil.MustHexToBytes(tt.calldata)
+			}
+			if tt.returnData != "" {
+				returnData = hexutil.MustHexToBytes(tt.returnData)
+			}
+			assert.Equal(t, tt.expected, m.Text(calldata, returnData))
+		})
+	}
+}
+
 func TestMethod_EncodeArgs(t *testing.T) {
 	tests := []struct {
 		signature string

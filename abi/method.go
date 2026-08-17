@@ -283,6 +283,46 @@ func (m *Method) MustDecodeValues(data []byte, vals ...any) {
 	}
 }
 
+// Text returns a human-readable representation of the method call and/or
+// return values. Either calldata or returnData may be nil.
+//
+// The calldata must be the ABI-encoded call arguments; the 4-byte selector is
+// optional. The returnData must be the ABI-encoded return values.
+func (m *Method) Text(inputData []byte, outputData []byte) string {
+	msg := strings.Builder{}
+	msg.WriteString("function ")
+	msg.WriteString(m.name)
+	if inputData != nil {
+		if len(inputData)%32 == 4 {
+			if !m.fourBytes.Match(inputData) {
+				msg.WriteString("(selector mismatch)")
+				return msg.String()
+			}
+			inputData = inputData[4:]
+		}
+		v := m.inputs.Value().(*TupleValue)
+		if _, err := v.DecodeABI(BytesToWords(inputData)); err != nil {
+			msg.WriteString("(")
+			msg.WriteString(err.Error())
+			msg.WriteString(")")
+			return msg.String()
+		}
+		writeValue(&msg, v)
+	}
+	if outputData != nil {
+		msg.WriteString(" returns")
+		v := m.outputs.Value().(*TupleValue)
+		if _, err := v.DecodeABI(BytesToWords(outputData)); err != nil {
+			msg.WriteString("(")
+			msg.WriteString(err.Error())
+			msg.WriteString(")")
+			return msg.String()
+		}
+		writeValue(&msg, v)
+	}
+	return msg.String()
+}
+
 // String returns the human-readable signature of the method.
 func (m *Method) String() string {
 	var buf strings.Builder

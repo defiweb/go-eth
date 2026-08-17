@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/defiweb/go-eth/hexutil"
 )
 
 func TestParseConstructor(t *testing.T) {
@@ -34,6 +36,47 @@ func TestParseConstructor(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expected, c.String())
 			}
+		})
+	}
+}
+
+func TestConstructor_Text(t *testing.T) {
+	tests := []struct {
+		name      string
+		signature string
+		data      string
+		expected  string
+	}{
+		{
+			name:      "named arg",
+			signature: "constructor(uint256 amount)",
+			data:      "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "constructor(amount=300)",
+		},
+		{
+			name:      "unnamed arg",
+			signature: "constructor(uint256)",
+			data:      "000000000000000000000000000000000000000000000000000000000000012c",
+			expected:  "constructor(arg0=300)",
+		},
+		{
+			name:      "multiple named args",
+			signature: "constructor(uint256 code, bool flag)",
+			data: "0000000000000000000000000000000000000000000000000000000000000042" +
+				"0000000000000000000000000000000000000000000000000000000000000001",
+			expected: "constructor(code=66, flag=true)",
+		},
+		{
+			name:      "no args",
+			signature: "constructor()",
+			data:      "",
+			expected:  "constructor()",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := MustParseConstructor(tt.signature)
+			assert.Equal(t, tt.expected, c.Text(hexutil.MustHexToBytes(tt.data)))
 		})
 	}
 }

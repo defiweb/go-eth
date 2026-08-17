@@ -39,9 +39,7 @@ func TestParseEvent(t *testing.T) {
 	}
 }
 
-func TestEvent_Format(t *testing.T) {
-	dynHash := types.MustHashFromHex("0xb6e16d27ac5ab427a7f68900ac5559ce272dc6c37c82b3e052246c82244c50e4", types.PadNone)
-
+func TestEvent_Text(t *testing.T) {
 	tests := []struct {
 		name        string
 		signature   string
@@ -73,12 +71,13 @@ func TestEvent_Format(t *testing.T) {
 			expected:    "event foo(from[indexed]=0x1f7acda376ef37ec371235a094113df9cb4efee1, amount=300)",
 		},
 		{
+			// Dynamic indexed types are stored as their keccak256 hash (bytes32).
 			name:        "dynamic indexed type stored as hash",
 			signature:   "foo(string indexed message, uint256 amount)",
 			withTopic0:  true,
 			extraTopics: []string{"0xb6e16d27ac5ab427a7f68900ac5559ce272dc6c37c82b3e052246c82244c50e4"},
 			data:        "000000000000000000000000000000000000000000000000000000000000012c",
-			expected:    fmt.Sprintf("event foo(message[indexed]=%v, amount=300)", [32]byte(dynHash)),
+			expected:    "event foo(message[indexed]=0xb6e16d27ac5ab427a7f68900ac5559ce272dc6c37c82b3e052246c82244c50e4, amount=300)",
 		},
 		{
 			name:        "invalid topic0",
@@ -104,7 +103,7 @@ func TestEvent_Format(t *testing.T) {
 			for _, h := range tt.extraTopics {
 				topics = append(topics, types.MustHashFromHex(h, types.PadNone))
 			}
-			assert.Equal(t, tt.expected, e.Format(topics, hexutil.MustHexToBytes(tt.data)))
+			assert.Equal(t, tt.expected, e.Text(topics, hexutil.MustHexToBytes(tt.data)))
 		})
 	}
 }

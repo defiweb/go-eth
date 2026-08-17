@@ -136,7 +136,7 @@ func decodeArray(a *[]Value, w Words, t Type) (int, error) {
 		return 0, fmt.Errorf("abi: cannot decode array, size exceeds data length")
 	}
 	*a = make([]Value, size)
-	for i := 0; i < size; i++ {
+	for i := range size {
 		(*a)[i] = t.Value()
 	}
 	if _, err := decodeTuple(a, w[1:]); err != nil {

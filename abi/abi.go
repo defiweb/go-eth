@@ -210,7 +210,7 @@ func addr(v reflect.Value) reflect.Value {
 }
 
 var (
-	valueTy   = reflect.TypeOf((*Value)(nil)).Elem()
-	mapFromTy = reflect.TypeOf((*MapFrom)(nil)).Elem()
-	mapToTy   = reflect.TypeOf((*MapTo)(nil)).Elem()
+	valueTy   = reflect.TypeFor[Value]()
+	mapFromTy = reflect.TypeFor[MapFrom]()
+	mapToTy   = reflect.TypeFor[MapTo]()
 )

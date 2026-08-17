@@ -2,6 +2,7 @@ package abi
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/defiweb/go-sigparser"
 )
@@ -124,13 +125,7 @@ func newEventFromSig(abi *ABI, extraTypes map[string]Type, s sigparser.Signature
 			Type:    typ,
 		})
 	}
-	anonymous := false
-	for _, param := range s.Modifiers {
-		if param == "anonymous" {
-			anonymous = true
-			break
-		}
-	}
+	anonymous := slices.Contains(s.Modifiers, "anonymous")
 	return abi.NewEvent(s.Name, NewEventTupleType(in...), anonymous), nil
 }
 

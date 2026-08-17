@@ -21,7 +21,7 @@ type Contract struct {
 	MethodsBySignature map[string]*Method
 	Events             map[string]*Event
 	Errors             map[string]*Error
-	Types              map[string]Type // Types defined in the ABI (structs, enums and user-defined Value Types)
+	Types              map[string]Type // Types defined in the ABI (structs, enums, and user-defined Value Types)
 }
 
 // IsError returns true if the given error data, returned by a contract call,

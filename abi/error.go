@@ -32,7 +32,7 @@ func (e CustomError) Error() string {
 	if e.Type == nil {
 		return "unknown error"
 	}
-	return e.Type.Format(e.Data)
+	return e.Type.Text(e.Data)
 }
 
 // Error represents an error in an ABI. The error can be used to decode errors
@@ -200,13 +200,12 @@ func (e *Error) HandleError(err error) error {
 	return err
 }
 
-// Format returns a human-readable representation of the error, including the
+// Text returns a human-readable representation of the error, including the
 // values of the error arguments.
 //
 // The data must be the ABI-encoded error data returned by a contract call;
 // the 4-byte selector is optional.
-func (e *Error) Format(data []byte) string {
-	res := make(map[string]any)
+func (e *Error) Text(data []byte) string {
 	msg := strings.Builder{}
 	msg.WriteString("error ")
 	msg.WriteString(e.Name())
@@ -217,26 +216,14 @@ func (e *Error) Format(data []byte) string {
 		}
 		data = data[4:]
 	}
-	if decErr := DecodeValue(e.Inputs(), data, res); decErr != nil {
+	v := e.inputs.Value().(*TupleValue)
+	if _, err := v.DecodeABI(BytesToWords(data)); err != nil {
 		msg.WriteString("(")
-		msg.WriteString(decErr.Error())
+		msg.WriteString(err.Error())
 		msg.WriteString(")")
 		return msg.String()
 	}
-	msg.WriteString("(")
-	for i, input := range e.Inputs().Elements() {
-		if i > 0 {
-			msg.WriteString(", ")
-		}
-		name := input.Name
-		if name == "" {
-			name = fmt.Sprintf("arg%d", i)
-		}
-		msg.WriteString(name)
-		msg.WriteString("=")
-		_, _ = fmt.Fprintf(&msg, "%v", res[name])
-	}
-	msg.WriteString(")")
+	writeValue(&msg, v)
 	return msg.String()
 }
 

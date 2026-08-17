@@ -163,8 +163,6 @@ func (e *Event) DecodeValues(topics []types.Hash, data []byte, vals ...any) erro
 			dataVals = append(dataVals, vals[i])
 		}
 	}
-	// The anymapper package does not zero out values before decoding into
-	// it, therefore we can decode topics and data into the same value.
 	if len(topics) > 1 {
 		if err := e.abi.DecodeValues(e.inputs.TopicsTuple(), hashSliceToBytes(topics[1:]), indexedVals...); err != nil {
 			return err
@@ -186,11 +184,11 @@ func (e *Event) MustDecodeValues(topics []types.Hash, data []byte, vals ...any) 
 	}
 }
 
-// Format returns a human-readable representation of the event, including the
+// Text returns a human-readable representation of the event, including the
 // values of the event arguments.
 //
 // The topics must include topic0 for non-anonymous events.
-func (e *Event) Format(topics []types.Hash, data []byte) string {
+func (e *Event) Text(topics []types.Hash, data []byte) string {
 	msg := strings.Builder{}
 	msg.WriteString("event ")
 	msg.WriteString(e.Name())
@@ -202,54 +200,48 @@ func (e *Event) Format(topics []types.Hash, data []byte) string {
 		}
 		topicsData = topics[1:]
 	}
-	topicsRes := make(map[string]any)
+	topicsVal := e.inputs.TopicsTuple().Value().(*TupleValue)
 	if len(topicsData) > 0 {
-		if decErr := DecodeValue(e.inputs.TopicsTuple(), hashSliceToBytes(topicsData), topicsRes); decErr != nil {
+		if _, err := topicsVal.DecodeABI(BytesToWords(hashSliceToBytes(topicsData))); err != nil {
 			msg.WriteString("(")
-			msg.WriteString(decErr.Error())
+			msg.WriteString(err.Error())
 			msg.WriteString(")")
 			return msg.String()
 		}
 	}
-	dataRes := make(map[string]any)
+	dataVal := e.inputs.DataTuple().Value().(*TupleValue)
 	if len(data) > 0 {
-		if decErr := DecodeValue(e.inputs.DataTuple(), data, dataRes); decErr != nil {
+		if _, err := dataVal.DecodeABI(BytesToWords(data)); err != nil {
 			msg.WriteString("(")
-			msg.WriteString(decErr.Error())
+			msg.WriteString(err.Error())
 			msg.WriteString(")")
 			return msg.String()
 		}
 	}
 	msg.WriteString("(")
-	topicIdx := 0
-	dataIdx := 0
+	topicIdx, dataIdx := 0, 0
 	for i, elem := range e.inputs.Elements() {
 		if i > 0 {
 			msg.WriteString(", ")
 		}
-		var name string
-		var val any
+		name := elem.Name
 		if elem.Indexed {
-			name = elem.Name
 			if name == "" {
 				name = fmt.Sprintf("topic%d", topicIdx+1)
 			}
+			msg.WriteString(name)
+			msg.WriteString("[indexed]=")
+			writeValue(&msg, (*topicsVal)[topicIdx].Value)
 			topicIdx++
-			val = topicsRes[name]
 		} else {
-			name = elem.Name
 			if name == "" {
 				name = fmt.Sprintf("data%d", dataIdx)
 			}
+			msg.WriteString(name)
+			msg.WriteString("=")
+			writeValue(&msg, (*dataVal)[dataIdx].Value)
 			dataIdx++
-			val = dataRes[name]
 		}
-		msg.WriteString(name)
-		if elem.Indexed {
-			msg.WriteString("[indexed]")
-		}
-		msg.WriteString("=")
-		_, _ = fmt.Fprintf(&msg, "%v", val)
 	}
 	msg.WriteString(")")
 	return msg.String()

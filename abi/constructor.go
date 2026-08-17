@@ -1,5 +1,7 @@
 package abi
 
+import "strings"
+
 // Constructor represents a constructor in an Contract. The constructor can be used to
 // encode arguments for a constructor call.
 type Constructor struct {
@@ -114,6 +116,24 @@ func (m *Constructor) MustEncodeArgs(code []byte, args ...any) []byte {
 		panic(err)
 	}
 	return encoded
+}
+
+// Text returns a human-readable representation of the constructor call,
+// including the values of the input arguments.
+//
+// The data must be the ABI-encoded constructor arguments (without bytecode).
+func (m *Constructor) Text(data []byte) string {
+	msg := strings.Builder{}
+	msg.WriteString("constructor")
+	v := m.inputs.Value().(*TupleValue)
+	if _, err := v.DecodeABI(BytesToWords(data)); err != nil {
+		msg.WriteString("(")
+		msg.WriteString(err.Error())
+		msg.WriteString(")")
+		return msg.String()
+	}
+	writeValue(&msg, v)
+	return msg.String()
 }
 
 // String returns the human-readable signature of the constructor.

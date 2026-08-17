@@ -58,7 +58,7 @@ func TestError_Is(t *testing.T) {
 	assert.False(t, e.Is(hexutil.MustHexToBytes("0xaabbccdd000000000000000000000000000000000000000000000000000000000000012c")))
 }
 
-func TestError_Format(t *testing.T) {
+func TestError_Text(t *testing.T) {
 	tests := []struct {
 		name      string
 		signature string
@@ -94,7 +94,7 @@ func TestError_Format(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := MustParseError(tt.signature)
-			assert.Equal(t, tt.expected, e.Format(hexutil.MustHexToBytes(tt.data)))
+			assert.Equal(t, tt.expected, e.Text(hexutil.MustHexToBytes(tt.data)))
 		})
 	}
 }
