@@ -2,18 +2,7 @@
 
 # go-eth
 
-This library is a comprehensive Go package designed to interact with the Ethereum blockchain. It provides robust tools for
-connecting to Ethereum nodes, sending transactions, and handling smart contract events. Whether you're developing a
-decentralized application or conducting blockchain analysis, this package offers everything you need.
-
-Key features include:
-
-- **RPC Client**: Supports HTTP, WebSocket, and IPC transports with advanced middleware capabilities
-- **ABI Package**: Comprehensive ABI encoder/decoder with Human-Readable ABI support
-- **Transaction Support**: All transaction types including Legacy, EIP-1559, EIP-2930, and EIP-4844 (blob transactions)
-- **Wallet Management**: Support for JSON keystore, HD wallets, and mnemonic phrases
-- **Cryptographic Functions**: Built-in support for ECDSA signing, Keccak hashing, and KZG4844 proofs
-- **Extensible Design**: Modular architecture with customizable transport hijackers and middleware
+This library is a Go package designed to interact with the Ethereum blockchain.
 
 <!-- TOC -->
 * [go-eth](#go-eth)
@@ -30,8 +19,6 @@ Key features include:
   * [Client Configuration](#client-configuration)
     * [Available Options](#available-options)
     * [Transport Hijacking](#transport-hijacking)
-      * [Ordering](#ordering)
-      * [Argument copying](#argument-copying)
   * [Working with ABI](#working-with-abi)
     * [Mapping rules](#mapping-rules)
     * [Encoding and Decoding Methods](#encoding-and-decoding-methods)
@@ -49,14 +36,6 @@ Key features include:
     * [Custom types](#custom-types)
       * [Simple types](#simple-types)
       * [Advanced types](#advanced-types)
-  * [Cryptographic Functions](#cryptographic-functions)
-    * [ECDSA Operations](#ecdsa-operations)
-    * [Hashing](#hashing)
-    * [KZG4844 (EIP-4844 Blob Transactions)](#kzg4844-eip-4844-blob-transactions)
-    * [Transaction Signing](#transaction-signing)
-  * [Utility Packages](#utility-packages)
-    * [HexUtil Package](#hexutil-package)
-    * [Types Package](#types-package)
   * [Additional tools](#additional-tools)
   * [Documentation](#documentation)
 <!-- TOC -->
@@ -69,12 +48,9 @@ go get -u github.com/defiweb/go-eth
 
 ## Quick start
 
-The examples below provide a comprehensive overview of the `go-eth` package capabilities.
+The examples below provide an overview of the `go-eth` package capabilities.
 
 ### Connecting to a node
-
-The `go-eth` package offers a JSON-RPC client that can connect to Ethereum nodes using various transport methods. The example below
-demonstrates how to connect using HTTP transport.
 
 <!-- examples/connect/main.go -->
 
@@ -117,8 +93,6 @@ func main() {
 ```
 
 ### Calling a contract method
-
-The following example demonstrates how to call the `balanceOf` method on an ERC-20 contract.
 
 <!-- examples/call/main.go -->
 
@@ -286,9 +260,6 @@ func main() {
 
 ### Sending a transaction
 
-The following example demonstrates how to execute an ERC-20 token transfer transaction. It also illustrates the
-use of client options to automatically set gas, nonce, and other transaction parameters.
-
 <!-- examples/send-tx/main.go -->
 
 ```go
@@ -391,9 +362,6 @@ func keyPath() string {
 EIP-4844 blob transactions carry large data payloads that the EVM cannot read
 but that remain available to the network for a limited time. The example below
 posts two blobs and prints their versioned hashes.
-
-Note that the blob gas price is not covered by any of the client options — it
-has to be set explicitly with `SetMaxFeePerBlobGas`.
 
 <!-- examples/send-tx-blob/main.go -->
 
@@ -518,8 +486,6 @@ func keyPath() string {
 
 ### Subscribing to events
 
-The following example shows how to subscribe to WETH transfer events.
-
 <!-- examples/subscription/main.go -->
 
 ```go
@@ -596,7 +562,7 @@ To connect to a node, you need to choose an appropriate transport method. The tr
 with the node. The `go-eth` package offers the following transport options:
 
 | Transport | Description                                                                                | Subscriptions   |
-| --------- | ------------------------------------------------------------------------------------------ | --------------- |
+|-----------|--------------------------------------------------------------------------------------------|-----------------|
 | HTTP      | Connects to a node using the HTTP protocol. Most widely supported.                         | No              |
 | WebSocket | Connects to a node using the WebSocket protocol. Supports real-time subscriptions.         | Yes             |
 | IPC       | Connects to a node using Inter-Process Communication (Unix sockets/named pipes).           | Yes             |
@@ -614,7 +580,7 @@ implementing the `transport.Transport` interface or the `transport.SubscriptionT
 The `go-eth` package provides comprehensive support for various wallet types and key management:
 
 | Description                       | Example                                                                     |
-| --------------------------------- | --------------------------------------------------------------------------- |
+|-----------------------------------|-----------------------------------------------------------------------------|
 | Random key generation             | `key := wallet.NewRandomKey()`                                              |
 | Private key from bytes            | `key, err := wallet.NewKeyFromBytes(privateKey)`                            |
 | JSON keystore file<sup>1</sup>    | `key, err := wallet.NewKeyFromJSON(path, password)`                         |
@@ -669,7 +635,7 @@ The RPC client can be configured with various options to automatically handle tr
 ### Available Options
 
 | Option                   | Description                                          |
-| ------------------------ | ---------------------------------------------------- |
+|--------------------------|------------------------------------------------------|
 | `WithTransport`          | Sets the transport for communication                 |
 | `WithKeys`               | Adds private keys for transaction signing            |
 | `WithDefaultAddress`     | Sets default sender address                          |
@@ -689,20 +655,13 @@ matter.
 
 ### Transport Hijacking
 
-Every option above except `WithTransport` and `WithTransactionDecoder` is
-implemented as a *hijacker*: middleware wrapped around the transport that can
-inspect and modify a call before it reaches the node. The same mechanism is
-available for custom middleware through `WithPreHijackers` and
-`WithPostHijackers`.
-
-A hijacker implements `transport.Hijacker`, which has one method per transport
-operation. Returning `nil` from any of them leaves that operation untouched:
+Hijacker is a middleware wrapped around the transport that can inspect and modify a call before it reaches the node.
 
 ```go
 type Hijacker interface {
-	Call() func(next CallFunc) CallFunc
-	Subscribe() func(next SubscribeFunc) SubscribeFunc
-	Unsubscribe() func(next UnsubscribeFunc) UnsubscribeFunc
+Call() func (next CallFunc) CallFunc
+Subscribe() func (next SubscribeFunc) SubscribeFunc
+Unsubscribe() func (next UnsubscribeFunc) UnsubscribeFunc
 }
 ```
 
@@ -764,10 +723,8 @@ func main() {
 
 ## Working with ABI
 
-The `go-eth` package offers a comprehensive ABI encoder and decoder for working with smart contract data. The package includes a signature
-parser for parsing method, event, and error signatures, as well as support for custom types and structs.
-
-The following example shows how to encode and decode data:
+The `go-eth` package offers an ABI encoder and decoder for working with smart contract data. The package includes a
+signature parser for parsing method, event, and error signatures, as well as support for custom types and structs.
 
 <!-- examples/abi-enc-dec-struct/main.go -->
 
@@ -912,20 +869,20 @@ func main() {
 
 When mapping between Go and Solidity types, the following rules apply:
 
-| Go type \ Solidity type | `intX`           | `uintX`            | `bool` | `string` | `bytes`       | `bytesX`         | `address`       |
-| ----------------------- | ---------------- | ------------------ | ------ | -------- | ------------- | ---------------- | --------------- |
-| `intX`                  | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
-| `uintX`                 | ✓<sup>1,2</sup>  | ✓<sup>1</sup>      | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
-| `bool`                  | ✗                | ✗                  | ✓      | ✗        | ✗             | ✗                | ✗               |
-| `string`                | ✓<sup>5</sup>    | ✓<sup>5,6</sup>    | ✗      | ✓        | ✓<sup>7</sup> | ✓<sup>7,8</sup>  | ✓<sup>7,9</sup> |
-| `[]byte`                | ✗                | ✗                  | ✗      | ✓        | ✓             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
-| `[X]byte`               | ✗                | ✗                  | ✗      | ✗        | ✗             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
-| `big.Int`               | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
-| `types.Address`         | ✗                | ✗                  | ✗      | ✗        | ✓             | ✓<sup>4</sup>    | ✓               |
-| `types.Hash`            | ✗                | ✗                  | ✗      | ✗        | ✓             | ✓<sup>3</sup>    | ✗               |
-| `types.Bytes`           | ✗                | ✗                  | ✗      | ✓        | ✓             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
-| `types.Number`          | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗      | ✗        | ✗             | ✓<sup>3,6</sup>  | ✗               |
-| `types.BlockNumber`     | ✓<sup>1,10</sup> | ✓<sup>1,2,10</sup> | ✗      | ✗        | ✗             | ✓<sup>3,10</sup> | ✗               |
+| Go type \ Solidity type | `intX`            | `uintX`             | `bool` | `string` | `bytes`        | `bytesX`          | `address`        |
+|-------------------------|-------------------|---------------------|--------|----------|----------------|-------------------|------------------|
+| `intX`                  | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗     | ✗       | ✗             | ✓<sup>3,6</sup>  | ✗               |
+| `uintX`                 | ✓<sup>1,2</sup>  | ✓<sup>1</sup>      | ✗     | ✗       | ✗             | ✓<sup>3,6</sup>  | ✗               |
+| `bool`                  | ✗                | ✗                  | ✓     | ✗       | ✗             | ✗                | ✗               |
+| `string`                | ✓<sup>5</sup>    | ✓<sup>5,6</sup>    | ✗     | ✓       | ✓<sup>7</sup> | ✓<sup>7,8</sup>  | ✓<sup>7,9</sup> |
+| `[]byte`                | ✗                | ✗                  | ✗     | ✓       | ✓             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
+| `[X]byte`               | ✗                | ✗                  | ✗     | ✗       | ✗             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
+| `big.Int`               | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗     | ✗       | ✗             | ✓<sup>3,6</sup>  | ✗               |
+| `types.Address`         | ✗                | ✗                  | ✗     | ✗       | ✓             | ✓<sup>4</sup>    | ✓               |
+| `types.Hash`            | ✗                | ✗                  | ✗     | ✗       | ✓             | ✓<sup>3</sup>    | ✗               |
+| `types.Bytes`           | ✗                | ✗                  | ✗     | ✓       | ✓             | ✓<sup>8</sup>    | ✓<sup>9</sup>   |
+| `types.Number`          | ✓<sup>1</sup>    | ✓<sup>1,2</sup>    | ✗     | ✗       | ✗             | ✓<sup>3,6</sup>  | ✗               |
+| `types.BlockNumber`     | ✓<sup>1,10</sup> | ✓<sup>1,2,10</sup> | ✗     | ✗       | ✗             | ✓<sup>3,10</sup> | ✗               |
 
 - ✓ - Supported
 - ✗ - Not supported
@@ -1097,12 +1054,9 @@ func main() {
 The `abi.Contract` structure is a utility that provides an interface to a contract. It can be created using a JSON-ABI
 file or by supplying a list of signatures (also known as a Human-Readable ABI).
 
-To create a contract struct, the following methods can be used:
-
 - `abi.LoadJSON` / `abi.MustLoadJSON` - creates a new contract by loading a JSON-ABI file.
 - `abi.ParseJSON` / `abi.MustParseJSON` - creates a new contract by parsing a JSON-ABI string.
-- `abi.ParseSignatures` / `abi.MustParseSignatures` - creates a new contract by parsing a list of signatures (
-  Human-Readable ABI).
+- `abi.ParseSignatures` / `abi.MustParseSignatures` - creates a new contract by parsing a list of signatures (Human-Readable ABI).
 
 #### JSON-ABI
 
@@ -1192,7 +1146,7 @@ func main() {
 
 ### Errors
 
-To decode custom contract errors, first an `abi.Error` struct must be created. Errors can be created using different approaches:
+Errors are a special type of ABI-encoded data that can be returned by a contract when a call fails.
 
 - `abi.ParseError` / `abi.MustParseError` - creates a new error by parsing an error signature.
 - `abi.NewError(name, inputs)` - creates a new error using provided arguments.
@@ -1420,105 +1374,6 @@ func main() {
 Please note that adding a custom type to the `abi.Default.Types` map will affect all instances of the `abi` package in
 the current process. If you want to add a custom type to a single `abi` instance, you can create a new instance using
 the `abi.NewABI` function.
-
-## Cryptographic Functions
-
-The `go-eth` package includes a comprehensive crypto module with support for various cryptographic operations:
-
-### ECDSA Operations
-
-- **Key Recovery**: `crypto.ECRecoverHash()` and `crypto.ECRecoverMessage()`
-- **Digital Signatures**: `crypto.ECSignHash()` and `crypto.ECSignMessage()`
-- **Address Generation**: `crypto.ECPublicKeyToAddress()`
-
-### Hashing
-
-- **Keccak-256**: `crypto.Keccak256()` - The primary hash function used in Ethereum
-
-### KZG4844 (EIP-4844 Blob Transactions)
-
-The package includes full support for KZG commitments and proofs used in blob transactions:
-
-- **Blob to Commitment**: `crypto.KZGBlobToCommitment()`
-- **Proof Generation**: `crypto.KZGComputeProof()` and `crypto.KZGComputeBlobProof()`
-- **Proof Verification**: `crypto.KZGVerifyProof()` and `crypto.KZGVerifyBlobProof()`
-- **Blob Hash Computation**: `crypto.KZGComputeBlobHashV1()`
-
-Example KZG usage:
-
-```go
-import "github.com/defiweb/go-eth/crypto"
-
-// Create a blob (128 KiB of data)
-var blob crypto.KZGBlob
-copy(blob[:], "your data here...")
-
-// Generate commitment
-commitment, err := crypto.KZGBlobToCommitment(&blob)
-if err != nil {
-    panic(err)
-}
-
-// Generate proof for a specific point
-var point crypto.KZGPoint
-proof, claim, err := crypto.KZGComputeProof(&blob, point)
-```
-
-### Transaction Signing
-
-The crypto module also provides transaction signing capabilities through the `txsign` subpackage, supporting all Ethereum transaction types including legacy, EIP-1559, EIP-2930, and EIP-4844.
-
-## Utility Packages
-
-### HexUtil Package
-
-The `hexutil` package provides convenient functions for working with hexadecimal data:
-
-```go
-import "github.com/defiweb/go-eth/hexutil"
-
-// Convert between big integers and hex strings
-hexStr := hexutil.BigIntToHex(big.NewInt(12345))  // "0x3039"
-bigInt := hexutil.MustHexToBigInt("0x3039")       // 12345
-
-// Convert between byte slices and hex strings
-hexStr = hexutil.BytesToHex([]byte{0x12, 0x34})  // "0x1234"
-bytes := hexutil.MustHexToBytes("0x1234")        // []byte{0x12, 0x34}
-
-// Utility functions
-hasPrefix := hexutil.Has0xPrefix("0x1234")       // true
-```
-
-### Types Package
-
-The `types` package provides Ethereum-specific data types:
-
-- **Address**: 20-byte Ethereum addresses with validation
-- **Hash**: 32-byte hashes with utilities
-- **BlockNumber**: Special handling for latest/earliest/pending blocks
-- **Transaction Types**: Support for all transaction types (Legacy, AccessList, DynamicFee, Blob)
-- **Call Types**: Various call structures for different use cases
-- **Filter Queries**: For event log filtering
-
-Example:
-
-```go
-import "github.com/defiweb/go-eth/types"
-
-// Create address from hex string
-addr := types.MustAddressFromHex("0x742d35Cc6606e7d8123456789012345678901234")
-
-// Create various transaction types
-legacyTx := types.NewTransactionLegacy()
-eip1559Tx := types.NewTransactionDynamicFee()
-eip2930Tx := types.NewTransactionAccessList()
-blobTx := types.NewTransactionBlob()
-
-// Create call for contract interaction
-call := types.NewCall()
-call.SetTo(addr)
-call.SetInput(calldata)
-```
 
 ## Additional tools
 
