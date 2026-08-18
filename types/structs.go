@@ -46,7 +46,6 @@ func (a *AccessList) Copy() AccessList {
 func (a AccessList) EncodeRLP() ([]byte, error) {
 	l := rlp.List{}
 	for _, tuple := range a {
-		tuple := tuple
 		l.Add(&tuple)
 	}
 	return rlp.Encode(l)
@@ -190,6 +189,192 @@ func NewBlobInfo(b *crypto.KZGBlob) (BlobInfo, error) {
 		Hash:    s.ComputeHash(),
 		Sidecar: s,
 	}, nil
+}
+
+// Authorization represents an EIP-7702 authorization tuple.
+//
+// An authorization tuple allows an EOA to temporarily adopt the code of a
+// contract. The EOA signs the tuple to authorize the adoption.
+//
+// https://eips.ethereum.org/EIPS/eip-7702
+type Authorization struct {
+	// ChainID is the chain ID. A value of 0 means the authorization is
+	// valid for any chain.
+	ChainID uint64
+
+	// Address is the address of the contract whose code will be adopted.
+	Address Address
+
+	// Nonce is the expected nonce of the signing account.
+	Nonce uint64
+
+	// Signature is the authorization signature. The V field contains the
+	// y-parity (0 or 1).
+	Signature *Signature
+}
+
+// Copy creates a deep copy of the Authorization.
+func (a *Authorization) Copy() Authorization {
+	var sig *Signature
+	if a.Signature != nil {
+		sig = a.Signature.Copy()
+	}
+	return Authorization{
+		ChainID:   a.ChainID,
+		Address:   a.Address,
+		Nonce:     a.Nonce,
+		Signature: sig,
+	}
+}
+
+// SigningHash returns the hash used for signing the authorization.
+//
+// The signing hash is computed as:
+//
+//	keccak256(0x05 || rlp([chain_id, address, nonce]))
+func (a *Authorization) SigningHash() (Hash, error) {
+	bin, err := rlp.List{
+		rlp.Uint(a.ChainID),
+		a.Address,
+		rlp.Uint(a.Nonce),
+	}.EncodeRLP()
+	if err != nil {
+		return ZeroHash, err
+	}
+	return Hash(crypto.Keccak256(append([]byte{0x05}, bin...))), nil
+}
+
+// EncodeRLP implements the rlp.Encoder interface.
+func (a Authorization) EncodeRLP() ([]byte, error) {
+	var (
+		v = &rlp.BigInt{}
+		r = &rlp.BigInt{}
+		s = &rlp.BigInt{}
+	)
+	if a.Signature != nil {
+		v = (*rlp.BigInt)(a.Signature.V)
+		r = (*rlp.BigInt)(a.Signature.R)
+		s = (*rlp.BigInt)(a.Signature.S)
+	}
+	return rlp.Encode(rlp.List{
+		rlp.Uint(a.ChainID),
+		a.Address,
+		rlp.Uint(a.Nonce),
+		v,
+		r,
+		s,
+	})
+}
+
+// DecodeRLP implements the rlp.Decoder interface.
+func (a *Authorization) DecodeRLP(data []byte) (int, error) {
+	var (
+		chainID = new(rlp.Uint)
+		nonce   = new(rlp.Uint)
+		v       = new(rlp.BigInt)
+		r       = new(rlp.BigInt)
+		s       = new(rlp.BigInt)
+	)
+	list := rlp.List{chainID, &a.Address, nonce, v, r, s}
+	n, err := rlp.Decode(data, &list)
+	if err != nil {
+		return 0, err
+	}
+	a.ChainID = uint64(chainID.Get())
+	a.Nonce = uint64(nonce.Get())
+	if v.Ptr().Sign() != 0 || r.Ptr().Sign() != 0 || s.Ptr().Sign() != 0 {
+		a.Signature = &Signature{
+			V: v.Ptr(),
+			R: r.Ptr(),
+			S: s.Ptr(),
+		}
+	}
+	return n, nil
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (a Authorization) MarshalJSON() ([]byte, error) {
+	j := &jsonAuthorization{
+		ChainID: NumberFromUint64(a.ChainID),
+		Address: a.Address,
+		Nonce:   NumberFromUint64(a.Nonce),
+	}
+	if a.Signature != nil {
+		j.V = NumberFromBigIntPtr(a.Signature.V)
+		j.R = NumberFromBigIntPtr(a.Signature.R)
+		j.S = NumberFromBigIntPtr(a.Signature.S)
+	}
+	return json.Marshal(j)
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (a *Authorization) UnmarshalJSON(data []byte) error {
+	j := &jsonAuthorization{}
+	if err := json.Unmarshal(data, j); err != nil {
+		return err
+	}
+	a.ChainID = j.ChainID.Big().Uint64()
+	a.Address = j.Address
+	a.Nonce = j.Nonce.Big().Uint64()
+	if j.V != nil || j.R != nil || j.S != nil {
+		a.Signature = SignatureFromVRSPtr(j.V.Big(), j.R.Big(), j.S.Big())
+	}
+	return nil
+}
+
+type jsonAuthorization struct {
+	ChainID Number  `json:"chainId"`
+	Address Address `json:"address"`
+	Nonce   Number  `json:"nonce"`
+	V       *Number `json:"v,omitempty"`
+	R       *Number `json:"r,omitempty"`
+	S       *Number `json:"s,omitempty"`
+}
+
+// AuthorizationList represents a list of EIP-7702 authorization tuples.
+//
+// https://eips.ethereum.org/EIPS/eip-7702
+type AuthorizationList []Authorization
+
+// Copy creates a deep copy of the authorization list.
+func (a *AuthorizationList) Copy() AuthorizationList {
+	if a == nil {
+		return nil
+	}
+	c := make(AuthorizationList, len(*a))
+	for i, auth := range *a {
+		c[i] = auth.Copy()
+	}
+	return c
+}
+
+// EncodeRLP implements the rlp.Encoder interface.
+func (a AuthorizationList) EncodeRLP() ([]byte, error) {
+	l := rlp.List{}
+	for _, auth := range a {
+		l.Add(&auth)
+	}
+	return rlp.Encode(l)
+}
+
+// DecodeRLP implements the rlp.Decoder interface.
+func (a *AuthorizationList) DecodeRLP(data []byte) (int, error) {
+	d, n, err := rlp.DecodeLazy(data)
+	if err != nil {
+		return 0, err
+	}
+	l, err := d.List()
+	if err != nil {
+		return 0, err
+	}
+	for _, item := range l {
+		var auth Authorization
+		if err := item.Decode(&auth); err != nil {
+			return 0, err
+		}
+		*a = append(*a, auth)
+	}
+	return n, nil
 }
 
 // TransactionOnChain represents a transaction on the blockchain.

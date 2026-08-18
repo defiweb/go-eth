@@ -97,6 +97,21 @@ func convertTX(tx types.Transaction, typ types.TransactionType) types.Transactio
 			btx.SetBlobData(*tx.GetBlobData())
 		}
 		return btx
+	case types.SetCodeTxType:
+		sctx := types.NewTransactionSetCode()
+		if tx, ok := tx.(types.HasSigningData); ok {
+			sctx.SetSigningData(*tx.GetSigningData())
+		}
+		if tx, ok := tx.(types.HasExecutionData); ok {
+			sctx.SetExecutionData(*tx.GetExecutionData())
+		}
+		if tx, ok := tx.(types.HasAccessListData); ok {
+			sctx.SetAccessListData(*tx.GetAccessListData())
+		}
+		if tx, ok := tx.(types.HasDynamicFeeData); ok {
+			sctx.SetDynamicFeeData(*tx.GetDynamicFeeData())
+		}
+		return sctx
 	default:
 		return nil
 	}

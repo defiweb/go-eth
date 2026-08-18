@@ -50,6 +50,13 @@ type HasBlobData interface {
 	SetBlobData(data BlobData)
 }
 
+// HasAuthorizationData specifies that the type uses authorization list data for
+// EIP-7702 transactions.
+type HasAuthorizationData interface {
+	GetAuthorizationData() *AuthorizationData
+	SetAuthorizationData(data AuthorizationData)
+}
+
 // GetSigningData is a helper function to get the [SigningData] from call
 // or transaction types.
 func GetSigningData(v any) *SigningData {
@@ -100,6 +107,15 @@ func GetDynamicFeeData(v any) *DynamicFeeData {
 func GetBlobData(v any) *BlobData {
 	if s, ok := v.(HasBlobData); ok {
 		return s.GetBlobData()
+	}
+	return nil
+}
+
+// GetAuthorizationData is a helper function to get the [AuthorizationData] from
+// call or transaction types.
+func GetAuthorizationData(v any) *AuthorizationData {
+	if s, ok := v.(HasAuthorizationData); ok {
+		return s.GetAuthorizationData()
 	}
 	return nil
 }
@@ -196,7 +212,7 @@ func (c *SigningData) fromJSON(j *jsonTransaction) {
 //
 // This type is used to embed call data into other types.
 type ExecutionData struct {
-	// From is the sender address. Not part of the Ethereum wire protocol;
+	// From is the sender address. Not part of the Ethereum protocol;
 	// used for key selection and as an execution context by the RPC client.
 	From *Address
 
@@ -531,4 +547,50 @@ func (c *BlobData) fromJSON(j *jsonCall) {
 			c.Blobs[i] = b
 		}
 	}
+}
+
+// AuthorizationData contains the authorization list for EIP-7702 transactions.
+//
+// This type is used to embed authorization list data into other types.
+type AuthorizationData struct {
+	// AuthorizationList is the EIP-7702 authorization list.
+	AuthorizationList AuthorizationList
+}
+
+// GetAuthorizationData returns the embedded authorization data.
+func (c *AuthorizationData) GetAuthorizationData() *AuthorizationData {
+	return c
+}
+
+// SetAuthorizationData sets the embedded authorization data.
+func (c *AuthorizationData) SetAuthorizationData(data AuthorizationData) {
+	*c = data
+}
+
+// SetAuthorizationList sets the authorization list.
+func (c *AuthorizationData) SetAuthorizationList(authorizationList AuthorizationList) {
+	c.AuthorizationList = authorizationList
+}
+
+// AddAuthorization adds an authorization to the list.
+func (c *AuthorizationData) AddAuthorization(auth Authorization) {
+	c.AuthorizationList = append(c.AuthorizationList, auth)
+}
+
+// Copy creates a deep copy of the AuthorizationData.
+func (c *AuthorizationData) Copy() *AuthorizationData {
+	if c == nil {
+		return nil
+	}
+	return &AuthorizationData{
+		AuthorizationList: c.AuthorizationList.Copy(),
+	}
+}
+
+func (c *AuthorizationData) toJSON(j *jsonCall) {
+	j.AuthorizationList = c.AuthorizationList
+}
+
+func (c *AuthorizationData) fromJSON(j *jsonCall) {
+	c.AuthorizationList = j.AuthorizationList
 }

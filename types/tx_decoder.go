@@ -14,6 +14,7 @@ var DefaultTransactionDecoder = &TypedTransactionDecoder{
 		AccessListTxType: func() Transaction { return NewTransactionAccessList() },
 		DynamicFeeTxType: func() Transaction { return NewTransactionDynamicFee() },
 		BlobTxType:       func() Transaction { return NewTransactionBlob() },
+		SetCodeTxType:    func() Transaction { return NewTransactionSetCode() },
 	},
 	IgnoreUnknownTypes: true,
 }
@@ -118,13 +119,14 @@ func (t *TransactionUnknown) DecodeRLP(_ []byte) (int, error) {
 //
 // If the type is not specified, it tries to guess the type using the same rules as
 // in go-ethereum code:
-// https://github.com/ethereum/go-ethereum/blob/5b3e3cd2bee284db7d7deaa5986544d356410dcb/internal/ethapi/transaction_args.go#L472
+// https://github.com/ethereum/go-ethereum/blob/2133e014ae24553561066cd1c4677eeff5f986a8/internal/ethapi/transaction_args.go#L512
 func jsonTXType(data []byte) (TransactionType, error) {
 	var tx struct {
-		Type         *Number         `json:"type"`
-		AccessList   *nilUnmarshaler `json:"accessList"`
-		MaxFeePerGas *nilUnmarshaler `json:"maxFeePerGas"`
-		BlobHashes   *nilUnmarshaler `json:"blobVersionedHashes"`
+		Type              *Number         `json:"type"`
+		AccessList        *nilUnmarshaler `json:"accessList"`
+		MaxFeePerGas      *nilUnmarshaler `json:"maxFeePerGas"`
+		BlobHashes        *nilUnmarshaler `json:"blobVersionedHashes"`
+		AuthorizationList *nilUnmarshaler `json:"authorizationList"`
 	}
 	if err := json.Unmarshal(data, &tx); err != nil {
 		return 0, fmt.Errorf("failed to unmarshal transaction: %w", err)
@@ -134,6 +136,9 @@ func jsonTXType(data []byte) (TransactionType, error) {
 	}
 	if tx.BlobHashes != nil {
 		return BlobTxType, nil
+	}
+	if tx.AuthorizationList != nil {
+		return SetCodeTxType, nil
 	}
 	if tx.MaxFeePerGas != nil {
 		return DynamicFeeTxType, nil

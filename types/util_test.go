@@ -39,6 +39,9 @@ func assertEqualTX(t *testing.T, actual, expected Transaction) {
 	if _, ok := actual.(HasBlobData); ok {
 		assert.Equal(t, expected.(HasBlobData).GetBlobData(), actual.(HasBlobData).GetBlobData())
 	}
+	if _, ok := actual.(HasAuthorizationData); ok {
+		assert.Equal(t, expected.(HasAuthorizationData).GetAuthorizationData(), actual.(HasAuthorizationData).GetAuthorizationData())
+	}
 }
 
 func assertEqualCall(t *testing.T, actual, expected Call) {
@@ -57,6 +60,9 @@ func assertEqualCall(t *testing.T, actual, expected Call) {
 	}
 	if _, ok := actual.(HasBlobData); ok {
 		assert.Equal(t, expected.(HasBlobData).GetBlobData(), actual.(HasBlobData).GetBlobData())
+	}
+	if _, ok := actual.(HasAuthorizationData); ok {
+		assert.Equal(t, expected.(HasAuthorizationData).GetAuthorizationData(), actual.(HasAuthorizationData).GetAuthorizationData())
 	}
 }
 

@@ -33,6 +33,13 @@ const (
 	// Introduced by EIP-4844, this transaction type adds support for
 	// blob-carrying transactions.
 	BlobTxType
+
+	// SetCodeTxType represents the set code transaction format (Type 4).
+	//
+	// Introduced by EIP-7702, this transaction type allows EOAs to temporarily
+	// adopt code from a smart contract by providing a list of authorization
+	// tuples.
+	SetCodeTxType
 )
 
 // Transaction is an interface that represents a generic Ethereum transaction.
