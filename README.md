@@ -13,6 +13,7 @@ This library is a Go package designed to interact with the Ethereum blockchain.
     * [Calling a contract method using a Human-Readable ABI](#calling-a-contract-method-using-a-human-readable-abi)
     * [Sending a transaction](#sending-a-transaction)
     * [Sending a blob transaction](#sending-a-blob-transaction)
+    * [Sending a set code transaction](#sending-a-set-code-transaction)
     * [Subscribing to events](#subscribing-to-events)
   * [Transports](#transports)
   * [Wallets](#wallets)
@@ -481,6 +482,131 @@ func keyPath() string {
 		return "./key.json"
 	}
 	return "./examples/send-tx-blob/key.json"
+}
+```
+
+### Sending a set code transaction
+
+EIP-7702 set code transactions let an EOA adopt the bytecode of a deployed
+contract. After the transaction is mined, calls to the EOA execute through
+the borrowed code while the EOA's balance, nonce, and storage remain its own.
+The example below demonstrates self-delegation, where the same key acts as
+both the authority (the EOA being delegated) and the sponsor (the account
+paying for gas).
+
+<!-- examples/send-tx-setcode/main.go -->
+
+```go
+package main
+
+import (
+  "context"
+  "fmt"
+  "os"
+
+  "github.com/defiweb/go-eth/rpc"
+  "github.com/defiweb/go-eth/rpc/transport"
+  "github.com/defiweb/go-eth/types"
+  "github.com/defiweb/go-eth/wallet"
+)
+
+func main() {
+  // Load the private key.
+  //
+  // The key is both the authority (the EOA whose code is being set) and the
+  // sponsor (the account paying for gas).
+  k, err := wallet.NewKeyFromJSON(keyPath(), "test123")
+  if err != nil {
+    panic(err)
+  }
+
+  // Create transport.
+  t, err := transport.NewHTTP(transport.HTTPOptions{URL: "https://ethereum.publicnode.com"})
+  if err != nil {
+    panic(err)
+  }
+
+  // Create a JSON-RPC client.
+  c, err := rpc.NewClient(
+    // Transport is always required.
+    rpc.WithTransport(t),
+
+    // Specify a key for signing transactions. If provided, the client
+    // will sign transactions before sending them to the node.
+    rpc.WithKeys(k),
+
+    // Specify the default "from" address for transactions.
+    rpc.WithDefaultAddress(rpc.AddressOptions{
+      Address: k.Address(),
+    }),
+
+    // Estimate gas limit for transactions if not provided explicitly.
+    rpc.WithGasLimit(rpc.GasLimitOptions{
+      Multiplier: 1.25,
+    }),
+
+    // Estimate gas price for transactions if not provided explicitly.
+    rpc.WithDynamicGasFee(rpc.DynamicGasFeeOptions{
+      GasPriceMultiplier:          1.25,
+      PriorityFeePerGasMultiplier: 1.25,
+    }),
+
+    // Automatically set the chain ID for transactions.
+    rpc.WithChainID(rpc.ChainIDOptions{}),
+
+    // Automatically set the nonce for transactions.
+    rpc.WithNonce(rpc.NonceOptions{}),
+  )
+  if err != nil {
+    panic(err)
+  }
+
+  // The contract whose code the EOA will adopt.
+  contractAddr := types.MustAddressFromHex("0x0000000000000000000000000000000000000000")
+
+  // Fetch the authority's current nonce. This is the nonce that will be
+  // consumed by the authorization, not the transaction nonce.
+  authorityNonce, err := c.GetTransactionCount(context.Background(), k.Address(), types.LatestBlockNumber)
+  if err != nil {
+    panic(err)
+  }
+
+  // Build the authorization tuple.
+  auth := types.Authorization{
+    ChainID: 1,
+    Address: contractAddr,
+    Nonce:   authorityNonce,
+  }
+
+  // Sign the authorization.
+  if err := auth.Sign(context.Background(), k); err != nil {
+    panic(err)
+  }
+
+  // Prepare a set code transaction.
+  tx := types.NewTransactionSetCode()
+  tx.SetTo(k.Address())
+  tx.AddAuthorization(auth)
+
+  txHash, err := c.SendTransaction(context.Background(), tx)
+  if err != nil {
+    panic(err)
+  }
+
+  // Print the transaction hash.
+  //
+  // After this transaction is mined, any call to k.Address() will execute
+  // through the adopted contract code. The delegation persists until the EOA
+  // sends another set code transaction with a different address or the zero
+  // address to clear it.
+  fmt.Printf("Transaction hash: %s\n", txHash.String())
+}
+
+func keyPath() string {
+  if _, err := os.Stat("./key.json"); err == nil {
+    return "./key.json"
+  }
+  return "./examples/send-tx-setcode/key.json"
 }
 ```
 

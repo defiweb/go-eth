@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -110,6 +111,11 @@ func (t *TransactionBlob) SigningHash() (Hash, error) {
 		return ZeroHash, err
 	}
 	return Hash(crypto.Keccak256(append([]byte{byte(BlobTxType)}, bin...))), nil
+}
+
+// Sign signs the transaction.
+func (t *TransactionBlob) Sign(ctx context.Context, key TransactionSigner) error {
+	return key.SignTransaction(ctx, t)
 }
 
 // Copy creates a deep copy of the transaction.

@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -20,6 +21,16 @@ var (
 	// Address type.
 	ForceAddressChecksum = false
 )
+
+// HashSigner can sign an arbitrary hash.
+type HashSigner interface {
+	SignHash(ctx context.Context, hash Hash) (*Signature, error)
+}
+
+// TransactionSigner can sign a transaction.
+type TransactionSigner interface {
+	SignTransaction(ctx context.Context, tx SignableTransaction) error
+}
 
 // Pad is a padding type.
 type Pad uint8

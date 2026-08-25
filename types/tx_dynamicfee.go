@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -97,6 +98,11 @@ func (t *TransactionDynamicFee) SigningHash() (Hash, error) {
 		return ZeroHash, err
 	}
 	return Hash(crypto.Keccak256(append([]byte{byte(DynamicFeeTxType)}, bin...))), nil
+}
+
+// Sign signs the transaction.
+func (t *TransactionDynamicFee) Sign(ctx context.Context, key TransactionSigner) error {
+	return key.SignTransaction(ctx, t)
 }
 
 // Copy creates a deep copy of the transaction.

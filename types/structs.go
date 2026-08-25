@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -242,6 +243,20 @@ func (a *Authorization) SigningHash() (Hash, error) {
 		return ZeroHash, err
 	}
 	return Hash(crypto.Keccak256(append([]byte{0x05}, bin...))), nil
+}
+
+// Sign signs the authorization.
+func (a *Authorization) Sign(ctx context.Context, key HashSigner) error {
+	hash, err := a.SigningHash()
+	if err != nil {
+		return err
+	}
+	sig, err := key.SignHash(ctx, hash)
+	if err != nil {
+		return err
+	}
+	a.Signature = sig
+	return nil
 }
 
 // EncodeRLP implements the rlp.Encoder interface.

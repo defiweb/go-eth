@@ -1,6 +1,7 @@
 package types
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
@@ -93,6 +94,11 @@ func (t *TransactionAccessList) SigningHash() (Hash, error) {
 		return ZeroHash, err
 	}
 	return Hash(crypto.Keccak256(append([]byte{byte(AccessListTxType)}, bin...))), nil
+}
+
+// Sign signs the transaction.
+func (t *TransactionAccessList) Sign(ctx context.Context, key TransactionSigner) error {
+	return key.SignTransaction(ctx, t)
 }
 
 // EncodeRLP implements the rlp.Encoder interface.
